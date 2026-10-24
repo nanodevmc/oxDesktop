@@ -1,3 +1,5 @@
+![exteraGram Desktop](docs/banner.png)
+
 <img src="docs/logo.png" width="150" align="left"/>
 
 ## exteraGram Desktop
