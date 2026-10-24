@@ -462,6 +462,7 @@ void Launcher::workingFolderReady() {
 	srand((unsigned int)time(nullptr));
 
 	ComputeDebugMode();
+	SetUpdaterDisabledAtStartup();
 	ComputeExternalUpdater();
 	ComputeInstallBetaVersions();
 	ComputeInstallationTag();

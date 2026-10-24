@@ -17,7 +17,8 @@ Unofficial **third-party** Windows port of [exteraGram](https://github.com/exter
 - exteraGram Preferences with General, Appearance, Chats, App Navigation, Plugins and Other sections.
 - Material Design 3 switches and sliders, avatar corners, 33 app icons from exteraGram.
 - Channel feed, wide posts, seconds in message time, edited icon, forward count.
-- Streamer mode with per chat type settings and exceptions.
+- Streamer mode with per chat type settings, exceptions and screen capture protection.
+- Update notifications for new releases on GitHub.
 - Python plugins compatible with exteraGram plugins, with automatic safe mode.
 - AI chat with Google Gemini using your own API key.
 - ID, data center and approximate registration date in profiles.

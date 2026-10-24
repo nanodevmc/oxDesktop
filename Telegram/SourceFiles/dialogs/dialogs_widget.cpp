@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_widget.h"
+#include "extera/extera_update.h"
 
 #include "extera/extera_config.h"
 
@@ -653,6 +654,33 @@ Widget::Widget(
 		this,
 		[=] { searchCursorMoved(); },
 		Qt::QueuedConnection); // So getLastText() works already.
+
+	Extera::Update::AvailableValue(
+	) | rpl::on_next([=](bool available) {
+		if (_layout == Layout::Child) {
+			return;
+		}
+		if (available && !_updateTelegram) {
+			_updateTelegram.create(
+				this,
+				tr::lng_extera_update(tr::now),
+				st::dialogsUpdateButton,
+				st::dialogsInstallUpdate,
+				st::dialogsInstallUpdateOver,
+				true);
+			_updateTelegram->show();
+			_updateTelegram->setClickedCallback([] {
+				Extera::Update::OpenRelease();
+			});
+			if (_connecting) {
+				_connecting->raise();
+			}
+			updateControlsGeometry();
+		} else if (!available && _updateTelegram) {
+			_updateTelegram.destroy();
+			updateControlsGeometry();
+		}
+	}, lifetime());
 
 	if (!Core::UpdaterDisabled()) {
 		Core::UpdateChecker checker;

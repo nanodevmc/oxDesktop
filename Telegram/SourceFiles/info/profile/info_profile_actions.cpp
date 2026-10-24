@@ -1833,7 +1833,9 @@ Section DetailsFiller::makeInfo() {
 		SetupAboutPeerIdDrag(about.text, user);
 
 		const auto usernameLine = addInfoOneLine(
-			(user->isSelf() && Extera::Streamer::Active())
+			(user->isSelf()
+				&& (Extera::Streamer::Username()
+					!= Extera::Streamer::UsernameMode::Shown))
 				? (tr::lng_info_username_label(tr::marked)
 					| rpl::type_erased)
 				: UsernamesSubtext(_peer, tr::lng_info_username_label()),

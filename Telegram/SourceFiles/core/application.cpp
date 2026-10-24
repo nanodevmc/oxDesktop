@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "core/application.h"
+#include "extera/extera_update.h"
 #include "extera/extera_streamer.h"
 
 #include "ui/widgets/checkbox.h"
@@ -550,6 +551,8 @@ void Application::run() {
 	Extera::StartBadges();
 	Extera::StartWelcome();
 	Extera::Plugins::Start();
+	Extera::Update::Start();
+	Extera::Streamer::Start();
 
 	Test::Fire(u"launch_finished"_q);
 	Test::Start();

@@ -1930,6 +1930,8 @@ PRIVATE
     extera/extera_navigation.cpp
     extera/extera_navigation.h
     extera/extera_streamer.cpp
+    extera/extera_update.cpp
+    extera/extera_update.h
     extera/extera_streamer.h
     extera/extera_feed.h
     extera/extera_menu.cpp

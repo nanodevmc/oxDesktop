@@ -35,6 +35,8 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"folder_counter"_q, 0 },
 		{ u"hide_all_chats"_q, false },
 		{ u"streamer_mode"_q, false },
+		{ u"streamer_full"_q, false },
+		{ u"streamer_capture"_q, 0 },
 		{ u"menu_order"_q, QString() },
 		{ u"menu_hidden"_q, QString() },
 		{ u"streamer_name"_q, true },

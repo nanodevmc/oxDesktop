@@ -26,15 +26,68 @@
 
 #include <QtWidgets/QApplication>
 
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
 namespace Extera::Streamer {
 namespace {
 
-[[nodiscard]] bool Option(const QString &key) {
-	return Active() && Bool(key);
+[[nodiscard]] bool Full() {
+	return Active() && Bool(u"streamer_full"_q);
 }
 
-[[nodiscard]] int Choice(const QString &key, int shown) {
-	return Active() ? Int(key) : shown;
+[[nodiscard]] bool Option(const QString &key) {
+	return Active() && (Full() || Bool(key));
+}
+
+[[nodiscard]] int Choice(const QString &key, int shown, int full) {
+	return !Active() ? shown : Full() ? full : Int(key);
+}
+
+class CaptureFilter final : public QObject {
+public:
+	using QObject::QObject;
+
+protected:
+	bool eventFilter(QObject *object, QEvent *event) override;
+
+};
+
+[[nodiscard]] int CaptureMode() {
+	return Active() ? Int(u"streamer_capture"_q) : 0;
+}
+
+void ApplyCapture(QWidget *widget) {
+#ifdef Q_OS_WIN
+	if (!widget || !widget->isWindow() || !widget->internalWinId()) {
+		return;
+	}
+	const auto mode = CaptureMode();
+	const auto affinity = (mode == 1)
+		? DWORD(0x00000001)
+		: (mode == 2)
+		? DWORD(0x00000011)
+		: DWORD(0x00000000);
+	SetWindowDisplayAffinity(HWND(widget->internalWinId()), affinity);
+#endif
+}
+
+void ApplyCaptureAll() {
+	for (const auto widget : QApplication::topLevelWidgets()) {
+		ApplyCapture(widget);
+	}
+}
+
+bool CaptureFilter::eventFilter(QObject *object, QEvent *event) {
+	if (event->type() == QEvent::Show || event->type() == QEvent::WinIdChange) {
+		if (const auto widget = qobject_cast<QWidget*>(object)) {
+			if (widget->isWindow()) {
+				ApplyCapture(widget);
+			}
+		}
+	}
+	return false;
 }
 
 [[nodiscard]] QString TypeKey(ChatType type) {
@@ -52,6 +105,9 @@ namespace {
 }
 
 [[nodiscard]] ChatHide HideFor(ChatType type) {
+	if (Full()) {
+		return { .avatar = true, .name = true, .text = true };
+	}
 	return {
 		.avatar = Bool(PartKey(type, u"avatar"_q)),
 		.name = Bool(PartKey(type, u"name"_q)),
@@ -88,6 +144,7 @@ void Apply() {
 	for (const auto widget : QApplication::topLevelWidgets()) {
 		widget->update();
 	}
+	ApplyCaptureAll();
 }
 
 [[nodiscard]] const QImage &PreviewAvatar() {
@@ -391,16 +448,24 @@ bool HideProfile() {
 }
 
 PhoneMode Phone() {
-	return PhoneMode(Choice(u"streamer_phone"_q, int(PhoneMode::Shown)));
+	return PhoneMode(Choice(
+		u"streamer_phone"_q,
+		int(PhoneMode::Shown),
+		int(PhoneMode::Unknown)));
 }
 
 UsernameMode Username() {
-	return UsernameMode(
-		Choice(u"streamer_username"_q, int(UsernameMode::Shown)));
+	return UsernameMode(Choice(
+		u"streamer_username"_q,
+		int(UsernameMode::Shown),
+		int(UsernameMode::Hidden)));
 }
 
 IdMode Id() {
-	return IdMode(Choice(u"streamer_id"_q, int(IdMode::Shown)));
+	return IdMode(Choice(
+		u"streamer_id"_q,
+		int(IdMode::Shown),
+		int(IdMode::Full)));
 }
 
 ChatType TypeOf(not_null<PeerData*> peer) {
@@ -478,6 +543,16 @@ void Refresh() {
 	Apply();
 }
 
+void Start() {
+	static auto started = false;
+	if (started) {
+		return;
+	}
+	started = true;
+	qApp->installEventFilter(new CaptureFilter(qApp));
+	ApplyCaptureAll();
+}
+
 void ShowSettings(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setTitle(tr::lng_extera_streamer_settings());
@@ -507,7 +582,20 @@ void ShowSettings(not_null<Window::SessionController*> controller) {
 			u"streamer_mode"_q,
 			tr::lng_extera_streamer_mode(),
 			changed);
-		Ui::AddSkip(content);
+		AddToggleRow(
+			content,
+			u"streamer_full"_q,
+			tr::lng_extera_streamer_full_mode(),
+			changed);
+		AddChoiceRow(content, controller, u"streamer_capture"_q,
+			tr::lng_extera_streamer_capture(),
+			{
+				tr::lng_extera_streamer_capture_shown(tr::now),
+				tr::lng_extera_streamer_capture_black(tr::now),
+				tr::lng_extera_streamer_capture_hidden(tr::now),
+			},
+			changed);
+		Ui::AddDividerText(content, tr::lng_extera_streamer_capture_about());
 
 		Ui::AddDivider(content);
 		Ui::AddSkip(content);

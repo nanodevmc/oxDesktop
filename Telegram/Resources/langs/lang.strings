@@ -9475,6 +9475,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_ai_send" = "Send";
 "lng_extera_ai_clear" = "Clear";
 "lng_extera_feed" = "Channel Feed";
+"lng_extera_streamer_full_mode" = "Hide Everything";
+"lng_extera_streamer_capture" = "Screen Capture";
+"lng_extera_streamer_capture_shown" = "Allowed";
+"lng_extera_streamer_capture_black" = "Black Window";
+"lng_extera_streamer_capture_hidden" = "Hidden Window";
+"lng_extera_streamer_capture_about" = "Screenshots, OBS and screen sharing get a black or empty window instead of the client.";
+"lng_extera_update" = "Update exteraGram";
 "lng_extera_streamer_row_about" = "Click the title to choose what to hide. The switch turns the mode on and off.";
 "lng_extera_streamer_preview_bio" = "Bio: exteraDesktop Developer";
 "lng_extera_streamer_preview_private" = "Continue with it tomorrow";

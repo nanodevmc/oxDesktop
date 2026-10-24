@@ -70,6 +70,7 @@ void SetException(not_null<PeerData*> peer, Exception exception);
 [[nodiscard]] QString MaskId(const QString &id);
 
 void Refresh();
+void Start();
 void ShowSettings(not_null<Window::SessionController*> controller);
 
 } // namespace Extera::Streamer
