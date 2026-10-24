@@ -786,6 +786,13 @@ void MainMenu::setupMenu() {
 				}, badge->lifetime());
 			}
 		}
+		addAction(
+			tr::lng_extera_plugins(),
+			{ &st::exteraIconPlugins }
+		)->setClickedCallback([=] {
+			UrlClickHandler::Open(u"tg://settings/extera/plugins"_q);
+		});
+		tag("plugins");
 		const auto session = &controller->session();
 		const auto wallet = _menu->add(
 			object_ptr<Ui::SlideWrap<Ui::SettingsButton>>(

@@ -188,9 +188,13 @@ rpl::producer<TextWithEntities> PhoneWithSpoilerValue(
 	}
 	return rpl::combine(
 		std::move(phone),
-		user->session().settings().phoneNumberHiddenValue()
-	) | rpl::map([](const TextWithEntities &phone, bool hidden) {
-		return hidden
+		user->session().settings().phoneNumberHiddenValue(),
+		Extera::Config::Instance().boolChanges(u"hide_phone"_q)
+	) | rpl::map([](
+			const TextWithEntities &phone,
+			bool hidden,
+			bool exteraHidden) {
+		return (hidden || exteraHidden)
 			? Ui::Text::Wrapped(phone, EntityType::Spoiler)
 			: phone;
 	});

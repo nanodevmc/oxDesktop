@@ -982,3 +982,8 @@ exteraPluginNameButton: SettingsButton(settingsButtonNoIcon) {
 exteraStreamerDateSkip: 64px;
 exteraStreamerToggleSkip: 14px;
 exteraStreamerSplit: 26px;
+
+exteraQuickHeight: 48px;
+exteraQuickPadding: 4px;
+exteraQuickButtonWidth: 48px;
+exteraQuickAboutPadding: margins(22px, 8px, 22px, 8px);

@@ -5,6 +5,7 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
+#include "extera/extera_menu.h"
 #include "history/view/history_view_list_widget.h"
 
 #include "history/view/history_view_about_view.h"
@@ -4152,6 +4153,7 @@ void ListWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		return;
 	}
 
+	Extera::ApplyQuickActions(_menu.get());
 	using namespace HistoryView::Reactions;
 	const auto desiredPosition = e->globalPos();
 	const auto reactItem = (_overElement

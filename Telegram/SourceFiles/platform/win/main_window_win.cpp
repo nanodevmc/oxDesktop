@@ -609,23 +609,23 @@ void MainWindow::updateTaskbarAndIconCounters() {
 		GetSystemMetrics(SM_CXICON),
 		GetSystemMetrics(SM_CYICON));
 	const auto supportMode = session && session->supportMode();
+	const auto integration = &Platform::WindowsIntegration::Instance();
+	const auto taskbarList = integration->taskbarList();
+	const auto bigCounter = taskbarList ? 0 : counter;
 
 	auto iconSmallPixmap16 = Tray::IconWithCounter(
-		Tray::CounterLayerArgs(16, counter, muted),
+		Tray::CounterLayerArgs(16, bigCounter, muted),
 		true,
 		false,
 		supportMode);
 	auto iconSmallPixmap32 = Tray::IconWithCounter(
-		Tray::CounterLayerArgs(32, counter, muted),
+		Tray::CounterLayerArgs(32, bigCounter, muted),
 		true,
 		false,
 		supportMode);
 	QIcon iconSmall, iconBig;
 	iconSmall.addPixmap(iconSmallPixmap16);
 	iconSmall.addPixmap(iconSmallPixmap32);
-	const auto integration = &Platform::WindowsIntegration::Instance();
-	const auto taskbarList = integration->taskbarList();
-	const auto bigCounter = taskbarList ? 0 : counter;
 	iconBig.addPixmap(Tray::IconWithCounter(
 		Tray::CounterLayerArgs(32, bigCounter, muted),
 		false,

@@ -3925,6 +3925,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		_menu = nullptr;
 		return;
 	}
+	Extera::ApplyQuickActions(_menu.get());
 	using namespace HistoryView::Reactions;
 	const auto desiredPosition = e->globalPos();
 	const auto reactItem = Element::Hovered()

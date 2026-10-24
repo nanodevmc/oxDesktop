@@ -37,6 +37,7 @@ struct Item {
 		{ u"calls"_q, tr::lng_menu_calls, &st::menuIconPhone },
 		{ u"saved"_q, tr::lng_saved_messages, &st::menuIconSavedMessages },
 		{ u"feed"_q, tr::lng_extera_feed, &st::menuIconChannel },
+		{ u"plugins"_q, tr::lng_extera_plugins, &st::exteraIconPlugins },
 		{ u"wallet"_q, tr::lng_wallet_menu, &st::walletMenuIcon },
 		{ u"settings"_q, tr::lng_menu_settings, &st::menuIconSettings },
 		{ u"streamer"_q, tr::lng_extera_streamer_mode, &st::menuIconUserHide },
@@ -65,9 +66,20 @@ struct Item {
 			const QString &id) {
 		return (id != kDivider) && (!FindItem(id) || hidden.contains(id));
 	}), result.end());
+	auto previous = QString();
 	for (const auto &item : Items()) {
 		if (!result.contains(item.id) && !hidden.contains(item.id)) {
-			result.push_back(item.id);
+			const auto after = previous.isEmpty()
+				? -1
+				: result.indexOf(previous);
+			if (after >= 0) {
+				result.insert(after + 1, item.id);
+			} else {
+				result.push_back(item.id);
+			}
+		}
+		if (result.contains(item.id)) {
+			previous = item.id;
 		}
 	}
 	return result;
@@ -169,6 +181,7 @@ void FillSettings(not_null<Ui::VerticalLayout*> container) {
 		Ui::AddSubsectionTitle(container, tr::lng_extera_nav_items());
 		const auto list = container->add(
 			object_ptr<Ui::VerticalLayout>(container));
+		const auto dragging = list->lifetime().make_state<bool>(false);
 		for (const auto &id : order) {
 			const auto item = FindItem(id);
 			const auto button = list->add(item
@@ -185,6 +198,9 @@ void FillSettings(not_null<Ui::VerticalLayout*> container) {
 			button->setProperty(kProperty, id);
 			AddDragHandle(button);
 			button->setClickedCallback([=] {
+				if (*dragging) {
+					return;
+				}
 				auto order = Order();
 				auto hidden = Hidden();
 				const auto index = [&] {
@@ -212,7 +228,15 @@ void FillSettings(not_null<Ui::VerticalLayout*> container) {
 			Ui::VerticalLayoutReorder>(list);
 		reorder->updates(
 		) | rpl::on_next([=](Ui::VerticalLayoutReorder::Single data) {
-			if (data.state != Ui::VerticalLayoutReorder::State::Applied) {
+			using State = Ui::VerticalLayoutReorder::State;
+			if (data.state == State::Started) {
+				*dragging = true;
+				return;
+			}
+			crl::on_main(list, [=] {
+				*dragging = false;
+			});
+			if (data.state != State::Applied) {
 				return;
 			}
 			auto order = QStringList();

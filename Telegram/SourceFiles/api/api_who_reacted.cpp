@@ -825,7 +825,27 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 rpl::producer<Ui::WhoReadContent> WhenEdited(
 		not_null<PeerData*> author,
 		TimeId date) {
-	return WhenDate(author, date, Ui::WhoReadType::Edited);
+	const auto parsed = base::unixtime::parse(date);
+	const auto time = QLocale().toString(
+		parsed.time(),
+		QLocale::ShortFormat);
+	const auto text = (parsed.date() == QDate::currentDate())
+		? tr::lng_extera_edited_at(tr::now, lt_time, time)
+		: tr::lng_extera_edited_at_date(
+			tr::now,
+			lt_date,
+			langDayOfMonthShort(parsed.date()),
+			lt_time,
+			time);
+	return rpl::single(Ui::WhoReadContent{
+		.participants = { Ui::WhoReadParticipant{
+			.name = author->name(),
+			.date = text,
+			.id = author->id.value,
+		} },
+		.type = Ui::WhoReadType::Edited,
+		.fullReadCount = 1,
+	});
 }
 
 rpl::producer<Ui::WhoReadContent> WhenOriginal(

@@ -11,6 +11,14 @@
 #include "extera/extera_config.h"
 #include "ui/widgets/menu/menu_common.h"
 #include "ui/widgets/menu/menu_action.h"
+#include "ui/widgets/menu/menu_item_base.h"
+#include "ui/painter.h"
+#include "ui/abstract_button.h"
+#include "styles/style_chat.h"
+#include "styles/style_settings.h"
+#include "styles/style_widgets.h"
+#include <QtGui/QClipboard>
+#include <QtGui/QGuiApplication>
 #include "extera/extera_utils.h"
 #include "extera/extera_plugins_ui.h"
 #include "history/history.h"
@@ -27,45 +35,314 @@
 namespace Extera {
 namespace {
 
-[[nodiscard]] QString FormatDate(TimeId date) {
-	return QLocale().toString(
-		base::unixtime::parse(date),
-		QLocale::ShortFormat);
+constexpr auto kMaxQuickActions = 5;
+
+
+class DetailAction final : public Ui::Menu::ItemBase {
+public:
+	DetailAction(
+		not_null<Ui::Menu::Menu*> parent,
+		const style::Menu &st,
+		const style::icon *icon,
+		const QString &title,
+		const QString &value);
+
+	bool isEnabled() const override;
+	not_null<QAction*> action() const override;
+
+protected:
+	int contentHeight() const override;
+	void paintEvent(QPaintEvent *e) override;
+
+private:
+	const not_null<QAction*> _dummyAction;
+	const style::Menu &_st;
+	const style::icon *_icon = nullptr;
+	const QString _title;
+	const QString _value;
+	int _height = 0;
+
+};
+
+DetailAction::DetailAction(
+	not_null<Ui::Menu::Menu*> parent,
+	const style::Menu &st,
+	const style::icon *icon,
+	const QString &title,
+	const QString &value)
+: ItemBase(parent, st)
+, _dummyAction(Ui::CreateChild<QAction>(parent.get()))
+, _st(st)
+, _icon(icon)
+, _title(title)
+, _value(value) {
+	_height = _st.itemPadding.top()
+		+ _st.itemStyle.font->height
+		+ st::normalFont->height
+		+ _st.itemPadding.bottom();
+	setMinWidth(_st.itemPadding.left()
+		+ std::max(
+			_st.itemStyle.font->width(_title),
+			st::normalFont->width(_value))
+		+ _st.itemPadding.right());
+	fitToMenuWidth();
+	enableMouseSelecting();
+	setActionTriggered([=] {
+		QGuiApplication::clipboard()->setText(_value);
+	});
 }
 
-[[nodiscard]] TextWithEntities DetailsText(not_null<HistoryItem*> item) {
-	auto lines = QStringList();
-	const auto add = [&](const QString &label, const QString &value) {
-		lines.push_back(label + u": "_q + value);
+bool DetailAction::isEnabled() const {
+	return true;
+}
+
+not_null<QAction*> DetailAction::action() const {
+	return _dummyAction;
+}
+
+int DetailAction::contentHeight() const {
+	return _height;
+}
+
+void DetailAction::paintEvent(QPaintEvent *e) {
+	auto p = Painter(this);
+	const auto selected = isSelected();
+	p.fillRect(rect(), selected ? _st.itemBgOver : _st.itemBg);
+	RippleButton::paintRipple(p, 0, 0);
+	if (_icon) {
+		_icon->paint(
+			p,
+			_st.itemIconPosition.x(),
+			(_height - _icon->height()) / 2,
+			width());
+	}
+	const auto left = _st.itemPadding.left();
+	const auto available = width() - left - _st.itemPadding.right();
+	auto top = _st.itemPadding.top();
+	p.setFont(_st.itemStyle.font);
+	p.setPen(selected ? _st.itemFgOver : _st.itemFg);
+	p.drawTextLeft(
+		left,
+		top,
+		width(),
+		_st.itemStyle.font->elided(_title, available));
+	top += _st.itemStyle.font->height;
+	p.setFont(st::normalFont);
+	p.setPen(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut);
+	p.drawTextLeft(
+		left,
+		top,
+		width(),
+		st::normalFont->elided(_value, available));
+}
+
+struct QuickEntry {
+	QString id;
+	std::vector<tr::phrase<>> labels;
+	const style::icon *icon = nullptr;
+};
+
+[[nodiscard]] const std::vector<QuickEntry> &QuickEntries() {
+	static const auto result = std::vector<QuickEntry>{
+		{ u"reply"_q, { tr::lng_context_reply_msg }, &st::menuIconReply },
+		{ u"delete"_q, { tr::lng_context_delete_msg }, &st::menuIconDelete },
+		{
+			u"copy"_q,
+			{ tr::lng_context_copy_text, tr::lng_context_copy_selected },
+			&st::menuIconCopy,
+		},
+		{ u"edit"_q, { tr::lng_context_edit_msg }, &st::menuIconEdit },
+		{
+			u"forward"_q,
+			{ tr::lng_context_forward_msg },
+			&st::menuIconForward,
+		},
+		{
+			u"pin"_q,
+			{ tr::lng_context_pin_msg, tr::lng_context_unpin_msg },
+			&st::menuIconPin,
+		},
+		{ u"select"_q, { tr::lng_context_select_msg }, &st::menuIconSelect },
 	};
-	add(tr::lng_extera_details_id(tr::now), QString::number(item->id.bare));
+	return result;
+}
+
+class QuickRow final : public Ui::Menu::ItemBase {
+public:
+	QuickRow(
+		not_null<Ui::Menu::Menu*> parent,
+		const style::Menu &st,
+		Fn<void()> hide);
+
+	void addButton(
+		not_null<QAction*> action,
+		const style::icon *icon,
+		const QString &label);
+
+	bool isEnabled() const override;
+	not_null<QAction*> action() const override;
+
+protected:
+	int contentHeight() const override;
+
+private:
+	void layout();
+
+	const not_null<QAction*> _dummyAction;
+	const style::Menu &_st;
+	const Fn<void()> _hide;
+	std::vector<not_null<Ui::AbstractButton*>> _buttons;
+
+};
+
+QuickRow::QuickRow(
+	not_null<Ui::Menu::Menu*> parent,
+	const style::Menu &st,
+	Fn<void()> hide)
+: ItemBase(parent, st)
+, _dummyAction(Ui::CreateChild<QAction>(parent.get()))
+, _st(st)
+, _hide(std::move(hide)) {
+	fitToMenuWidth();
+	widthValue() | rpl::on_next([=] {
+		layout();
+	}, lifetime());
+}
+
+void QuickRow::addButton(
+		not_null<QAction*> action,
+		const style::icon *icon,
+		const QString &label) {
+	action->setParent(this);
+	const auto button = Ui::CreateChild<Ui::AbstractButton>(this);
+	button->setAccessibleName(label);
+	button->setPointerCursor(true);
+	button->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(button);
+		if (button->isOver() || button->isDown()) {
+			auto hq = PainterHighQualityEnabler(p);
+			p.setPen(Qt::NoPen);
+			p.setBrush(_st.itemBgOver);
+			const auto radius = st::roundRadiusLarge;
+			p.drawRoundedRect(button->rect(), radius, radius);
+		}
+		icon->paintInCenter(p, button->rect());
+	}, button->lifetime());
+	button->setClickedCallback([=] {
+		const auto weak = base::make_weak(this);
+		action->trigger();
+		if (weak) {
+			_hide();
+		}
+	});
+	_buttons.push_back(button);
+	setMinWidth(int(_buttons.size()) * st::exteraQuickButtonWidth
+		+ 2 * st::exteraQuickPadding);
+	layout();
+}
+
+void QuickRow::layout() {
+	if (_buttons.empty()) {
+		return;
+	}
+	const auto padding = st::exteraQuickPadding;
+	const auto available = width() - 2 * padding;
+	const auto count = int(_buttons.size());
+	const auto each = available / count;
+	for (auto i = 0; i != count; ++i) {
+		_buttons[i]->setGeometry(
+			padding + i * each,
+			padding,
+			each,
+			contentHeight() - 2 * padding);
+	}
+}
+
+bool QuickRow::isEnabled() const {
+	return false;
+}
+
+not_null<QAction*> QuickRow::action() const {
+	return _dummyAction;
+}
+
+int QuickRow::contentHeight() const {
+	return st::exteraQuickHeight;
+}
+
+[[nodiscard]] QString FormatFullDate(TimeId date) {
+	const auto parsed = base::unixtime::parse(date);
+	return tr::lng_mediaview_date_time(
+		tr::now,
+		lt_date,
+		QLocale().toString(parsed.date(), u"dd.MM.yyyy"_q),
+		lt_time,
+		QLocale().toString(parsed.time(), u"HH:mm:ss"_q));
+}
+
+void FillDetails(
+		not_null<Ui::PopupMenu*> menu,
+		not_null<HistoryItem*> item) {
+	const auto add = [&](
+			const style::icon *icon,
+			const QString &title,
+			const QString &value) {
+		menu->addAction(base::make_unique_q<DetailAction>(
+			menu->menu(),
+			menu->st().menu,
+			icon,
+			title,
+			value));
+	};
 	add(
+		&st::menuIconInfo,
+		tr::lng_extera_details_id(tr::now),
+		QString::number(item->id.bare));
+	add(
+		&st::menuIconChats,
 		tr::lng_extera_details_chat(tr::now),
-		QString::number(item->history()->peer->id.value & PeerId::kChatTypeMask));
+		QString::number(
+			item->history()->peer->id.value & PeerId::kChatTypeMask));
 	if (const auto from = item->from()) {
 		add(
+			&st::menuIconProfile,
 			tr::lng_extera_details_sender(tr::now),
 			QString::number(from->id.value & PeerId::kChatTypeMask));
 	}
-	add(tr::lng_extera_details_date(tr::now), FormatDate(item->date()));
+	add(
+		&st::menuIconSchedule,
+		tr::lng_extera_details_date(tr::now),
+		FormatFullDate(item->date()));
 	if (const auto edited = item->Get<HistoryMessageEdited>()) {
 		if (edited->date) {
 			add(
+				&st::menuIconEdit,
 				tr::lng_extera_details_edited(tr::now),
-				FormatDate(edited->date));
+				FormatFullDate(edited->date));
+		}
+	}
+	if (const auto forwarded = item->Get<HistoryMessageForwarded>()) {
+		if (forwarded->originalDate) {
+			add(
+				&st::menuIconForward,
+				tr::lng_extera_details_forwarded(tr::now),
+				FormatFullDate(forwarded->originalDate));
 		}
 	}
 	if (const auto media = item->media()) {
 		if (const auto document = media->document()) {
 			if (!document->filename().isEmpty()) {
-				add(tr::lng_extera_details_file(tr::now), document->filename());
+				add(
+					&st::menuIconFile,
+					tr::lng_extera_details_file(tr::now),
+					document->filename());
 			}
 			add(
+				&st::menuIconDownload,
 				tr::lng_extera_details_size(tr::now),
 				Ui::FormatSizeText(document->size));
 		}
 	}
-	return TextWithEntities{ lines.join('\n') };
 }
 
 } // namespace
@@ -79,27 +356,6 @@ void AddMessageMenuActions(
 	}
 	const auto itemId = item->fullId();
 	const auto session = &item->history()->session();
-	if (const auto edited = item->Get<HistoryMessageEdited>()) {
-		if (edited->date > 0) {
-			const auto parsed = base::unixtime::parse(edited->date);
-			const auto time = FormatTime(parsed.time());
-			const auto text = (parsed.date() == QDate::currentDate())
-				? tr::lng_extera_edited_at(tr::now, lt_time, time)
-				: tr::lng_extera_edited_at_date(
-					tr::now,
-					lt_date,
-					QLocale().toString(parsed.date(), u"dd.MM.yy"_q),
-					lt_time,
-					time);
-			const auto inner = menu->menu();
-			menu->insertAction(0, base::make_unique_q<Ui::Menu::Action>(
-				inner,
-				menu->st().menu,
-				Ui::Menu::CreateAction(inner, text, [] {}),
-				&st::menuIconSchedule,
-				&st::menuIconSchedule));
-		}
-	}
 	if (Bool(u"menu_repeat"_q)
 		&& item->allowsForward()
 		&& Data::CanSendAnything(item->history())) {
@@ -116,12 +372,117 @@ void AddMessageMenuActions(
 	}
 	Plugins::AddMessageMenuItems(menu, item);
 	if (Bool(u"menu_details"_q)) {
-		menu->addAction(tr::lng_extera_menu_details(tr::now), [=] {
-			if (const auto item = session->data().message(itemId)) {
-				controller->show(Ui::MakeInformBox(DetailsText(item)));
-			}
-		}, &st::menuIconInfo);
+		const auto action = menu->addAction(
+			tr::lng_extera_menu_details(tr::now),
+			[] {},
+			&st::menuIconInfo);
+		action->setMenu(Ui::CreateChild<QMenu>(menu->menu().get()));
+		FillDetails(
+			menu->ensureSubmenu(action, st::popupMenuWithIcons),
+			item);
 	}
+}
+
+QStringList QuickActionIds() {
+	auto result = QStringList();
+	for (const auto &entry : QuickEntries()) {
+		result.push_back(entry.id);
+	}
+	return result;
+}
+
+QString QuickActionTitle(const QString &id) {
+	for (const auto &entry : QuickEntries()) {
+		if (entry.id == id) {
+			return entry.labels.front()(tr::now);
+		}
+	}
+	return id;
+}
+
+const style::icon *QuickActionIcon(const QString &id) {
+	for (const auto &entry : QuickEntries()) {
+		if (entry.id == id) {
+			return entry.icon;
+		}
+	}
+	return nullptr;
+}
+
+void ApplyQuickActions(not_null<Ui::PopupMenu*> menu) {
+	if (!Bool(u"menu_quick_row"_q)) {
+		return;
+	}
+	const auto ids = String(u"menu_quick_items"_q).split(
+		',',
+		Qt::SkipEmptyParts);
+	struct Found {
+		QAction *action = nullptr;
+		const style::icon *icon = nullptr;
+		QString label;
+	};
+	auto found = std::vector<Found>();
+	for (const auto &id : ids) {
+		if (found.size() >= kMaxQuickActions) {
+			break;
+		}
+		const auto entry = ranges::find(QuickEntries(), id, &QuickEntry::id);
+		if (entry == end(QuickEntries())) {
+			continue;
+		}
+		for (const auto action : menu->actions()) {
+			if (action->isSeparator() || action->menu()) {
+				continue;
+			}
+			const auto text = action->text();
+			const auto matches = ranges::any_of(entry->labels, [&](
+					const tr::phrase<> &label) {
+				return text == label(tr::now);
+			});
+			if (matches) {
+				found.push_back({ action.get(), entry->icon, text });
+				break;
+			}
+		}
+	}
+	if (found.empty()) {
+		return;
+	}
+	const auto weak = base::make_weak(menu.get());
+	auto row = base::make_unique_q<QuickRow>(
+		menu->menu(),
+		menu->st().menu,
+		[=] {
+			if (const auto strong = weak.get()) {
+				strong->hideMenu();
+			}
+		});
+	for (const auto &entry : found) {
+		row->addButton(entry.action, entry.icon, entry.label);
+	}
+	for (const auto &entry : found) {
+		const auto &actions = menu->actions();
+		const auto i = ranges::find_if(actions, [&](not_null<QAction*> a) {
+			return a.get() == entry.action;
+		});
+		if (i != end(actions)) {
+			menu->removeAction(int(i - begin(actions)));
+		}
+	}
+	auto previousSeparator = true;
+	for (auto i = 0; i < int(menu->actions().size());) {
+		const auto separator = menu->actions()[i]->isSeparator();
+		if (separator && previousSeparator) {
+			menu->removeAction(i);
+			continue;
+		}
+		previousSeparator = separator;
+		++i;
+	}
+	if (!menu->empty() && !menu->actions().back()->isSeparator()) {
+		menu->addSeparator(&st::expandedMenuSeparator);
+	}
+	menu->addAction(std::move(row));
 }
 
 } // namespace Extera

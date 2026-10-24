@@ -13,7 +13,7 @@
 namespace Extera::Update {
 namespace {
 
-constexpr auto kExteraBuild = 1;
+constexpr auto kExteraBuild = 2;
 constexpr auto kCheckInterval = 6 * 60 * 60 * crl::time(1000);
 constexpr auto kFirstCheckDelay = 10 * crl::time(1000);
 
@@ -58,7 +58,7 @@ State &Instance() {
 	return result;
 }
 
-void Check() {
+void Check(Fn<void(CheckResult)> done = nullptr) {
 	auto &state = Instance();
 	if (!state.manager) {
 		state.manager = new QNetworkAccessManager(qApp);
@@ -71,18 +71,29 @@ void Check() {
 	QObject::connect(reply, &QNetworkReply::finished, [=] {
 		reply->deleteLater();
 		if (reply->error() != QNetworkReply::NoError) {
+			if (done) {
+				done(CheckResult::Failed);
+			}
 			return;
 		}
 		const auto object = QJsonDocument::fromJson(
 			reply->readAll()).object();
 		const auto tag = object.value(u"tag_name"_q).toString();
 		if (tag.isEmpty() || object.value(u"draft"_q).toBool()) {
+			if (done) {
+				done(CheckResult::Failed);
+			}
 			return;
 		}
 		auto &state = Instance();
 		state.version = tag;
 		state.url = object.value(u"html_url"_q).toString();
 		state.available = (Parse(tag) > Current());
+		if (done) {
+			done(state.available.current()
+				? CheckResult::Available
+				: CheckResult::Latest);
+		}
 	});
 }
 
@@ -98,6 +109,10 @@ void Start() {
 		Instance().timer->callOnce(kCheckInterval);
 	});
 	state.timer->callOnce(kFirstCheckDelay);
+}
+
+void CheckNow(Fn<void(CheckResult)> done) {
+	Check(std::move(done));
 }
 
 rpl::producer<bool> AvailableValue() {

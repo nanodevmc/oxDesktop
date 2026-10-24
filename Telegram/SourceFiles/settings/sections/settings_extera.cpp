@@ -9,12 +9,15 @@
 #include "boxes/translate_box.h"
 #include "boxes/download_path_box.h"
 #include "extera/extera_config.h"
+#include "extera/extera_menu.h"
+#include "history/view/media/history_view_sticker.h"
 #include "extera/extera_navigation.h"
 #include "extera/extera_streamer.h"
 #include "extera/extera_ai_chat.h"
 #include "extera/extera_welcome.h"
 #include "extera/extera_plugins_ui.h"
 #include "extera/extera_plugins.h"
+#include "extera/extera_update.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
@@ -27,6 +30,7 @@
 #include "ui/boxes/confirm_box.h"
 #include "ui/boxes/single_choice_box.h"
 #include "ui/layers/generic_box.h"
+#include "ui/wrap/vertical_layout_reorder.h"
 #include "ui/painter.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
@@ -386,11 +390,12 @@ void AddPreview(
 		SectionBuilder &builder,
 		const QString &key,
 		int height,
-		Fn<void(QPainter&, QRect, int)> paint) {
+		Fn<void(QPainter&, QRect, int)> paint,
+		Fn<int()> heightValue = nullptr) {
 	builder.add([=](const WidgetContext &ctx) {
 		auto result = object_ptr<Ui::FixedHeightWidget>(
 			ctx.container,
-			height);
+			heightValue ? heightValue() : height);
 		const auto raw = result.data();
 		raw->paintRequest(
 		) | rpl::on_next([=] {
@@ -406,6 +411,9 @@ void AddPreview(
 		Config().intChanges(
 			key
 		) | rpl::on_next([=] {
+			if (heightValue) {
+				raw->resize(raw->width(), heightValue());
+			}
 			raw->update();
 		}, raw->lifetime());
 		return SectionBuilder::WidgetToAdd{
@@ -438,10 +446,15 @@ void PaintAvatarPreview(QPainter &p, QRect frame, int corners) {
 	p.setOpacity(1.);
 }
 
+[[nodiscard]] int StickerPreviewHeight() {
+	return HistoryView::Sticker::Size().height()
+		+ 2 * st::exteraPreviewSkip;
+}
+
 void PaintStickerPreview(QPainter &p, QRect frame, int value) {
+	static const auto image = QImage(u":/gui/art/exteradesktop.png"_q);
 	const auto skip = st::exteraPreviewSkip;
-	const auto maxSide = frame.height() - 2 * skip;
-	const auto side = maxSide * std::clamp(value, 4, 20) / 20;
+	const auto side = HistoryView::Sticker::Size().width();
 	const auto bubble = QRectF(
 		frame.x() + skip,
 		frame.y() + skip,
@@ -449,15 +462,13 @@ void PaintStickerPreview(QPainter &p, QRect frame, int value) {
 		st::exteraPreviewBubble);
 	p.setBrush(st::msgInBg);
 	p.drawRoundedRect(bubble, st::bubbleRadiusLarge, st::bubbleRadiusLarge);
-	p.setBrush(st::msgOutBg);
-	p.drawRoundedRect(
-		QRectF(
-			frame.right() - skip - side,
-			frame.bottom() - skip - side,
+	p.drawImage(
+		QRect(
+			frame.x() + frame.width() - skip - side,
+			frame.y() + frame.height() - skip - side,
 			side,
 			side),
-		side / 6.,
-		side / 6.);
+		image);
 }
 
 struct AppIconInfo {
@@ -522,19 +533,105 @@ void PaintAppIcon(QPainter &p, const QImage &image, QRect rect) {
 	p.restore();
 }
 
+void ShowQuickActionsBox(not_null<Window::SessionController*> controller) {
+	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+		constexpr auto kLimit = 5;
+		box->setTitle(tr::lng_extera_quick_actions_buttons());
+		box->addButton(tr::lng_box_done(), [=] { box->closeBox(); });
+
+		auto chosen = Extera::String(u"menu_quick_items"_q).split(
+			',',
+			Qt::SkipEmptyParts);
+		auto order = chosen;
+		for (const auto &id : Extera::QuickActionIds()) {
+			if (!order.contains(id)) {
+				order.push_back(id);
+			}
+		}
+		const auto state = box->lifetime().make_state<QStringList>(chosen);
+		const auto list = box->addRow(
+			object_ptr<Ui::VerticalLayout>(box),
+			style::margins());
+		const auto dragging = list->lifetime().make_state<bool>(false);
+		const auto save = [=] {
+			auto result = QStringList();
+			for (auto i = 0; i != list->count(); ++i) {
+				const auto id = list->widgetAt(i)->property(
+					"extera_quick_id").toString();
+				if (state->contains(id)) {
+					result.push_back(id);
+				}
+			}
+			*state = result;
+			Config().setString(u"menu_quick_items"_q, result.join(','));
+		};
+		for (const auto &id : order) {
+			const auto button = list->add(Settings::CreateButtonWithIcon(
+				list,
+				rpl::single(Extera::QuickActionTitle(id)),
+				st::settingsButton,
+				{ Extera::QuickActionIcon(id) }));
+			button->setProperty("extera_quick_id", id);
+			const auto forced = button->lifetime().make_state<
+				rpl::event_stream<bool>>();
+			button->toggleOn(rpl::single(
+				chosen.contains(id)
+			) | rpl::then(forced->events()), true);
+			button->setClickedCallback([=] {
+				if (!*dragging) {
+					forced->fire(!button->toggled());
+				}
+			});
+			button->toggledValue(
+			) | rpl::skip(1) | rpl::on_next([=](bool on) {
+				if (on && !state->contains(id)) {
+					if (state->size() >= kLimit) {
+						controller->showToast(
+							tr::lng_extera_quick_actions_limit(tr::now));
+						crl::on_main(button, [=] {
+							forced->fire(false);
+						});
+						return;
+					}
+					state->push_back(id);
+				} else if (!on) {
+					state->removeAll(id);
+				}
+				save();
+			}, button->lifetime());
+		}
+		const auto reorder = list->lifetime().make_state<
+			Ui::VerticalLayoutReorder>(list);
+		reorder->updates(
+		) | rpl::on_next([=](Ui::VerticalLayoutReorder::Single data) {
+			using State = Ui::VerticalLayoutReorder::State;
+			if (data.state == State::Started) {
+				*dragging = true;
+				return;
+			}
+			crl::on_main(list, [=] {
+				*dragging = false;
+			});
+			if (data.state == State::Applied) {
+				save();
+			}
+		}, list->lifetime());
+		reorder->start();
+		box->addRow(
+			object_ptr<Ui::FlatLabel>(
+				box,
+				tr::lng_extera_quick_actions_about(),
+				st::boxDividerLabel),
+			st::exteraQuickAboutPadding);
+	}));
+}
+
 void ShowAppIconBox(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setStyle(st::exteraInstallBox);
 		box->setWidth(st::exteraAppIconBoxWidth);
 		box->setNoContentMargin(true);
-		const auto close = Ui::CreateChild<Ui::IconButton>(
-			box.get(),
-			st::boxTitleClose);
-		close->setClickedCallback([=] { box->closeBox(); });
-		box->widthValue() | rpl::on_next([=](int width) {
-			close->moveToRight(0, 0, width);
-			close->raise();
-		}, close->lifetime());
+		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 		const auto &icons = AppIcons();
 		const auto images = std::make_shared<std::vector<QImage>>();
 		for (const auto &icon : icons) {
@@ -1144,7 +1241,8 @@ void BuildChats(SectionBuilder &builder) {
 			builder,
 			u"sticker_size"_q,
 			st::exteraPreviewStickerHeight,
-			PaintStickerPreview);
+			PaintStickerPreview,
+			StickerPreviewHeight);
 		AddChoice(
 			builder,
 			u"sticker_time"_q,
@@ -1155,6 +1253,7 @@ void BuildChats(SectionBuilder &builder) {
 				&tr::lng_extera_sticker_time_hidden,
 			});
 	});
+	builder.addDivider();
 
 	builder.addSkip();
 	builder.card([&] {
@@ -1295,6 +1394,21 @@ void BuildChats(SectionBuilder &builder) {
 				{ u"menu_history"_q, &tr::lng_extera_menu_history },
 				{ u"menu_details"_q, &tr::lng_extera_menu_details },
 			});
+		AddToggle(
+			builder,
+			u"menu_quick_row"_q,
+			tr::lng_extera_quick_actions(),
+			{ u"menu"_q },
+			tr::lng_extera_quick_actions_about_toggle(),
+			true);
+		const auto controller = builder.controller();
+		builder.addButton({
+			.id = u"extera/menu_quick_items"_q,
+			.title = tr::lng_extera_quick_actions_buttons(),
+			.st = &st::settingsButtonNoIcon,
+			.onClick = [=] { ShowQuickActionsBox(controller); },
+			.keywords = { u"menu"_q },
+		});
 	});
 	builder.addDivider();
 
@@ -1651,6 +1765,41 @@ void BuildOther(SectionBuilder &builder) {
 			u"@DesktopExtera"_q,
 			u"https://t.me/DesktopExtera"_q,
 			{ &st::exteraIconChannel });
+	});
+	builder.addDivider();
+
+	builder.addSkip();
+	builder.addSubsectionTitle(tr::lng_extera_updates());
+	builder.card([&] {
+		builder.addButton({
+			.id = u"extera/check_updates"_q,
+			.title = tr::lng_extera_check_updates(),
+			.icon = { &st::menuIconRestore },
+			.onClick = [=] {
+				using Result = Extera::Update::CheckResult;
+				const auto weak = base::make_weak(controller);
+				Extera::Update::CheckNow([=](Result result) {
+					const auto strong = weak.get();
+					if (!strong) {
+						return;
+					}
+					switch (result) {
+					case Result::Available:
+						Extera::Update::OpenRelease();
+						break;
+					case Result::Latest:
+						strong->showToast(
+							tr::lng_extera_updates_latest(tr::now));
+						break;
+					case Result::Failed:
+						strong->showToast(
+							tr::lng_extera_updates_failed(tr::now));
+						break;
+					}
+				});
+			},
+			.keywords = { u"update"_q, u"version"_q },
+		});
 	});
 	builder.addDivider();
 

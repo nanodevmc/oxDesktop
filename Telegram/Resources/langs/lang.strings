@@ -9475,6 +9475,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_ai_send" = "Send";
 "lng_extera_ai_clear" = "Clear";
 "lng_extera_feed" = "Channel Feed";
+"lng_extera_quick_actions" = "Quick Actions Bar";
+"lng_extera_quick_actions_about_toggle" = "Icons at the bottom of the message menu replace the selected items.";
+"lng_extera_quick_actions_buttons" = "Quick Actions Buttons";
+"lng_extera_quick_actions_limit" = "Up to 5 buttons.";
+"lng_extera_quick_actions_about" = "Up to 5 buttons. Drag to change the order.";
+"lng_extera_updates" = "Updates";
+"lng_extera_check_updates" = "Check for Updates";
+"lng_extera_updates_latest" = "The latest version is installed.";
+"lng_extera_updates_failed" = "Update check failed.";
 "lng_extera_streamer_full_mode" = "Hide Everything";
 "lng_extera_streamer_capture" = "Screen Capture";
 "lng_extera_streamer_capture_shown" = "Allowed";
@@ -9644,6 +9653,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_details_sender" = "Sender ID";
 "lng_extera_details_date" = "Date";
 "lng_extera_details_edited" = "Edited";
+"lng_extera_details_forwarded" = "Original Date";
 "lng_extera_details_file" = "File";
 "lng_extera_details_size" = "Size";
 "lng_extera_translate_about" = "The Translate button appears in the message context menu.";
