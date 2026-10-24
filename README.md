@@ -9,6 +9,8 @@ Unofficial **third-party** Windows port of [exteraGram](https://github.com/exter
 [![Website](https://img.shields.io/badge/Website-exteradesktop.xyz-blue.svg)](https://exteradesktop.xyz)
 [![Developer](https://img.shields.io/badge/Developer-@metawka-blue.svg)](https://t.me/metawka)
 
+![exteraGram Desktop](docs/screenshots/main.png)
+
 ## Features
 - exteraGram Preferences with General, Appearance, Chats, App Navigation, Plugins and Other sections.
 - Material Design 3 switches and sliders, avatar corners, 33 app icons from exteraGram.
@@ -17,6 +19,8 @@ Unofficial **third-party** Windows port of [exteraGram](https://github.com/exter
 - Python plugins compatible with exteraGram plugins, with automatic safe mode.
 - AI chat with Google Gemini using your own API key.
 - ID, data center and approximate registration date in profiles.
+
+![Plugins](docs/screenshots/plugins.png)
 
 ## Downloads
 Ready builds are on the [releases page](https://github.com/metawka/exteraDesktop/releases): an installer and a portable zip. Both include the `python` folder needed for plugins. The client installs beside the official Telegram Desktop and does not conflict with it.
