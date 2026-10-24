@@ -1,4 +1,4 @@
-![exteraGram Desktop](docs/banner.png)
+[![exteraGram Desktop](docs/banner.png)](https://github.com/metawka/exteraDesktop/stargazers)
 
 <img src="docs/logo.png" width="150" align="left"/>
 
