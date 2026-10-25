@@ -3,7 +3,7 @@
 #define MyAppPublisher "exDesktop"
 #define MyAppURL "https://exteradesktop.xyz"
 #define MyAppExeName "Telegram.exe"
-#define MyAppId "53F49750-6209-4FBF-9CA8-7A333C87D1ED"
+#define MyAppId "7D324782-E0D8-4A3C-BCF8-ECABD916542F"
 #define CurrentYear GetDateTimeString('yyyy','','')
 
 [Setup]
