@@ -22,7 +22,7 @@ jobs:
         run: ln -s "$GITHUB_WORKSPACE" "$(dirname "$GITHUB_WORKSPACE")/tdesktop"
 
       - name: Select Xcode
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+        run: sudo xcode-select -s "$(find /Applications -maxdepth 1 -name 'Xcode*.app' | sort -V | tail -1)"
 
       - name: Install build dependencies
         run: brew install automake libtool cmake wget pkg-config gnu-tar ninja nasm meson
