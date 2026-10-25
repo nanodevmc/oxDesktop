@@ -27,8 +27,9 @@ jobs:
       - name: Install build dependencies
         run: brew install automake libtool cmake wget pkg-config gnu-tar ninja nasm meson
 
-      - name: Cache ThirdParty libraries
-        uses: actions/cache@v4
+      - name: Restore ThirdParty libraries
+        id: libs
+        uses: actions/cache/restore@v4
         with:
           path: |
             ${{ github.workspace }}/../Libraries
@@ -37,6 +38,15 @@ jobs:
 
       - name: Build ThirdParty libraries
         run: ./Telegram/build/prepare/mac.sh silent
+
+      - name: Save ThirdParty libraries
+        if: steps.libs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ github.workspace }}/../Libraries
+            ${{ github.workspace }}/../ThirdParty
+          key: ${{ steps.libs.outputs.cache-primary-key }}
 
       - name: Configure
         working-directory: Telegram
