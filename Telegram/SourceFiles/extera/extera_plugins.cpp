@@ -35,7 +35,9 @@
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 
+#ifdef Q_OS_WIN
 #include <windows.h>
+#endif // Q_OS_WIN
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtGui/QClipboard>
@@ -449,8 +451,12 @@ PyObject *InitNativeModule() {
 } // namespace
 
 bool Available() {
+#ifdef Q_OS_WIN
 	return QFile::exists(RuntimePath() + u"python311.dll"_q)
 		&& QFile::exists(RuntimePath() + u"extera/extera_host.py"_q);
+#else // Q_OS_WIN
+	return QFile::exists(RuntimePath() + u"extera/extera_host.py"_q);
+#endif // Q_OS_WIN
 }
 
 bool Started() {
@@ -470,12 +476,14 @@ void Start() {
 		state.error = u"Python runtime not found"_q;
 		return;
 	}
+#ifdef Q_OS_WIN
 	const auto dll = QDir::toNativeSeparators(
 		RuntimePath() + u"python311.dll"_q).toStdWString();
 	if (!LoadLibraryW(dll.c_str())) {
 		state.error = u"python311.dll could not be loaded"_q;
 		return;
 	}
+#endif // Q_OS_WIN
 	if (PyImport_AppendInittab("_extera", InitNativeModule) == -1) {
 		state.error = u"Native module registration failed"_q;
 		return;
