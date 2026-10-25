@@ -1590,13 +1590,13 @@ if win and qt >= '6':
     # Windows 7 and 8 support for qtbase, and the ANGLE backend Qt 6 dropped.
     stage('qt6_windows7', """
 win32_win64:
-    python $ROOT_DIR/tdesktop/Telegram/build/prepare/fetch_archive.py desktop-app/qt6_windows7_patches 9ce1ffe051161a22f7e78f715b042c773f868e59 qt6_windows7
+    python %ROOT_DIR%\\tdesktop\\Telegram\\build\\prepare\\fetch_archive.py desktop-app/qt6_windows7_patches 9ce1ffe051161a22f7e78f715b042c773f868e59 qt6_windows7
 """)
 
 if win:
     stage('tg_angle', """
 win32_win64:
-    python $ROOT_DIR/tdesktop/Telegram/build/prepare/fetch_archive.py desktop-app/tg_angle 9fd174a91e6155d1006c5f427366b23006f5d899 tg_angle
+    python %ROOT_DIR%\\tdesktop\\Telegram\\build\\prepare\\fetch_archive.py desktop-app/tg_angle 9fd174a91e6155d1006c5f427366b23006f5d899 tg_angle
     cd tg_angle
     cmake -B out ^
         -DTG_ANGLE_SPECIAL_TARGET=%SPECIAL_TARGET% ^
@@ -1681,7 +1681,11 @@ else: # qt > '6'
     modifiedEnv['QT_ANGLE_CMAKE'] = qtAngleCmake
     branch = 'v$QT' + ('-lts-lgpl' if qt.startswith('6.2.') else '')
     stage('qt_' + qt, """
+win:
+    python %ROOT_DIR%\\\\tdesktop\\\\Telegram\\\\build\\\\prepare\\\\fetch_archive.py qt/qt5 """ + branch + """ qt_$QT --only=qtbase,qtimageformats,qtshadertools,qtsvg
+!win:
     python $ROOT_DIR/tdesktop/Telegram/build/prepare/fetch_archive.py qt/qt5 """ + branch + """ qt_$QT --only=qtbase,qtimageformats,qtshadertools,qtsvg
+common:
     cd qt_$QT
 depends:patches/qtbase_""" + qt + """/*.patch
 depends:patches/qtsvg_""" + qt + """/*.patch
@@ -1831,7 +1835,11 @@ win:
 """)
 
 stage('tg_owt', """
+win:
+    python %ROOT_DIR%\\\\tdesktop\\\\Telegram\\\\build\\\\prepare\\\\fetch_archive.py desktop-app/tg_owt 07fb35bc33b3e79125a1beab7690e830f183f5d8 tg_owt --recursive
+!win:
     python $ROOT_DIR/tdesktop/Telegram/build/prepare/fetch_archive.py desktop-app/tg_owt 07fb35bc33b3e79125a1beab7690e830f183f5d8 tg_owt --recursive
+common:
     cd tg_owt
 win:
     SET MOZJPEG_PATH=$LIBS_DIR/mozjpeg
@@ -1927,7 +1935,11 @@ release:
 """)
 
 stage('ada', """
+win:
+    python %ROOT_DIR%\\\\tdesktop\\\\Telegram\\\\build\\\\prepare\\\\fetch_archive.py ada-url/ada v3.2.9 ada
+!win:
     python $ROOT_DIR/tdesktop/Telegram/build/prepare/fetch_archive.py ada-url/ada v3.2.9 ada
+common:
     cd ada
 win:
     cmake -B out . ^
@@ -1948,7 +1960,11 @@ mac:
 """)
 
 stage('tde2e', """
+win:
+    python %ROOT_DIR%\\\\tdesktop\\\\Telegram\\\\build\\\\prepare\\\\fetch_archive.py tdlib/td 51743df tde2e
+!win:
     python $ROOT_DIR/tdesktop/Telegram/build/prepare/fetch_archive.py tdlib/td 51743df tde2e
+common:
     cd tde2e
 win:
     SET OPENSSL_DIR=%LIBS_DIR%\\openssl3
@@ -2034,7 +2050,11 @@ tlottieRevision = '92df98dc20'
 walletEngineRevision = 'e59e0d89d7ee90c388bf36e3334c5b276f396697'
 stage('tlottie', """
 version: 2
+win:
+    python %ROOT_DIR%\\\\tdesktop\\\\Telegram\\\\build\\\\prepare\\\\fetch_archive.py dkaraush/tlottie """ + tlottieRevision + """ tlottie
+!win:
     python $ROOT_DIR/tdesktop/Telegram/build/prepare/fetch_archive.py dkaraush/tlottie """ + tlottieRevision + """ tlottie
+common:
     cd tlottie
 """)
 
@@ -2043,10 +2063,11 @@ version: 2
 depends:patches/wallet-engine.patch
 win:
     SET "GIT_LFS_SKIP_SMUDGE=1"
+    python %ROOT_DIR%\\tdesktop\\Telegram\\build\\prepare\\fetch_archive.py i582/wallet-engine """ + walletEngineRevision + """ wallet-engine
 mac:
     export GIT_LFS_SKIP_SMUDGE=1
-win_mac:
     python $ROOT_DIR/tdesktop/Telegram/build/prepare/fetch_archive.py i582/wallet-engine """ + walletEngineRevision + """ wallet-engine
+win_mac:
     cd wallet-engine
     git apply --ignore-whitespace ../patches/wallet-engine.patch
 """)
