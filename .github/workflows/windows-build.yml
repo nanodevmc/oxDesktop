@@ -36,8 +36,9 @@ jobs:
           $vsPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
           echo "VCVARS64=$vsPath\VC\Auxiliary\Build\vcvars64.bat" >> $env:GITHUB_ENV
 
-      - name: Cache ThirdParty libraries
-        uses: actions/cache@v4
+      - name: Restore ThirdParty libraries
+        id: libs
+        uses: actions/cache/restore@v4
         with:
           path: |
             ${{ github.workspace }}\..\Libraries
@@ -49,6 +50,15 @@ jobs:
         run: |
           call "%VCVARS64%" -vcvars_ver=14.44
           Telegram\build\prepare\win.bat silent
+
+      - name: Save ThirdParty libraries
+        if: steps.libs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ github.workspace }}\..\Libraries
+            ${{ github.workspace }}\..\ThirdParty
+          key: ${{ steps.libs.outputs.cache-primary-key }}
 
       - name: Install Inno Setup
         shell: pwsh
