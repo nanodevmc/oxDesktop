@@ -11,6 +11,8 @@ An unofficial Windows client built from the official [Telegram Desktop](https://
 [![Website](https://img.shields.io/badge/Website-exteradesktop.xyz-blue.svg)](https://exteradesktop.xyz)
 [![Developer](https://img.shields.io/badge/Developer-@metawka-blue.svg)](https://t.me/metawka)
 
+![exDesktop settings](docs/screenshots/main.png)
+
 ## Features
 - Settings for General, Appearance, Chats, Navigation, Plugins and Other.
 - Material Design 3 controls, adjustable avatar corners and 33 application icons.
@@ -20,6 +22,8 @@ An unofficial Windows client built from the official [Telegram Desktop](https://
 - Python plugin engine with per plugin settings and automatic safe mode after crashes.
 - Gemini chat with your own API key.
 - User IDs, data center and estimated registration date in profiles.
+
+![Plugin manager](docs/screenshots/plugins.png)
 
 ## Downloads
 Get the installer or portable archive from the [releases page](https://github.com/metawka/exDesktop/releases). Both packages include the `python` folder needed by plugins. The client installs beside Telegram Desktop and keeps its data separate.
