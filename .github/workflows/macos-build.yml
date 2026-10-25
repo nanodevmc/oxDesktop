@@ -37,7 +37,7 @@ jobs:
           key: mac-libs-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/mac.sh') }}
 
       - name: Build ThirdParty libraries
-        run: ./Telegram/build/prepare/mac.sh silent
+        run: ./Telegram/build/prepare/mac.sh silent arm64-only
 
       - name: Save ThirdParty libraries
         if: steps.libs.outputs.cache-hit != 'true'
