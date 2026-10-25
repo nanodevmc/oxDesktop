@@ -29,6 +29,13 @@ jobs:
         shell: cmd
         run: mklink /J "%GITHUB_WORKSPACE%\..\tdesktop" "%GITHUB_WORKSPACE%"
 
+      - name: Find vcvars64.bat
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          echo "VCVARS64=$vsPath\VC\Auxiliary\Build\vcvars64.bat" >> $env:GITHUB_ENV
+
       - name: Cache ThirdParty libraries
         uses: actions/cache@v4
         with:
@@ -39,18 +46,13 @@ jobs:
 
       - name: Build ThirdParty libraries
         shell: cmd
-        run: Telegram\build\prepare\win.bat silent
+        run: |
+          call "%VCVARS64%" -vcvars_ver=14.44
+          Telegram\build\prepare\win.bat silent
 
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --yes --no-progress
-
-      - name: Find vcvars64.bat
-        shell: pwsh
-        run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vsPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
-          echo "VCVARS64=$vsPath\VC\Auxiliary\Build\vcvars64.bat" >> $env:GITHUB_ENV
 
       # -vcvars_ver=14.44 is what docs/building-win.md pins for Windows 7
       # support. If a runner's VS install doesn't ship that exact toolset
