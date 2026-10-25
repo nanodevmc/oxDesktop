@@ -73,36 +73,39 @@ jobs:
           $versionHeader = Get-Content 'Telegram\SourceFiles\core\version.h' -Raw
           if ($versionHeader -notmatch 'AppVersionStr\s*=\s*"([^"]+)"') { throw 'AppVersionStr was not found' }
           $version = $Matches[1]
+          $packageVersion = $version
+          if ($env:GITHUB_EVENT_NAME -eq 'release') { $packageVersion = $env:GITHUB_REF_NAME.TrimStart('v') }
           $portable = Join-Path $env:GITHUB_WORKSPACE 'exDesktop-windows-x64'
           New-Item -ItemType Directory -Path $portable -Force | Out-Null
           Copy-Item (Join-Path $release 'Telegram.exe') $portable
           Copy-Item (Join-Path $release 'python') $portable -Recurse
           Copy-Item (Join-Path $release 'modules') $portable -Recurse
           if (Test-Path (Join-Path $release 'Updater.exe')) { Copy-Item (Join-Path $release 'Updater.exe') $portable }
-          Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $env:GITHUB_WORKSPACE 'exDesktop-windows-x64.zip') -Force
+          $portableZip = "exDesktop-portable-x64.$packageVersion.zip"
+          Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $env:GITHUB_WORKSPACE $portableZip) -Force
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           $setup = Join-Path $env:GITHUB_WORKSPACE 'Telegram\build\setup.iss'
           $setupArgs = @(
             '/dSkipSign',
             "/dMyAppVersion=$version",
             "/dMyAppVersionZero=$version.0",
-            "/dMyAppVersionFull=$version",
-            "/dMyOutputBaseFilename=exDesktop-setup-x64-$version",
+            "/dMyAppVersionFull=$packageVersion",
+            "/dMyOutputBaseFilename=exDesktop-setup-x64.$packageVersion",
             "/dReleasePath=$release",
             '/dMyBuildTarget=win64',
             $setup
           )
           & $iscc @setupArgs
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
-          "BUILD_VERSION=$version" >> $env:GITHUB_ENV
+          "BUILD_VERSION=$packageVersion" >> $env:GITHUB_ENV
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: exDesktop-windows-x64
           path: |
-            exDesktop-windows-x64.zip
-            out/Release/exDesktop-setup-x64-*.exe
+            exDesktop-portable-x64.*.zip
+            out/Release/exDesktop-setup-x64.*.exe
 
       - name: Attach to release
         if: github.event_name == 'release'
@@ -110,4 +113,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$env:RELEASE_TAG" "exDesktop-windows-x64.zip" "out\Release\exDesktop-setup-x64-$env:BUILD_VERSION.exe"
+        run: gh release upload "$env:RELEASE_TAG" "exDesktop-portable-x64.$env:BUILD_VERSION.zip" "out\Release\exDesktop-setup-x64.$env:BUILD_VERSION.exe" --clobber
