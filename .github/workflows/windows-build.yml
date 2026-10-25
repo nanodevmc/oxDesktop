@@ -1,0 +1,77 @@
+name: Windows build
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # prepare.py expects the checkout to be a folder literally named
+      # "tdesktop" sitting right next to Libraries/ThirdParty, same deal
+      # as the macOS workflow.
+      - name: Link checkout as tdesktop
+        shell: cmd
+        run: mklink /J "%GITHUB_WORKSPACE%\..\tdesktop" "%GITHUB_WORKSPACE%"
+
+      - name: Cache ThirdParty libraries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}\..\Libraries
+            ${{ github.workspace }}\..\ThirdParty
+          key: win-libs-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/win.bat') }}
+
+      - name: Build ThirdParty libraries
+        shell: cmd
+        run: Telegram\build\prepare\win.bat silent
+
+      - name: Find vcvars64.bat
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          echo "VCVARS64=$vsPath\VC\Auxiliary\Build\vcvars64.bat" >> $env:GITHUB_ENV
+
+      # -vcvars_ver=14.44 is what docs/building-win.md pins for Windows 7
+      # support. If a runner's VS install doesn't ship that exact toolset
+      # this will fail and needs adjusting to whatever is actually there.
+      - name: Configure and build
+        shell: cmd
+        run: |
+          call "%VCVARS64%" -vcvars_ver=14.44
+          cd Telegram
+          call configure.bat x64 -D TDESKTOP_API_ID=${{ secrets.TDESKTOP_API_ID }} -D TDESKTOP_API_HASH=${{ secrets.TDESKTOP_API_HASH }}
+          cd ..\out
+          msbuild Telegram.slnx /t:Telegram /p:Configuration=Release /m
+
+      - name: Package
+        shell: pwsh
+        run: Compress-Archive -Path out\Release\Telegram.exe -DestinationPath exteraDesktop-windows-x64.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exteraDesktop-windows-x64
+          path: exteraDesktop-windows-x64.zip
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$env:RELEASE_TAG" "exteraDesktop-windows-x64.zip"
