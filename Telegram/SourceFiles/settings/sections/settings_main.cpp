@@ -389,7 +389,7 @@ void BuildSectionButtons(SectionBuilder &builder) {
 		.title = tr::lng_extera_title(),
 		.icon = { &st::exteraIconLogo },
 		.onClick = [=] { showOther(ExteraId()); },
-		.keywords = { u"extera"_q, u"exteragram"_q },
+		.keywords = { u"exdesktop"_q },
 	});
 	builder.addDivider();
 	builder.addSkip();

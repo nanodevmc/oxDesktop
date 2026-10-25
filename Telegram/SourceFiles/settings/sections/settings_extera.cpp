@@ -479,7 +479,7 @@ struct AppIconInfo {
 
 [[nodiscard]] const std::vector<AppIconInfo> &AppIcons() {
 	static const auto result = std::vector<AppIconInfo>{
-		{ QString(), QString(), u"exteraGram"_q },
+		{ QString(), QString(), u"exDesktop"_q },
 		{ u"orbit"_q, u"Orbit"_q, u"exteraGram"_q },
 		{ u"editor"_q, u"Editor"_q, u"exteraGram"_q },
 		{ u"mole"_q, u"Mole"_q, u"whatwherewhywhen"_q },
@@ -1762,8 +1762,8 @@ void BuildOther(SectionBuilder &builder) {
 			builder,
 			u"port_channel"_q,
 			tr::lng_extera_port_channel(),
-			u"@DesktopExtera"_q,
-			u"https://t.me/DesktopExtera"_q,
+			u"@exDesktop"_q,
+			u"https://t.me/exDesktop"_q,
 			{ &st::exteraIconChannel });
 	});
 	builder.addDivider();
@@ -1931,8 +1931,8 @@ void BuildMain(SectionBuilder &builder) {
 			builder,
 			u"channel"_q,
 			tr::lng_extera_channel(),
-			u"@exteraGram"_q,
-			u"https://t.me/exteraGram"_q,
+			u"@exDesktop"_q,
+			u"https://t.me/exDesktop"_q,
 			{ &st::exteraIconChannel });
 		AddLink(
 			builder,
@@ -1952,8 +1952,8 @@ void BuildMain(SectionBuilder &builder) {
 			builder,
 			u"website"_q,
 			tr::lng_extera_website(),
-			u"exteraGram.app"_q,
-			u"https://exteragram.app"_q,
+			u"exteradesktop.xyz"_q,
+			u"https://exteradesktop.xyz"_q,
 			{ &st::exteraIconWebsite });
 	});
 }

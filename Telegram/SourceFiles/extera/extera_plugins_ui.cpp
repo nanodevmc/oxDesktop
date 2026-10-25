@@ -921,7 +921,7 @@ void ChooseAndInstall(not_null<Window::SessionController*> controller) {
 	FileDialog::GetOpenPath(
 		Core::App().getFileDialogParent(),
 		tr::lng_extera_plugins_install(tr::now),
-		u"exteraGram Plugin (*.plugin);;Python (*.py)"_q,
+		u"exDesktop Plugin (*.plugin);;Python (*.py)"_q,
 		[=](FileDialog::OpenResult &&result) {
 			if (!result.paths.isEmpty()) {
 				ShowInstallBox(controller, result.paths.front(), false);

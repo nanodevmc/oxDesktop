@@ -964,7 +964,7 @@ QString SavedWindows::shellTitle(
 		? st::wrap_rtl(session->user()->name())
 		: QString();
 	return name.isEmpty()
-		? (user.isEmpty() ? u"exteraGram"_q : user)
+		? (user.isEmpty() ? u"exDesktop"_q : user)
 		: user.isEmpty()
 		? name
 		: (name + u" @ "_q + user);

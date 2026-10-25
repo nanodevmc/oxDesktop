@@ -211,15 +211,15 @@ QString PluralCodeForCustom(
 [[nodiscard]] QString Rebrand(ushort index, QString value) {
 	if (index == tr::lng_intro_about.base) {
 		return IsCyrillic(value)
-			? QString::fromUtf16(u"\u041D\u0435\u043E\u0444\u0438\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u043F\u043E\u0440\u0442 exteraGram \u0434\u043B\u044F Windows.\n\u041D\u0435 \u0441\u0432\u044F\u0437\u0430\u043D \u0441 \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u0439 exteraGram.")
+			? QString::fromUtf16(u"exDesktop - \u043D\u0435\u043E\u0444\u0438\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u043A\u043B\u0438\u0435\u043D\u0442 Telegram \u0434\u043B\u044F Windows.")
 			: GetOriginalValue(index);
 	} else if (index == tr::lng_about_text1.base) {
 		return GetOriginalValue(index);
 	}
-	value.replace(u"Telegram Desktop"_q, u"exteraGram Desktop"_q);
+	value.replace(u"Telegram Desktop"_q, u"exDesktop"_q);
 	if (index == tr::lng_open_from_tray.base
 		|| index == tr::lng_quit_from_tray.base) {
-		value.replace(u"Telegram"_q, u"exteraGram"_q);
+		value.replace(u"Telegram"_q, u"exDesktop"_q);
 	}
 	return value;
 }

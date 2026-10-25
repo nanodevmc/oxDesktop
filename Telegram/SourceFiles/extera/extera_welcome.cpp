@@ -84,8 +84,8 @@ void FillUnofficialInfo(not_null<Ui::VerticalLayout*> container) {
 	AddLinkButton(
 		container,
 		tr::lng_extera_welcome_channel(),
-		u"@DesktopExtera"_q,
-		u"https://t.me/DesktopExtera"_q,
+		u"@exDesktop"_q,
+		u"https://t.me/exDesktop"_q,
 		&st::exteraIconChannel);
 }
 

@@ -930,7 +930,7 @@ void MainWindow::updateTitle() {
 		: Dialogs::Key();
 	const auto thread = key ? key.thread() : nullptr;
 	if (!thread) {
-		setTitle((user.isEmpty() ? u"exteraGram"_q : user) + added + suffix);
+		setTitle((user.isEmpty() ? u"exDesktop"_q : user) + added + suffix);
 		return;
 	}
 	const auto history = thread->owningHistory();

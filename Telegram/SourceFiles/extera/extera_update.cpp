@@ -64,9 +64,9 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 		state.manager = new QNetworkAccessManager(qApp);
 	}
 	auto request = QNetworkRequest(QUrl(
-		u"https://api.github.com/repos/metawka/exteraDesktop/releases/latest"_q));
+		u"https://api.github.com/repos/metawka/exDesktop/releases/latest"_q));
 	request.setRawHeader("Accept", "application/vnd.github+json");
-	request.setRawHeader("User-Agent", "exteraGram-Desktop");
+	request.setRawHeader("User-Agent", "exDesktop");
 	const auto reply = state.manager->get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {
 		reply->deleteLater();

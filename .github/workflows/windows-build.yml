@@ -9,6 +9,8 @@ jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 360
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,6 +41,10 @@ jobs:
         shell: cmd
         run: Telegram\build\prepare\win.bat silent
 
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
       - name: Find vcvars64.bat
         shell: pwsh
         run: |
@@ -60,13 +66,41 @@ jobs:
 
       - name: Package
         shell: pwsh
-        run: Compress-Archive -Path out\Release\Telegram.exe -DestinationPath exteraDesktop-windows-x64.zip
+        run: |
+          $release = Join-Path $env:GITHUB_WORKSPACE 'out\Release'
+          $versionHeader = Get-Content 'Telegram\SourceFiles\core\version.h' -Raw
+          if ($versionHeader -notmatch 'AppVersionStr\s*=\s*"([^"]+)"') { throw 'AppVersionStr was not found' }
+          $version = $Matches[1]
+          $portable = Join-Path $env:GITHUB_WORKSPACE 'exDesktop-windows-x64'
+          New-Item -ItemType Directory -Path $portable -Force | Out-Null
+          Copy-Item (Join-Path $release 'Telegram.exe') $portable
+          Copy-Item (Join-Path $release 'python') $portable -Recurse
+          Copy-Item (Join-Path $release 'modules') $portable -Recurse
+          if (Test-Path (Join-Path $release 'Updater.exe')) { Copy-Item (Join-Path $release 'Updater.exe') $portable }
+          Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $env:GITHUB_WORKSPACE 'exDesktop-windows-x64.zip') -Force
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $setup = Join-Path $env:GITHUB_WORKSPACE 'Telegram\build\setup.iss'
+          $setupArgs = @(
+            '/dSkipSign',
+            "/dMyAppVersion=$version",
+            "/dMyAppVersionZero=$version.0",
+            "/dMyAppVersionFull=$version",
+            "/dMyOutputBaseFilename=exDesktop-setup-x64-$version",
+            "/dReleasePath=$release",
+            '/dMyBuildTarget=win64',
+            $setup
+          )
+          & $iscc @setupArgs
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
+          "BUILD_VERSION=$version" >> $env:GITHUB_ENV
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: exteraDesktop-windows-x64
-          path: exteraDesktop-windows-x64.zip
+          name: exDesktop-windows-x64
+          path: |
+            exDesktop-windows-x64.zip
+            out/Release/exDesktop-setup-x64-*.exe
 
       - name: Attach to release
         if: github.event_name == 'release'
@@ -74,4 +108,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$env:RELEASE_TAG" "exteraDesktop-windows-x64.zip"
+        run: gh release upload "$env:RELEASE_TAG" "exDesktop-windows-x64.zip" "out\Release\exDesktop-setup-x64-$env:BUILD_VERSION.exe"
