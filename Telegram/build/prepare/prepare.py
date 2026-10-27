@@ -64,6 +64,7 @@ optionsList = [
     'skip-release',
     'build-stackwalk',
     'qt-asserts',
+    'arm64-only',
 ]
 options = []
 runCommand = []
@@ -156,6 +157,7 @@ elif (mac):
     environment.update({
         'SPECIAL_TARGET': 'mac',
         'MAKE_THREADS_CNT': '-j' + str(os.cpu_count()),
+        'MAC_ARCHS': 'arm64' if 'arm64-only' in options else 'x86_64;arm64',
         'SDKROOT': macSdk,
         'MACOSX_DEPLOYMENT_TARGET': macDeployment,
         'UNGUARDED': '-Werror=unguarded-availability-new',
@@ -625,7 +627,7 @@ stage('xz', """
     git checkout 05af863c3166cddeb4ab935829b14e995c8346b4
     sed -i '' '\\@check_symbol_exists(futimens "sys/types.h;sys/stat.h" HAVE_FUTIMENS)@d' CMakeLists.txt
     CFLAGS="$UNGUARDED" CPPFLAGS="$UNGUARDED" cmake -B build . \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
+        -D CMAKE_OSX_ARCHITECTURES="$MAC_ARCHS" \\
         -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX
     cmake --build build
     cmake --install build
@@ -765,7 +767,7 @@ win:
     cmake --install out --config Release
 mac:
     CFLAGS="$UNGUARDED" CPPFLAGS="$UNGUARDED" cmake -B build . \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
+        -D CMAKE_OSX_ARCHITECTURES="$MAC_ARCHS" \\
         -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX
     cmake --build build
     cmake --install build
@@ -787,7 +789,7 @@ release:
     cd Debug
     cmake ../.. \\
         -D CMAKE_BUILD_TYPE=Debug \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+        -D CMAKE_OSX_ARCHITECTURES="$MAC_ARCHS"
     cmake --build .
 release:
     cd ..
@@ -795,7 +797,7 @@ release:
     cd Release
     cmake ../.. \\
         -D CMAKE_BUILD_TYPE=Release \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+        -D CMAKE_OSX_ARCHITECTURES="$MAC_ARCHS"
     cmake --build .
 """)
 
@@ -973,7 +975,7 @@ release:
     cmake --install . --config Release
 mac:
     cmake . \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
+        -D CMAKE_OSX_ARCHITECTURES="$MAC_ARCHS" \\
         -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX \\
         -D BUILD_SHARED_LIBS=OFF \\
         -D AVIF_ENABLE_WERROR=OFF \\
@@ -1058,7 +1060,7 @@ release:
     cmake --install . --config Release
 mac:
     cmake . \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
+        -D CMAKE_OSX_ARCHITECTURES="$MAC_ARCHS" \\
         -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX \\
         ${cmake_defines}
     cmake --build . --config MinSizeRel
@@ -1392,7 +1394,7 @@ release:
     cmake --install . --config Release
 mac:
     cmake . \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
+        -D CMAKE_OSX_ARCHITECTURES="$MAC_ARCHS" \\
         -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX \\
         -D BUILD_SHARED_LIBS=OFF \\
         -D BUILD_DOCUMENTATION=OFF \\
@@ -1442,7 +1444,7 @@ mac:
         -D ALSOFT_UTILS=OFF \\
         -D ALSOFT_TESTS=OFF \\
         -D LIBTYPE:STRING=STATIC \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+        -D CMAKE_OSX_ARCHITECTURES="$MAC_ARCHS"
     cmake --build build
     cmake --install build
 """)
@@ -1481,7 +1483,7 @@ mac:
     cmake -S "$PREPARE_DIR/breakpad" -B out -G "Ninja Multi-Config" \\
         -DBREAKPAD_SOURCE_DIR="$PWD" \\
         -DCMAKE_INSTALL_PREFIX="$PWD" \\
-        -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+        -DCMAKE_OSX_ARCHITECTURES="$MAC_ARCHS"
     cmake --build out --config Debug --parallel
     cmake --install out --config Debug
 release:
@@ -1724,7 +1726,7 @@ mac:
         -no-feature-brotli \
         -no-feature-cxx17_filesystem \
         -platform macx-clang -- \
-        -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+        -DCMAKE_OSX_ARCHITECTURES="$MAC_ARCHS" \
         -DCMAKE_OSX_SYSROOT="$SDKROOT" \
         -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" \
         -DCMAKE_PREFIX_PATH="$USED_PREFIX" \
@@ -1953,7 +1955,7 @@ mac:
     CFLAGS="$UNGUARDED" CPPFLAGS="$UNGUARDED" cmake -B build . \\
         -D ADA_TESTING=OFF \\
         -D ADA_TOOLS=OFF \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
+        -D CMAKE_OSX_ARCHITECTURES="$MAC_ARCHS" \\
         -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX
     cmake --build build
     cmake --install build
@@ -2022,7 +2024,7 @@ mac:
         cd out/$BUILD_CONFIG
         cmake \
             -DCMAKE_BUILD_TYPE=$BUILD_CONFIG \
-            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+            -DCMAKE_OSX_ARCHITECTURES="$MAC_ARCHS" \
             -DOPENSSL_FOUND=1 \
             -DOPENSSL_INCLUDE_DIR=$LIBS_DIR/openssl3/include \
             -DOPENSSL_SSL_LIBRARY=$LIBS_DIR/openssl3/libssl.a \
