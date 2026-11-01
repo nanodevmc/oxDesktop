@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/profile/info_profile_actions.h"
 
 #include "extera/extera_config.h"
+#include "extera/extera_regdate.h"
 #include "extera/extera_streamer.h"
 
 #include "api/api_blocked_peers.h"
@@ -182,66 +183,8 @@ base::options::toggle ShowChannelJoinedBelowAbout({
 	return 0;
 }
 
-[[nodiscard]] TimeId RegistrationDate(uint64 id) {
-	static const auto points = std::vector<std::pair<uint64, TimeId>>{
-		{ 2768409ULL, 1383264000 },
-		{ 7679610ULL, 1388448000 },
-		{ 11538514ULL, 1391212000 },
-		{ 15835244ULL, 1392940000 },
-		{ 23646077ULL, 1393459000 },
-		{ 38015510ULL, 1393632000 },
-		{ 44634663ULL, 1399334000 },
-		{ 46145305ULL, 1400198000 },
-		{ 54845238ULL, 1411257000 },
-		{ 63263518ULL, 1414454000 },
-		{ 101260938ULL, 1425600000 },
-		{ 111220210ULL, 1429574000 },
-		{ 124872445ULL, 1439856000 },
-		{ 133909606ULL, 1444176000 },
-		{ 157242073ULL, 1446768000 },
-		{ 171295414ULL, 1457481000 },
-		{ 181783990ULL, 1460246000 },
-		{ 222021233ULL, 1465344000 },
-		{ 225034354ULL, 1466208000 },
-		{ 278941742ULL, 1473465000 },
-		{ 285253072ULL, 1476835000 },
-		{ 294851037ULL, 1479600000 },
-		{ 328594461ULL, 1482969000 },
-		{ 352940995ULL, 1487894000 },
-		{ 369669043ULL, 1490918000 },
-		{ 400169472ULL, 1501459000 },
-		{ 805158066ULL, 1563208000 },
-		{ 1974255900ULL, 1634000000 },
-		{ 2147483647ULL, 1640995200 },
-		{ 5000000000ULL, 1648771200 },
-		{ 6000000000ULL, 1677628800 },
-		{ 7000000000ULL, 1709251200 },
-		{ 7500000000ULL, 1725148800 },
-		{ 8000000000ULL, 1740787200 },
-	};
-	if (id <= points.front().first) {
-		return points.front().second;
-	}
-	for (auto i = 1; i != int(points.size()); ++i) {
-		const auto &[toId, toDate] = points[i];
-		if (id <= toId) {
-			const auto &[fromId, fromDate] = points[i - 1];
-			const auto ratio = double(id - fromId) / double(toId - fromId);
-			return fromDate + TimeId(ratio * (toDate - fromDate));
-		}
-	}
-	return points.back().second;
-}
-
 [[nodiscard]] QString RegistrationText(not_null<UserData*> user) {
-	const auto date = base::unixtime::parse(
-		RegistrationDate(user->id.value & PeerId::kChatTypeMask)).date();
-	return tr::lng_extera_registered(
-		tr::now,
-		lt_date,
-		QLocale().standaloneMonthName(date.month())
-			+ ' '
-			+ QString::number(date.year()));
+	return Extera::RegDate::FormatEstimation(user->id.value & PeerId::kChatTypeMask);
 }
 
 [[nodiscard]] QString PeerDcText(not_null<PeerData*> peer) {

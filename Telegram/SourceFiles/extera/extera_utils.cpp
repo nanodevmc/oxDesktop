@@ -7,6 +7,8 @@
 #include <QtCore/QRegularExpression>
 #include <QtCore/QTime>
 #include <QtCore/QTimeZone>
+#include <QtCore/QUrl>
+#include <QtCore/QUrlQuery>
 
 #include <cmath>
 
@@ -639,6 +641,55 @@ std::optional<QString> InlineMathResult(const QString &text) {
 		return withEquals + *value + ' ';
 	}
 	return std::nullopt;
+}
+
+QString CleanUrl(const QString &urlString) {
+	const auto url = QUrl(urlString);
+	if (!url.isValid() || !url.hasQuery()) {
+		return urlString;
+	}
+	const auto query = QUrlQuery(url.query());
+	const auto items = query.queryItems();
+	auto cleaned = QUrlQuery();
+	for (const auto &[key, val] : items) {
+		const auto lower = key.toLower();
+		if (lower.startsWith(u"utm_"_q)
+			|| lower == u"si"_q
+			|| lower == u"igshid"_q
+			|| lower == u"fbclid"_q
+			|| lower == u"gclid"_q
+			|| lower == u"ref"_q
+			|| lower == u"mc_cid"_q
+			|| lower == u"mc_eid"_q) {
+			continue;
+		}
+		cleaned.addQueryItem(key, val);
+	}
+	auto result = url;
+	if (cleaned.isEmpty()) {
+		result.setQuery(QString());
+	} else {
+		result.setQuery(cleaned);
+	}
+	return result.toString();
+}
+
+QString CleanTextUrls(QString text) {
+	static const auto urlRe = QRegularExpression(
+		u"https?://[^\\s]+"_q,
+		QRegularExpression::CaseInsensitiveOption);
+	auto i = urlRe.globalMatch(text);
+	auto offset = 0;
+	while (i.hasNext()) {
+		const auto match = i.next();
+		const auto original = match.captured(0);
+		const auto cleaned = CleanUrl(original);
+		if (cleaned != original) {
+			text.replace(match.capturedStart(0) + offset, original.size(), cleaned);
+			offset += cleaned.size() - original.size();
+		}
+	}
+	return text;
 }
 
 } // namespace Extera

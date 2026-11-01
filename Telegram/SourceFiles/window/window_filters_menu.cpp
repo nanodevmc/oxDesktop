@@ -626,14 +626,16 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 			const auto chats = state.chats;
 			const auto chatsMuted = state.chatsMuted;
 			const auto muted = (chatsMuted + state.marksMuted);
+			const auto effectivelyIncludeMuted = includeMuted
+				&& !Extera::Bool(u"folder_unmuted_only"_q) && (Extera::Int(u"folder_counter"_q) != 1);
 			const auto count = (chats + state.marks)
-				- (includeMuted ? 0 : muted);
+				- (effectivelyIncludeMuted ? 0 : muted);
 			const auto string = !count
 				? QString()
 				: (count > 999)
 				? "99+"
 				: QString::number(count);
-			raw->setBadge(string, includeMuted && (count == muted));
+			raw->setBadge(string, effectivelyIncludeMuted && (count == muted));
 			if (!locked) {
 				raw->setAccessibleName(count
 					? tr::lng_filter_unread_chats(

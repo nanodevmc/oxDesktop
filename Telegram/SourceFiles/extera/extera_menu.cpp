@@ -21,6 +21,12 @@
 #include "styles/style_widgets.h"
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
+#include "data/data_file_click_handler.h"
+#include "data/data_photo.h"
+#include "data/data_photo_media.h"
+#include "extera/extera_ip_info.h"
+#include "extera/extera_lyrics.h"
+#include "extera/extera_platform.h"
 #include "extera/extera_utils.h"
 #include "extera/extera_plugins_ui.h"
 #include "history/history.h"
@@ -421,6 +427,16 @@ void FillDetails(
 				&st::menuIconDownload,
 				tr::lng_extera_details_size(tr::now),
 				Ui::FormatSizeText(document->size));
+			const auto path = document->filepath();
+			if (!path.isEmpty()) {
+				const auto platform = Extera::Platform::DetectFromFile(path);
+				if (!platform.isEmpty()) {
+					add(
+						&st::menuIconInfo,
+						tr::lng_extera_platform_sender(tr::now),
+						platform);
+				}
+			}
 		}
 	}
 }
@@ -436,6 +452,57 @@ void AddMessageMenuActions(
 	}
 	const auto itemId = item->fullId();
 	const auto session = &item->history()->session();
+	if (Bool(u"menu_copy_photo"_q)) {
+		if (const auto media = item->media()) {
+		if (const auto photo = media->photo()) {
+			if (!photo->isNull() && photo->activeMediaView() && photo->activeMediaView()->loaded()) {
+				menu->addAction(tr::lng_extera_menu_copy_photo(tr::now), [=] {
+					photo->activeMediaView()->setToClipboard();
+				}, &st::menuIconCopy);
+			}
+		}
+		}
+	}
+	if (Bool(u"menu_save"_q)) {
+		if (const auto media = item->media()) {
+			if (const auto document = media->document()) {
+				menu->addAction(tr::lng_extera_menu_save(tr::now), [=] {
+					DocumentSaveClickHandler::Save(
+						item->fullId(),
+						document,
+						DocumentSaveClickHandler::Mode::ToFile);
+				}, &st::menuIconDownload);
+			}
+		}
+	}
+	const auto ip = Extera::IpInfo::ExtractIp(item->originalText().text);
+	if (!ip.isEmpty()) {
+		menu->addAction(tr::lng_extera_inspect_ip(tr::now) + " (" + ip + ")", [=] {
+			Extera::IpInfo::Inspect(controller, ip);
+		}, &st::menuIconInfo);
+	}
+	if (const auto media = item->media()) {
+		if (const auto document = media->document()) {
+			if (document->isSong()) {
+				const auto song = document->song();
+				const auto artist = song ? song->performer : QString();
+				const auto title = song ? song->title : document->filename();
+				const auto duration = song ? song->duration : 0;
+				menu->addAction(tr::lng_extera_player_lyrics(tr::now), [=] {
+					Extera::Lyrics::ShowBox(controller, artist, title, duration);
+				}, &st::menuIconInfo);
+			}
+		}
+	}
+	if (Bool(u"menu_clean_link"_q)) {
+		const auto text = item->originalText().text;
+		const auto cleaned = Extera::CleanTextUrls(text);
+		if (!cleaned.isEmpty() && cleaned != text) {
+			menu->addAction(tr::lng_extera_menu_clean_text(tr::now), [=] {
+				QGuiApplication::clipboard()->setText(cleaned);
+			}, &st::menuIconCopy);
+		}
+	}
 	if (Bool(u"menu_repeat"_q)
 		&& item->allowsForward()
 		&& Data::CanSendAnything(item->history())) {

@@ -1967,6 +1967,7 @@ void PartChats5(SectionBuilder &builder) {
 				{ u"menu_repeat"_q, &tr::lng_extera_menu_repeat },
 				{ u"menu_history"_q, &tr::lng_extera_menu_history },
 				{ u"menu_details"_q, &tr::lng_extera_menu_details },
+				{ u"menu_clean_link"_q, &tr::lng_extera_menu_clean_link },
 				{ u"show_report_button"_q, &tr::lng_extera_menu_report },
 			});
 		AddToggle(
