@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_premium_limits.h"
 #include "data/data_session.h"
 #include "data/data_unread_value.h"
+#include "extera/extera_config.h"
 #include "data/data_user.h"
 #include "lang/lang_keys.h"
 #include "menu/menu_mark_as_read.h"
@@ -243,9 +244,11 @@ not_null<Ui::RpWidget*> AddChatFiltersTabsStrip(
 				const auto chats = state.chats;
 				const auto chatsMuted = state.chatsMuted;
 				const auto muted = (chatsMuted + state.marksMuted);
+				const auto effectivelyIncludeMuted = includeMuted
+					&& !Extera::Bool(u"folder_unmuted_only"_q) && (Extera::Int(u"folder_counter"_q) != 1);
 				const auto count = (chats + state.marks)
-					- (includeMuted ? 0 : muted);
-				const auto isMuted = includeMuted && (count == muted);
+					- (effectivelyIncludeMuted ? 0 : muted);
+				const auto isMuted = effectivelyIncludeMuted && (count == muted);
 				slider->setUnreadCount(i, count, isMuted);
 				slider->fitWidthToSections();
 			}, state->reorderLifetime);

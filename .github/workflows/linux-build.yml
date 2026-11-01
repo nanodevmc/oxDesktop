@@ -60,6 +60,14 @@ jobs:
           rm -rf ${{ runner.temp }}/.buildx-cache
           mv ${{ runner.temp }}/.buildx-cache-new ${{ runner.temp }}/.buildx-cache
 
+      - name: Build cache
+        uses: actions/cache@v4
+        with:
+          path: out
+          key: ${{ runner.os }}-out-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-out-
+
       - name: Build
         env:
           API_ID: ${{ secrets.TDESKTOP_API_ID }}

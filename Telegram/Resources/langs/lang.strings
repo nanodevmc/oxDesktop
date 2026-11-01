@@ -9436,6 +9436,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_menu_history" = "Message History";
 "lng_extera_menu_details" = "Details";
 "lng_extera_menu_report" = "Report";
+"lng_extera_inspect_ip" = "Inspect IP / Host";
+"lng_extera_regdate_approx" = "Approximate Registration";
+"lng_extera_player_lyrics" = "Lyrics";
+"lng_extera_security_confirm_title" = "Security Confirmation";
+"lng_extera_platform_sender" = "Sent from";
+"lng_extera_menu_clean_link" = "Copy Clean Link";
+"lng_extera_menu_clean_text" = "Copy Clean Text";
+"lng_extera_folder_unmuted_only" = "Only Unmuted Chats in Folders";
+"lng_extera_folder_unmuted_only_about" = "Do not count muted chats in folder tab badges";
 "lng_extera_media" = "Photos and Videos";
 "lng_extera_send_hd" = "Always Send in HD";
 "lng_extera_seek_step" = "Video Seek Step";

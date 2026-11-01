@@ -47,6 +47,7 @@ jobs:
             mac-libs-
 
       - name: Build ThirdParty libraries
+        if: steps.libs.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: ./tdesktop/Telegram/build/prepare/mac.sh silent
@@ -64,7 +65,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: mac-arm64
-          max-size: 2G
+          max-size: 10G
 
       - name: Configure
         working-directory: tdesktop/Telegram

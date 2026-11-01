@@ -1960,6 +1960,18 @@ PRIVATE
     extera/extera_views.h
     extera/extera_welcome.cpp
     extera/extera_welcome.h
+    extera/extera_regdate.cpp
+    extera/extera_regdate.h
+    extera/extera_ip_info.cpp
+    extera/extera_ip_info.h
+    extera/extera_lyrics.cpp
+    extera/extera_lyrics.h
+    extera/extera_security.cpp
+    extera/extera_security.h
+    extera/extera_platform.cpp
+    extera/extera_platform.h
+    extera/extera_search_filter.cpp
+    extera/extera_search_filter.h
     settings/sections/settings_extera.cpp
     settings/sections/settings_extera.h
     settings/sections/settings_advanced.cpp
