@@ -9414,6 +9414,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_action_none" = "Disabled";
 "lng_extera_chats_section" = "Chats";
 "lng_extera_disable_ai" = "Disable Telegram AI Features";
+"lng_extera_ai_editor" = "AI Text Editor";
+"lng_extera_ai_summaries" = "AI Chat Summaries";
+"lng_extera_disable_markdown" = "Disable Markdown Formatting";
+"lng_extera_disable_markdown_about" = "Disable automatic markdown formatting when typing in message fields.";
 "lng_extera_disable_greeting" = "👋 Instead of Greeting Sticker";
 "lng_extera_comma_mention" = "Add Comma after Mention";
 "lng_extera_inline_math" = "Inline Math Results";
@@ -9431,6 +9435,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_menu_repeat" = "Repeat";
 "lng_extera_menu_history" = "Message History";
 "lng_extera_menu_details" = "Details";
+"lng_extera_menu_report" = "Report";
 "lng_extera_media" = "Photos and Videos";
 "lng_extera_send_hd" = "Always Send in HD";
 "lng_extera_seek_step" = "Video Seek Step";

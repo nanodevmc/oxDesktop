@@ -83,8 +83,8 @@ void FillUnofficialInfo(not_null<Ui::VerticalLayout*> container) {
 	AddLinkButton(
 		container,
 		tr::lng_extera_welcome_dev(),
-		u"@metawka"_q,
-		u"https://t.me/metawka"_q,
+		u"@radoqi"_q,
+		u"https://t.me/radoqi"_q,
 		&st::exteraIconDeveloper);
 	AddLinkButton(
 		container,
@@ -159,8 +159,8 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			AddLinkButton(
 				content,
 				tr::lng_extera_port_developer(),
-				u"@metawka"_q,
-				u"https://t.me/metawka"_q,
+				u"@radoqi"_q,
+				u"https://t.me/radoqi"_q,
 				&st::exteraIconDeveloper);
 			AddLinkButton(
 				content,

@@ -19,6 +19,12 @@ fi
 
 MODE="${1:---help}"
 
+# Ensure cache directory & size defaults for .o object files
+export SCCACHE_DIR="${SCCACHE_DIR:-$HOME/.cache/sccache}"
+export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-15G}"
+export CCACHE_DIR="${CCACHE_DIR:-$HOME/.cache/ccache}"
+export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-15G}"
+
 show_help() {
     cat <<EOF
 exDesktop Linux Native Porter & Builder
