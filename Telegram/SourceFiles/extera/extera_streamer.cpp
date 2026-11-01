@@ -249,7 +249,7 @@ void PaintPreview(QPainter &p, QRect rect) {
 	case UsernameMode::Hidden:
 		break;
 	case UsernameMode::Shown:
-		drawText(y, u"@metawka"_q, true);
+		drawText(y, u"@username"_q, true);
 		y += line;
 		break;
 	}

@@ -571,11 +571,15 @@ auto InitMessageFieldHandlers(MessageFieldHandlersArgs &&args)
 	field->setInstantReplacesEnabled(
 		Core::App().settings().replaceEmojiValue(),
 		Core::App().settings().systemTextReplaceValue());
+	const auto allowTypedMd = args.allowTypedMarkdown
+		&& !Extera::Bool(u"disable_markdown"_q);
+	const auto allowInstantMd = args.instantMarkdown
+		&& !Extera::Bool(u"disable_markdown"_q);
 	field->setMarkdownReplacesEnabled(rpl::single(Ui::MarkdownEnabledState{
 		Ui::MarkdownEnabled{
 			std::move(args.allowMarkdownTags),
-			args.allowTypedMarkdown,
-			args.instantMarkdown
+			allowTypedMd,
+			allowInstantMd
 		}
 	}));
 	if (const auto &show = args.show) {

@@ -537,28 +537,13 @@ TopBar::TopBar(
 			const auto custom = Extera::BadgeCustomText(peer);
 			const auto name = peer->name();
 			const auto kind = Extera::BadgeKindFor(peer);
-			const auto exdToast = [weak, kind, name](const QString &text) {
+			const auto exdToast = [weak](const QString &text) {
 				const auto controller = weak.get();
 				if (!controller) {
 					return;
 				}
-				const auto supporter = (kind == Kind::Donor)
-					|| (kind == Kind::Supporter)
-					|| (kind == Kind::Custom);
-				const auto invite = supporter
-					? tr::lng_exd_badge_invite_support(tr::now)
-					: tr::lng_exd_badge_invite_get(tr::now);
-				auto full = TextWithEntities{ text };
-				full.append(QChar('\n')).append(
-					Ui::Text::Link(invite, u"tg://donate"_q));
 				controller->showToast({
-					.text = std::move(full),
-					.filter = [weak](const ClickHandlerPtr &, Qt::MouseButton) {
-						if (const auto strong = weak.get()) {
-							::Settings::ShowExteraSupportBox(strong);
-						}
-						return false;
-					},
+					.text = TextWithEntities{ text },
 					.duration = crl::time(4000),
 				});
 			};

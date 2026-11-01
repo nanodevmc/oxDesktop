@@ -1845,6 +1845,14 @@ void PartChats4(SectionBuilder &builder) {
 			tr::lng_extera_disable_ai());
 		AddToggle(
 			builder,
+			u"telegram_ai_editor"_q,
+			tr::lng_extera_ai_editor());
+		AddToggle(
+			builder,
+			u"telegram_ai_summaries"_q,
+			tr::lng_extera_ai_summaries());
+		AddToggle(
+			builder,
 			u"disable_greeting_sticker"_q,
 			tr::lng_extera_disable_greeting());
 		AddToggle(
@@ -1893,6 +1901,13 @@ void PartChats4(SectionBuilder &builder) {
 			tr::lng_extera_inline_math(),
 			{},
 			tr::lng_extera_inline_math_about(),
+			true);
+		AddToggle(
+			builder,
+			u"disable_markdown"_q,
+			tr::lng_extera_disable_markdown(),
+			{},
+			tr::lng_extera_disable_markdown_about(),
 			true);
 		AddToggle(
 			builder,
@@ -1952,6 +1967,7 @@ void PartChats5(SectionBuilder &builder) {
 				{ u"menu_repeat"_q, &tr::lng_extera_menu_repeat },
 				{ u"menu_history"_q, &tr::lng_extera_menu_history },
 				{ u"menu_details"_q, &tr::lng_extera_menu_details },
+				{ u"show_report_button"_q, &tr::lng_extera_menu_report },
 			});
 		AddToggle(
 			builder,

@@ -1252,6 +1252,7 @@ void AddReportAction(
 	if (!request.selectedItems.empty()) {
 		return;
 	} else if (!item
+		|| !Extera::Bool(u"show_report_button"_q)
 		|| !item->suggestReport()
 		|| item->history()->peer->isRepliesChat()) {
 		return;

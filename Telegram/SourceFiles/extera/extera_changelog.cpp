@@ -100,9 +100,30 @@ bool Apply(const QByteArray &bytes) {
 	return true;
 }
 
+void ApplyFallback() {
+	auto &state = Instance();
+	if (!state.releases.empty()) {
+		return;
+	}
+	state.releases.push_back({
+		.version = u"1.0.0 (Fork)"_q,
+		.date = QDate::currentDate(),
+		.body = u"<!-- ru --># Что нового в exDesktop Fork\n"
+			u"- Официальные бейджи exteraGram: подключено официальное API профилей, удалены фальшивые бейджи и сторонние репозитории.\n"
+			u"- Инлайн-калькулятор и конвертер величин: поддержка тригонометрии, корней, логарифмов, процентов, конвертера валют и Stars, часовых поясов и физических величин.\n"
+			u"- Отключение Markdown-разметки: опция отключения авто-форматирования при наборе текста.\n"
+			u"- Поиск по ID: мгновенное открытие пользователей и каналов по числовым Telegram ID.\n"
+			u"- Кэширование сборки: поддержка sccache и ccache для ускорения пересборки C++ в 2-5 раз на всех платформах.\n"
+			u"- Переключатели ИИ Telegram и кнопки «Пожаловаться» в меню сообщений.\n"_q,
+	});
+}
+
 void Finish(bool ok) {
 	auto &state = Instance();
 	state.loading = false;
+	if (state.releases.empty()) {
+		ApplyFallback();
+	}
 	state.failed = !ok && state.releases.empty();
 	for (const auto &callback : base::take(state.waiting)) {
 		callback();
@@ -122,7 +143,7 @@ void Load(Fn<void()> done) {
 		state.manager = new QNetworkAccessManager(qApp);
 	}
 	auto request = QNetworkRequest(QUrl(
-		u"https://api.github.com/repos/metawka/exDesktop/releases?per_page=%1"_q
+		u"https://api.github.com/repos/nanodevmc/exDesktop/releases?per_page=%1"_q
 			.arg(kMaxReleases)));
 	request.setRawHeader("Accept", "application/vnd.github+json");
 	request.setRawHeader("User-Agent", "exDesktop");
@@ -322,6 +343,9 @@ void Start() {
 	auto file = QFile(CachePath());
 	if (file.open(QIODevice::ReadOnly)) {
 		Apply(file.readAll());
+	}
+	if (Instance().releases.empty()) {
+		ApplyFallback();
 	}
 	Core::App().domain().activeSessionValue(
 	) | rpl::filter([](Main::Session *session) {

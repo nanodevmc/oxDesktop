@@ -62,6 +62,44 @@ void PeerSearch::request(
 }
 
 void PeerSearch::requestPeers() {
+	const auto injectNumericIdMatches = [=](PeerSearchResult &parsed) {
+		bool ok = false;
+		const auto rawId = _query.trimmed().toLongLong(&ok);
+		if (!ok || rawId == 0) {
+			return;
+		}
+		std::vector<PeerData*> matches;
+		if (rawId < 0) {
+			const auto trimmed = _query.trimmed();
+			if (trimmed.startsWith(u"-100"_q)) {
+				const auto channelId = ChannelId(trimmed.mid(4).toULongLong());
+				if (const auto peer = _session->data().peerLoaded(peerFromChannel(channelId))) {
+					matches.push_back(peer);
+				}
+			} else {
+				const auto chatId = ChatId(-rawId);
+				if (const auto peer = _session->data().peerLoaded(peerFromChat(chatId))) {
+					matches.push_back(peer);
+				}
+			}
+		} else {
+			if (const auto peer = _session->data().peerLoaded(peerFromUser(UserId(rawId)))) {
+				matches.push_back(peer);
+			}
+			if (const auto peer = _session->data().peerLoaded(peerFromChannel(ChannelId(rawId)))) {
+				if (!ranges::contains(matches, peer)) {
+					matches.push_back(peer);
+				}
+			}
+		}
+		for (auto it = matches.rbegin(); it != matches.rend(); ++it) {
+			const auto peer = *it;
+			if (!ranges::contains(parsed.my, peer) && !ranges::contains(parsed.peers, peer)) {
+				parsed.peers.insert(parsed.peers.begin(), peer);
+			}
+		}
+	};
+
 	const auto requestId = _session->api().request(MTPcontacts_Search(
 		MTP_flags(0),
 		MTP_string(_query),
@@ -81,9 +119,12 @@ void PeerSearch::requestPeers() {
 			const auto peerId = peerFromMTP(id);
 			parsed.peers.push_back(_session->data().peer(peerId));
 		}
+		injectNumericIdMatches(parsed);
 		finishPeers(requestId, std::move(parsed));
 	}).fail([=](const MTP::Error &error, mtpRequestId requestId) {
-		finishPeers(requestId, PeerSearchResult{});
+		auto parsed = PeerSearchResult();
+		injectNumericIdMatches(parsed);
+		finishPeers(requestId, std::move(parsed));
 	}).send();
 	_peerRequests.emplace(requestId, _query);
 }
