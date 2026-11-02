@@ -6,17 +6,16 @@ namespace Extera {
 
 enum class BadgeKind {
 	None,
+	Porter,
+	PorterChannel,
 	Developer,
 	OfficialChannel,
 	Supporter,
 	Trusted,
 	Custom,
-	// Compatibility aliases for legacy call sites:
-	Porter = Developer,
-	PorterChannel = OfficialChannel,
-	Bughunter = Supporter,
-	Helper = Supporter,
-	Donor = Supporter,
+	Bughunter,
+	Helper,
+	Donor,
 };
 
 struct TrustedSource {
