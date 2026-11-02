@@ -1,8 +1,6 @@
 name: Trusted plugin hashes
 
 on:
-  schedule:
-    - cron: '*/30 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
