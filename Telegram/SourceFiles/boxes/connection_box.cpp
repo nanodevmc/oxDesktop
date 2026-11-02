@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/connection_box.h"
 
+#include "extera/extera_config.h"
 #include "extera/extera_ws_proxy.h"
 
 #include "base/call_delayed.h"
