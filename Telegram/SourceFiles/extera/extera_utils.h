@@ -1,5 +1,7 @@
 #pragma once
 
+struct TextWithEntities;
+
 namespace Extera {
 
 [[nodiscard]] QString FormatTime(const QTime &time);
