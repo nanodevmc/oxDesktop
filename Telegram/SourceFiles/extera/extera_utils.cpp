@@ -69,7 +69,7 @@ private:
 
 	[[nodiscard]] bool take(const QString &str) {
 		skipSpaces();
-		if (_text.midRef(_position, str.size()).compare(str, Qt::CaseInsensitive) == 0) {
+		if (QStringView(_text).mid(_position, str.size()).compare(str, Qt::CaseInsensitive) == 0) {
 			_position += str.size();
 			return true;
 		}
@@ -78,7 +78,7 @@ private:
 
 	[[nodiscard]] std::optional<double> number() {
 		skipSpaces();
-		if (_text.midRef(_position, 2).compare(u"0x"_q, Qt::CaseInsensitive) == 0) {
+		if (QStringView(_text).mid(_position, 2).compare(u"0x"_q, Qt::CaseInsensitive) == 0) {
 			_position += 2;
 			const auto start = _position;
 			while (_position < _text.size()) {
@@ -527,8 +527,8 @@ void FilterZalgo(TextWithEntities &textWithEntities) {
 	const auto &pattern = ZalgoPattern();
 	auto match = pattern.match(textWithEntities.text);
 	while (match.hasMatch()) {
-		const auto start = match.capturedStart();
-		const auto len = match.capturedLength();
+		const auto start = int(match.capturedStart());
+		const auto len = int(match.capturedLength());
 		textWithEntities.text.remove(start, len);
 		for (auto &entity : textWithEntities.entities) {
 			if (entity.offset() >= start + len) {
