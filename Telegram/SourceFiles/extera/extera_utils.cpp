@@ -2,6 +2,8 @@
 
 #include "extera/extera_config.h"
 
+#include "ui/text/text_entity.h"
+
 #include <QtCore/QDateTime>
 #include <QtCore/QLocale>
 #include <QtCore/QRegularExpression>
