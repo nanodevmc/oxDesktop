@@ -68,7 +68,7 @@ void PeerSearch::requestPeers() {
 		if (!ok || rawId == 0) {
 			return;
 		}
-		std::vector<PeerData*> matches;
+		std::vector<not_null<PeerData*>> matches;
 		if (rawId < 0) {
 			const auto trimmed = _query.trimmed();
 			if (trimmed.startsWith(u"-100"_q)) {
@@ -87,7 +87,7 @@ void PeerSearch::requestPeers() {
 				matches.push_back(peer);
 			}
 			if (const auto peer = _session->data().peerLoaded(peerFromChannel(ChannelId(rawId)))) {
-				if (!ranges::contains(matches, peer)) {
+				if (!ranges::contains(matches, not_null{ peer })) {
 					matches.push_back(peer);
 				}
 			}
