@@ -436,7 +436,7 @@ void ShowAlert(const QString &payload) {
 			box->addButton(tr::lng_close(), [=] { box->closeBox(); });
 		}
 		box->boxClosing(
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			if (!*answered) {
 				answer(-2);
 			}
