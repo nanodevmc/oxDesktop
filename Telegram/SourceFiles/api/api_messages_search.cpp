@@ -61,6 +61,14 @@ constexpr auto kSearchPerPage = 50;
 	switch (request.filter) {
 	case SearchFilter::NoFilter: break;
 	case SearchFilter::Pinned: result += u"\npinned"_q; break;
+	case SearchFilter::Photo: result += u"\nphoto"_q; break;
+	case SearchFilter::Video: result += u"\nvideo"_q; break;
+	case SearchFilter::Document: result += u"\ndoc"_q; break;
+	case SearchFilter::Music: result += u"\nmusic"_q; break;
+	case SearchFilter::Url: result += u"\nurl"_q; break;
+	case SearchFilter::Voice: result += u"\nvoice"_q; break;
+	case SearchFilter::RoundVideo: result += u"\nround"_q; break;
+	case SearchFilter::Gif: result += u"\ngif"_q; break;
 	}
 	return result;
 }
@@ -69,6 +77,22 @@ constexpr auto kSearchPerPage = 50;
 	switch (filter) {
 	case SearchFilter::Pinned:
 		return MTP_inputMessagesFilterPinned();
+	case SearchFilter::Photo:
+		return MTP_inputMessagesFilterPhotos();
+	case SearchFilter::Video:
+		return MTP_inputMessagesFilterVideo();
+	case SearchFilter::Document:
+		return MTP_inputMessagesFilterDocument();
+	case SearchFilter::Music:
+		return MTP_inputMessagesFilterMusic();
+	case SearchFilter::Url:
+		return MTP_inputMessagesFilterUrl();
+	case SearchFilter::Voice:
+		return MTP_inputMessagesFilterVoice();
+	case SearchFilter::RoundVideo:
+		return MTP_inputMessagesFilterRoundVideo();
+	case SearchFilter::Gif:
+		return MTP_inputMessagesFilterGif();
 	case SearchFilter::NoFilter:
 		return MTP_inputMessagesFilterEmpty();
 	}
