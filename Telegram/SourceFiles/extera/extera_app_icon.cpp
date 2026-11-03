@@ -40,10 +40,21 @@ namespace {
 	return QColor(218, 48, 24);
 }
 
-[[nodiscard]] const QImage &Glyph() {
-	static const auto result = QImage(u":/gui/art/app_icon_glyph.png"_q)
-		.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-	return result;
+[[nodiscard]] const QImage &Glyph(const QString &customPath = QString()) {
+	if (customPath.isEmpty() || customPath == u":/gui/art/app_icon_glyph.png"_q) {
+		static const auto result = QImage(u":/gui/art/app_icon_glyph.png"_q)
+			.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+		return result;
+	}
+	static auto cache = base::flat_map<QString, QImage>();
+	auto it = cache.find(customPath);
+	if (it == cache.end()) {
+		it = cache.emplace(
+			customPath,
+			QImage(customPath).convertToFormat(QImage::Format_ARGB32_Premultiplied)
+		).first;
+	}
+	return it->second;
 }
 
 [[nodiscard]] QString IconPath() {
@@ -164,25 +175,61 @@ void UpdatePinned(const QString &icon) {
 std::vector<Variant> Variants() {
 	const auto accent = AccentColor();
 	return {
-		{ QString(), QColor(218, 48, 24), QColor(255, 108, 42), Qt::white },
+		{
+			QString(),
+			u"Aero Delta"_q,
+			QColor(218, 48, 24),
+			QColor(255, 108, 42),
+			Qt::white,
+			QString(),
+		},
+		{
+			u"cyber_ox"_q,
+			u"Cyber-Ox"_q,
+			QColor(218, 48, 24),
+			QColor(255, 108, 42),
+			Qt::white,
+			u":/gui/art/app_icon_glyph_cyber_ox.png"_q,
+		},
+		{
+			u"ox_monogram"_q,
+			u"OX Monogram"_q,
+			QColor(218, 48, 24),
+			QColor(255, 108, 42),
+			Qt::white,
+			u":/gui/art/app_icon_glyph_ox_monogram.png"_q,
+		},
 		{
 			u"telegram"_q,
+			tr::lng_exd_app_icon_telegram(tr::now),
 			QColor(34, 135, 203),
 			QColor(85, 190, 240),
 			Qt::white,
+			QString(),
 		},
-		{ u"accent"_q, accent, Lighter(accent, 0.35), Qt::white },
+		{
+			u"accent"_q,
+			tr::lng_exd_app_icon_accent(tr::now),
+			accent,
+			Lighter(accent, 0.35),
+			Qt::white,
+			QString(),
+		},
 		{
 			u"dark"_q,
+			tr::lng_exd_app_icon_dark(tr::now),
 			QColor(28, 28, 32),
 			QColor(58, 58, 66),
 			QColor(255, 108, 42),
+			QString(),
 		},
 		{
 			u"light"_q,
+			tr::lng_exd_app_icon_light(tr::now),
 			QColor(240, 240, 244),
 			QColor(255, 255, 255),
 			QColor(218, 48, 24),
+			QString(),
 		},
 	};
 }
@@ -197,7 +244,7 @@ QImage Render(int size, const QString &id, bool square) {
 		QImage::Format_ARGB32_Premultiplied);
 	result.fill(Qt::transparent);
 
-	auto glyph = Glyph().scaled(
+	auto glyph = Glyph(variant.glyph).scaled(
 		size,
 		size,
 		Qt::IgnoreAspectRatio,
