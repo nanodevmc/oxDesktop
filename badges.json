@@ -23,64 +23,24 @@
   },
   "users": [
     {
-      "id": 1388181090,
-      "type": "developer"
-    },
-    {
-      "id": 5288193145,
-      "type": "helper"
-    },
-    {
-      "id": 8406822449,
-      "type": "donor",
-      "text": "Пользователь поддержал разработку oxDesktop самым первым, большое спасибо <3"
-    },
-    {
-      "id": 1876746076,
-      "type": "donor"
-    },
-    {
       "id": 617070284,
       "type": "custom",
       "emoji": "5425060246269736415",
-      "text": "фури"
+      "text": "Ведущий разработчик какого-то oxDesktop"
     },
     {
-      "id": 969434663,
-      "type": "helper"
-    },
-    {
-      "id": 8354550825,
-      "type": "donor"
-    },
-    {
-      "id": 7386535306,
-      "type": "donor"
-    },
-    {
-      "id": 965180470,
-      "type": "donor"
+      "id": 6296191170,
+      "type": "developer",
+      "text": "Второй в этой компании, друга разработчика чего-то там."
     }
   ],
   "channels": [
     {
-      "id": 2661845134,
+      "id": 4364437246,
       "type": "developer"
     },
     {
-      "id": 4433892778,
-      "type": "developer"
-    },
-    {
-      "id": 4478798161,
-      "type": "developer"
-    },
-    {
-      "id": 3978523897,
-      "type": "developer"
-    },
-    {
-      "id": 9272062768,
+      "id": 4469639949,
       "type": "developer"
     }
   ],
@@ -89,11 +49,6 @@
       "id": 2189715950,
       "username": "exteraPluginsSup",
       "name": "exteraGram Plugins"
-    },
-    {
-      "id": 3914431400,
-      "username": "oxDesktopPlugins",
-      "name": "oxDesktop Plugins"
     }
   ]
 }

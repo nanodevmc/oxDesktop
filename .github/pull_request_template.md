@@ -1,11 +1,12 @@
-## What and why
+## Что и почему
 
-## How it was tested
+## Как это тестировалось
 
-- OS / arch:
-- Built and run locally: yes / no
-- Not tested (be explicit):
+- **ОС / архитектура:**
+- **Собрано и запущено локально:** да / нет
+- **Не тестировалось (указать явно):**
 
-## Notes
+## Примечания
 
-Anything platform-specific touched? (`prepare.py` tags, CMake, entitlements, workflows)
+Затронуто ли что-то платформенно-зависимое?  
+(`prepare.py` tags, CMake, entitlements, workflows)

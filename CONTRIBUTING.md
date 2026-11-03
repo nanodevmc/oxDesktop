@@ -1,48 +1,50 @@
-# Contributing to exteraDesktop
+# Участие в разработке exteraDesktop
 
-## Before you open a PR
+## Перед тем как открыть PR
 
-- Keep PRs scoped to one thing. A fix, a feature, a CI change — not all three at once.
-- If you're fixing a build/platform bug, say what broke and why in the PR description, not just what changed.
-- Test what you can before opening the PR. If you built and ran it locally, say so (and on what OS/arch). If you couldn't test something (no access to that OS, no hardware), say that too instead of leaving it implicit.
-- Draft PRs are fine for work in progress — mark them as draft rather than opening early for review.
+- Держите PR узконаправленным — одна вещь за раз. Исправление, фича, изменение CI — но не всё сразу.
+- Если исправляете баг сборки/платформы, опишите в PR, **что** сломалось и **почему**, а не только что изменилось.
+- Проверьте то, что можете, до открытия PR. Если собрали и запустили локально — скажите об этом (и на какой ОС/архитектуре). Если что-то проверить не смогли (нет доступа к этой ОС, нет железа) — тоже скажите прямо, а не оставляйте это подразумеваемым.
+- Черновики (Draft PR) — нормально для незавершённой работы. Помечайте их как draft, а не открывайте заранее на ревью.
 
-## Code style
+## Стиль кода
 
-This fork follows the existing style already used throughout the codebase (it's inherited from upstream [tdesktop](https://github.com/telegramdesktop/tdesktop)):
+Этот форк следует стилю, уже принятому во всей кодовой базе (он унаследован от апстрима [tdesktop](https://github.com/telegramdesktop/tdesktop)):
 
-- Tabs for indentation.
-- Braces on the same line (`if (...) {`).
-- `camelCase` for variables and functions, `PascalCase` for types.
-- Match the surrounding file's style over any abstract preference — this is a large, old codebase and consistency within a file matters more than any single rule.
+- Табы для отступов.
+- Фигурные скобки на той же строке (`if (...) {`).
+- `camelCase` для переменных и функций, `PascalCase` для типов.
+- Соблюдайте стиль окружающего файла важнее любых абстрактных предпочтений — это большая и старая кодовая база, и единообразие внутри файла важнее любого отдельного правила.
 
-There's no `.clang-format` config and no plan to add one that auto-reformats the whole tree — that would produce a diff nobody could review. If you want an editor to help, configure it manually (tabs, same-line braces) rather than relying on a formatter.
+Конфига `.clang-format` нет, и планов добавлять такой, который автоформатирует всё дерево, тоже нет — это породило бы дифф, который невозможно отревьюить. Если хотите, чтобы редактор помогал, настройте его вручную (табы, скобки на той же строке), а не полагайтесь на форматтер.
 
-## Local lint/format on commit
+## Локальный линт/формат при коммите
 
-There's a `.pre-commit-config.yaml` covering the same things CI checks, plus `shfmt` to format the build shell scripts. Install it once:
+Есть `.pre-commit-config.yaml`, покрывающий то же, что проверяет CI, плюс `shfmt` для форматирования shell-скриптов сборки. Установите один раз:
 
-```
+```bash
 pip install pre-commit
 pre-commit install
 ```
+После этого он запускается автоматически на git commit — только на тех файлах, которые вы трогаете. Прогнать вручную по всему:
 
-After that it runs automatically on `git commit`, only on the files you're touching. Run it on everything manually with `pre-commit run --all-files`.
+```bash
+pre-commit run --all-files
+```
+Он ограничен `.github/` и `Telegram/build/prepare/` — C++ кодовую базу он не трогает по той же причине, по которой нет `.clang-format`: автоформат по всему репозиторию дал бы неотревьюиваемый дифф.
 
-It's scoped to `.github/` and `Telegram/build/prepare/` — it does not touch the C++ codebase, for the same reason there's no `.clang-format`: a repo-wide auto-format would be an unreviewable diff.
+## Проверки CI
+На каждом PR запускается `.github/workflows/pr-checks.yml`:
 
-## CI checks
+- `actionlint` по любым затронутым workflow-файлам.
 
-Every PR runs `.github/workflows/pr-checks.yml`:
+- Проверка синтаксиса Python для `Telegram/build/prepare/prepare.py`.
 
-- `actionlint` on any workflow files you touched.
-- A Python syntax check on `Telegram/build/prepare/prepare.py`.
-- `shellcheck` (error severity only) on the `.sh` build scripts.
+- `shellcheck` (только `severity error`) по `.sh`-скриптам сборки.
 
-These are meant to catch real mistakes, not enforce style. If a check fails, the log tells you exactly what and where.
+Они нужны, чтобы ловить реальные ошибки, а не навязывать стиль. Если проверка упала — в логе точно указано, что и где.
 
-Platform build workflows (`macos-build.yml`, `windows-build.yml`) only run on release publish or manual dispatch — they're not part of per-PR checks since a full build takes hours.
+Платформенные workflow сборки (`macos-build.yml`, `windows-build.yml`) запускаются только при публикации релиза или вручную — они не входят в **per-PR** проверки, так как полная сборка занимает часы.
 
-## Build scripts (`prepare.py` and friends)
-
-If you're touching `Telegram/build/prepare/`, keep in mind it's a single script shared across win/mac/linux, gated by tags (`win:`, `mac:`, `!win:`, `common:`, etc.) inside the multi-line stage strings. A command with no tag before it runs on *every* platform — that's the most common way to accidentally break a platform you're not testing on. When in doubt, check `filterByPlatform()` in `prepare.py` to see how the tag you're adding actually resolves.
+## Скрипты сборки (prepare.py и компания)
+Если трогаете `Telegram/build/prepare/`, помните: это единый скрипт, общий для win/mac/linux, разграниченный тегами (`win:`, `mac:`, `!win:`, `common`: и т.д.) внутри многострочных строк стадий. Команда без тега перед ней выполняется на каждой платформе — это самый частый способ случайно сломать платформу, которую вы не тестируете. Если сомневаетесь — посмотрите `filterByPlatform()` в `prepare.py`, чтобы увидеть, как реально разрешается добавляемый вами тег

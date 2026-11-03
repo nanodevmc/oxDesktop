@@ -1,158 +1,160 @@
-name: macOS build
+# name: macOS build
 
-on:
-  release:
-    types: [published]
-  workflow_dispatch:
+# on:
+#   release:
+#     types: [published]
+#   workflow_dispatch:
 
-permissions:
-  contents: write
+# permissions:
+#   contents: write
 
-jobs:
-  build:
-    runs-on: macos-15
-    timeout-minutes: 360
-    env:
-      CLEAR_QT_BUILD_TREE: "1"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          path: tdesktop
+# jobs:
+#   build:
+#     runs-on: macos-15
+#     timeout-minutes: 360
+#     env:
+#       CLEAR_QT_BUILD_TREE: "1"
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           submodules: recursive
+#           path: tdesktop
 
-      - name: Select Xcode
-        run: sudo xcode-select -s "$(find /Applications -maxdepth 1 -name 'Xcode*.app' | sort -V | tail -1)"
+#       - name: Select Xcode
+#         run: sudo xcode-select -s "$(find /Applications -maxdepth 1 -name 'Xcode*.app' | sort -V | tail -1)"
 
-      - name: Patch tgcalls CryptoHelper.h for C++ linkage
-        run: python3 tdesktop/.github/patches/fix_tgcalls_crypto.py
+#       - name: Patch tgcalls CryptoHelper.h for C++ linkage
+#         run: python3 tdesktop/.github/patches/fix_tgcalls_crypto.py
 
-      - name: Install build dependencies
-        run: brew install automake libtool cmake wget pkg-config gnu-tar ninja nasm meson
+#       - name: Install build dependencies
+#         run: brew install automake libtool cmake wget pkg-config gnu-tar ninja nasm meson
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+#       - name: Set up Python 3.11
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: '3.11'
 
-      - name: Restore ThirdParty libraries
-        id: libs
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ${{ github.workspace }}/Libraries
-            ${{ github.workspace }}/ThirdParty
-          key: mac-libs-${{ hashFiles('tdesktop/Telegram/build/prepare/prepare.py', 'tdesktop/Telegram/build/prepare/mac.sh') }}
-          restore-keys: |
-            mac-libs-
+#       - name: Restore ThirdParty libraries
+#         id: libs
+#         uses: actions/cache/restore@v4
+#         with:
+#           path: |
+#             ${{ github.workspace }}/Libraries
+#             ${{ github.workspace }}/ThirdParty
+#           key: mac-libs-${{ hashFiles('tdesktop/Telegram/build/prepare/prepare.py', 'tdesktop/Telegram/build/prepare/mac.sh') }}
+#           restore-keys: |
+#             mac-libs-
 
-      - name: Build ThirdParty libraries
-        if: steps.libs.outputs.cache-hit != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: ./tdesktop/Telegram/build/prepare/mac.sh silent
+#       - name: Build ThirdParty libraries
+#         if: steps.libs.outputs.cache-hit != 'true'
+#         env:
+#           GH_TOKEN: ${{ github.token }}
+#         run: ./tdesktop/Telegram/build/prepare/mac.sh silent
 
-      - name: Save ThirdParty libraries
-        if: steps.libs.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ github.workspace }}/Libraries
-            ${{ github.workspace }}/ThirdParty
-          key: ${{ steps.libs.outputs.cache-primary-key }}
+#       - name: Save ThirdParty libraries
+#         if: steps.libs.outputs.cache-hit != 'true'
+#         uses: actions/cache/save@v4
+#         with:
+#           path: |
+#             ${{ github.workspace }}/Libraries
+#             ${{ github.workspace }}/ThirdParty
+#           key: ${{ steps.libs.outputs.cache-primary-key }}
 
-      - name: Set up ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: mac-arm64
-          max-size: 10G
+#       - name: Set up ccache
+#         uses: hendrikmuhs/ccache-action@v1.2
+#         with:
+#           key: mac-arm64
+#           max-size: 10G
 
-      - name: Configure
-        working-directory: tdesktop/Telegram
-        env:
-          API_ID: ${{ secrets.TDESKTOP_API_ID }}
-          API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
-        run: |
-          if [ -z "$API_ID" ] || [ -z "$API_HASH" ]; then
-            echo "TDESKTOP_API_ID or TDESKTOP_API_HASH secret is not set"
-            exit 1
-          fi
-          ./configure.sh \
-            -D TDESKTOP_API_ID="$API_ID" \
-            -D TDESKTOP_API_HASH="$API_HASH" \
-            -D Python3_ROOT_DIR="$pythonLocation" \
-            -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON \
-            -G "Ninja Multi-Config" \
-            -D CMAKE_OSX_ARCHITECTURES=arm64 \
-            -D CMAKE_C_COMPILER_LAUNCHER=ccache \
-            -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -D CMAKE_OBJC_COMPILER_LAUNCHER=ccache \
-            -D CMAKE_OBJCXX_COMPILER_LAUNCHER=ccache \
-            -D CMAKE_CXX_FLAGS="-Xclang -fno-pch-timestamp" \
-            -D CMAKE_OBJCXX_FLAGS="-Xclang -fno-pch-timestamp"
+#       - name: Configure
+#         working-directory: tdesktop/Telegram
+#         env:
+#           API_ID: ${{ secrets.TDESKTOP_API_ID }}
+#           API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
+#         run: |
+#           if [ -z "$API_ID" ] || [ -z "$API_HASH" ]; then
+#             echo "TDESKTOP_API_ID or TDESKTOP_API_HASH secret is not set"
+#             exit 1
+#           fi
+#           ./configure.sh \
+#             -D TDESKTOP_API_ID="$API_ID" \
+#             -D TDESKTOP_API_HASH="$API_HASH" \
+#             -D Python3_ROOT_DIR="$pythonLocation" \
+#             -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON \
+#             -G "Ninja Multi-Config" \
+#             -D CMAKE_OSX_ARCHITECTURES=arm64 \
+#             -D CMAKE_C_COMPILER_LAUNCHER=ccache \
+#             -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+#             -D CMAKE_OBJC_COMPILER_LAUNCHER=ccache \
+#             -D CMAKE_OBJCXX_COMPILER_LAUNCHER=ccache \
+#             -D CMAKE_CXX_FLAGS="-Xclang -fno-pch-timestamp" \
+#             -D CMAKE_OBJCXX_FLAGS="-Xclang -fno-pch-timestamp"
 
-      - name: Build
-        working-directory: tdesktop/out
-        env:
-          CCACHE_SLOPPINESS: pch_defines,time_macros,include_file_mtime,include_file_ctime
-        run: cmake --build . --config Release --target Telegram --parallel 3
+#       - name: Build
+#         working-directory: tdesktop/out
+#         env:
+#           CCACHE_SLOPPINESS: pch_defines,time_macros,include_file_mtime,include_file_ctime
+#         run: cmake --build . --config Release --target Telegram --parallel 3
 
-      - name: Package
-        working-directory: tdesktop/out/Release
-        run: |
-          VERSION=$(sed -n 's/.*AppVersionStr = "\([^"]*\)".*/\1/p' "$GITHUB_WORKSPACE/tdesktop/Telegram/SourceFiles/core/version.h")
-          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          fi
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          APP=Telegram.app
-          BIN="$APP/Contents/MacOS/Telegram"
-          mkdir -p "$APP/Contents/Frameworks" "$APP/Contents/Resources/python311/lib"
-          otool -L "$BIN"
-          LINKED=$(otool -L "$BIN" | awk 'tolower($1) ~ /python/ {print $1}' | head -1)
-          if [ -n "$LINKED" ]; then
-            cp -L "$pythonLocation/lib/libpython3.11.dylib" "$APP/Contents/Frameworks/"
-            chmod u+w "$APP/Contents/Frameworks/libpython3.11.dylib"
-            install_name_tool -id @executable_path/../Frameworks/libpython3.11.dylib \
-              "$APP/Contents/Frameworks/libpython3.11.dylib"
-            install_name_tool -change "$LINKED" @executable_path/../Frameworks/libpython3.11.dylib "$BIN"
-          else
-            echo "Python is linked statically"
-          fi
-          cp -R "$pythonLocation/lib/python3.11" "$APP/Contents/Resources/python311/lib/python3.11"
-          rm -rf "$APP/Contents/Resources/python311/lib/python3.11/test" \
-            "$APP/Contents/Resources/python311/lib/python3.11/site-packages"
-          find "$APP/Contents/Resources/python311" -name "__pycache__" -type d -prune -exec rm -rf {} +
-          rm -rf "$APP/Contents/Resources/python311/lib/python3.11/config-3.11-darwin"
-          find "$APP" -type l ! -exec test -e {} \; -print -delete
-          mkdir -p "$APP/Contents/MacOS/python/extera"
-          cp -r "$GITHUB_WORKSPACE/tdesktop/Telegram/SourceFiles/extera/python/." "$APP/Contents/MacOS/python/extera/"
-          rm -rf oxDesktop.app
-          mv "$APP" oxDesktop.app
-          codesign --force --deep --sign - oxDesktop.app
-          codesign --verify --deep --strict oxDesktop.app
-          ditto -c -k --sequesterRsrc --keepParent oxDesktop.app \
-            "$GITHUB_WORKSPACE/oxDesktop-macos-arm64.$VERSION.zip"
-          mkdir -p dmg
-          ditto oxDesktop.app dmg/oxDesktop.app
-          ln -s /Applications dmg/Applications
-          hdiutil create -volname oxDesktop -srcfolder dmg -ov -format UDZO \
-            "$GITHUB_WORKSPACE/oxDesktop-macos-arm64.$VERSION.dmg"
+#       - name: Package
+#         working-directory: tdesktop/out/Release
+#         run: |
+#           VERSION=$(sed -n 's/.*AppVersionStr = "\([^"]*\)".*/\1/p' "$GITHUB_WORKSPACE/tdesktop/Telegram/SourceFiles/core/version.h")
+#           if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+#             VERSION="${GITHUB_REF_NAME#v}"
+#           fi
+#           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+#           APP=Telegram.app
+#           BIN="$APP/Contents/MacOS/Telegram"
+#           mkdir -p "$APP/Contents/Frameworks" "$APP/Contents/Resources/python311/lib"
+#           otool -L "$BIN"
+#           LINKED=$(otool -L "$BIN" | awk 'tolower($1) ~ /python/ {print $1}' | head -1)
+#           if [ -n "$LINKED" ]; then
+#             cp -L "$pythonLocation/lib/libpython3.11.dylib" "$APP/Contents/Frameworks/"
+#             chmod u+w "$APP/Contents/Frameworks/libpython3.11.dylib"
+#             install_name_tool -id @executable_path/../Frameworks/libpython3.11.dylib \
+#               "$APP/Contents/Frameworks/libpython3.11.dylib"
+#             install_name_tool -change "$LINKED" @executable_path/../Frameworks/libpython3.11.dylib "$BIN"
+#           else
+#             echo "Python is linked statically"
+#           fi
+#           cp -R "$pythonLocation/lib/python3.11" "$APP/Contents/Resources/python311/lib/python3.11"
+#           rm -rf "$APP/Contents/Resources/python311/lib/python3.11/test" \
+#             "$APP/Contents/Resources/python311/lib/python3.11/site-packages"
+#           find "$APP/Contents/Resources/python311" -name "__pycache__" -type d -prune -exec rm -rf {} +
+#           rm -rf "$APP/Contents/Resources/python311/lib/python3.11/config-3.11-darwin"
+#           find "$APP" -type l ! -exec test -e {} \; -print -delete
+#           mkdir -p "$APP/Contents/MacOS/python/extera"
+#           cp -r "$GITHUB_WORKSPACE/tdesktop/Telegram/SourceFiles/extera/python/." "$APP/Contents/MacOS/python/extera/"
+#           rm -rf oxDesktop.app
+#           mv "$APP" oxDesktop.app
+#           codesign --force --deep --sign - oxDesktop.app
+#           codesign --verify --deep --strict oxDesktop.app
+#           ditto -c -k --sequesterRsrc --keepParent oxDesktop.app \
+#             "$GITHUB_WORKSPACE/oxDesktop-macos-arm64.$VERSION.zip"
+#           mkdir -p dmg
+#           ditto oxDesktop.app dmg/oxDesktop.app
+#           ln -s /Applications dmg/Applications
+#           hdiutil create -volname oxDesktop -srcfolder dmg -ov -format UDZO \
+#             "$GITHUB_WORKSPACE/oxDesktop-macos-arm64.$VERSION.dmg"
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: oxDesktop-macos-arm64
-          path: |
-            oxDesktop-macos-arm64.*.zip
-            oxDesktop-macos-arm64.*.dmg
-          retention-days: 7
+#       - name: Upload build artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: oxDesktop-macos-arm64
+#           path: |
+#             oxDesktop-macos-arm64.*.zip
+#             oxDesktop-macos-arm64.*.dmg
+#           retention-days: 7
 
-      - name: Attach to release
-        if: github.event_name == 'release'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-            "oxDesktop-macos-arm64.$VERSION.zip" \
-            "oxDesktop-macos-arm64.$VERSION.dmg" --clobber
+#       - name: Attach to release
+#         if: github.event_name == 'release'
+#         env:
+#           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+#             "oxDesktop-macos-arm64.$VERSION.zip" \
+#             "oxDesktop-macos-arm64.$VERSION.dmg" --clobber
+#
+#off

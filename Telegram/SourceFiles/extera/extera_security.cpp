@@ -1,4 +1,4 @@
-#include "extera/extera_security.h"
+﻿#include "extera/extera_security.h"
 
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/labels.h"
@@ -54,7 +54,7 @@ void ConfirmAction(
 		});
 
 		box->boxClosing(
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			if (!*handled) {
 				*handled = true;
 				callback(false);

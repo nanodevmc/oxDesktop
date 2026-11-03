@@ -136,8 +136,10 @@ jobs:
           path: oxDesktop-linux-x64.*.tar.gz
           retention-days: 7
 
+
       - name: Attach to release
         if: github.event_name == 'release'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" "oxDesktop-linux-x64.$VERSION.tar.gz" --clobber
+        uses: softprops/action-gh-release@v2
+        with:
+          files: oxDesktop-linux-x64.*.tar.gz
+          overwrite_files: true
