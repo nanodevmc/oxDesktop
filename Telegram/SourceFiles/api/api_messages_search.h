@@ -23,6 +23,14 @@ namespace Api {
 enum class SearchFilter {
 	NoFilter,
 	Pinned,
+	Photo,
+	Video,
+	Document,
+	Music,
+	Url,
+	Voice,
+	RoundVideo,
+	Gif,
 };
 
 struct FoundMessages {
