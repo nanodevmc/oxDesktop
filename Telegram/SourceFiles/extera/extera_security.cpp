@@ -4,6 +4,7 @@
 #include "ui/widgets/labels.h"
 #include "ui/text/text_utilities.h"
 #include "styles/style_boxes.h"
+#include "styles/style_layers.h"
 #include "window/window_session_controller.h"
 
 namespace Extera::Security {
