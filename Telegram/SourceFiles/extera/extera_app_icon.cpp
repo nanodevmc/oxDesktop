@@ -48,7 +48,7 @@ namespace {
 
 [[nodiscard]] QString IconPath() {
 	return QStandardPaths::writableLocation(
-		QStandardPaths::AppDataLocation) + u"/exDesktop.ico"_q;
+		QStandardPaths::AppDataLocation) + u"/oxDesktop.ico"_q;
 }
 
 [[nodiscard]] QByteArray IconFile(const QString &id, bool square) {
@@ -253,8 +253,8 @@ void ApplyToShortcuts() {
 			QStandardPaths::DesktopLocation }) {
 		for (const auto &folder : QStandardPaths::standardLocations(
 				location)) {
-			SetShortcutIcon(folder + u"/exDesktop.lnk"_q, icon);
-			SetShortcutIcon(folder + u"/exDesktop/exDesktop.lnk"_q, icon);
+			SetShortcutIcon(folder + u"/oxDesktop.lnk"_q, icon);
+			SetShortcutIcon(folder + u"/oxDesktop/oxDesktop.lnk"_q, icon);
 		}
 	}
 	UpdatePinned(icon);

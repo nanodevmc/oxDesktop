@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    fs::path tempBase = fs::temp_directory_path() / "exdesktop_test";
+    fs::path tempBase = fs::temp_directory_path() / "oxdesktop_test";
     fs::remove_all(tempBase);
     fs::create_directories(tempBase / "plugins");
     fs::create_directories(tempBase / "settings");
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 __id__ = "sample_test"
 __name__ = "Sample Test Plugin"
 __description__ = "A test plugin for Linux native runner"
-__author__ = "exDesktop Porter"
+__author__ = "oxDesktop Porter"
 __version__ = "1.0.0"
 
 import _extera

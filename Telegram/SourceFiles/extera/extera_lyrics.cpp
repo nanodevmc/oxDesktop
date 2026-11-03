@@ -69,7 +69,7 @@ void Fetch(
 	url.setQuery(query);
 
 	auto request = QNetworkRequest(url);
-	request.setRawHeader("User-Agent", "exDesktop-Lyrics/1.0");
+	request.setRawHeader("User-Agent", "oxDesktop-Lyrics/1.0");
 
 	const auto reply = manager->get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {

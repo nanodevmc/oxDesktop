@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      IMAGE_TAG: exdesktop:centos_env
+      IMAGE_TAG: oxdesktop:centos_env
 
     steps:
       - name: Clone
@@ -105,11 +105,11 @@ jobs:
             "$IMAGE_TAG" \
             bash -euo pipefail -c '
               cd /usr/src/tdesktop
-              PKG="pkg/exDesktop"
+              PKG="pkg/oxDesktop"
               rm -rf pkg
               mkdir -p "$PKG/lib" "$PKG/python" "$PKG/python311/lib"
-              cp out/Release/Telegram "$PKG/exDesktop-bin"
-              strip "$PKG/exDesktop-bin"
+              cp out/Release/Telegram "$PKG/oxDesktop-bin"
+              strip "$PKG/oxDesktop-bin"
               cp -L /usr/lib64/libpython3.11.so.1.0 "$PKG/lib/"
               cp -r /usr/lib64/python3.11 "$PKG/python311/lib/python3.11"
               rm -rf "$PKG/python311/lib/python3.11/test" \
@@ -117,27 +117,27 @@ jobs:
               find "$PKG/python311" -name "__pycache__" -type d -prune -exec rm -rf {} +
               mkdir -p "$PKG/python/extera"
               cp -r Telegram/SourceFiles/extera/python/. "$PKG/python/extera/"
-              cat > "$PKG/exDesktop" <<SH
+              cat > "$PKG/oxDesktop" <<SH
           #!/bin/sh
           DIR="\$(cd "\$(dirname "\$0")" && pwd)"
           export LD_LIBRARY_PATH="\$DIR/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
           export PYTHONHOME="\$DIR/python311"
-          exec "\$DIR/exDesktop-bin" "\$@"
+          exec "\$DIR/oxDesktop-bin" "\$@"
           SH
-              chmod +x "$PKG/exDesktop" "$PKG/exDesktop-bin"
-              tar -C pkg -czf "exDesktop-linux-x64.$VERSION.tar.gz" exDesktop
+              chmod +x "$PKG/oxDesktop" "$PKG/oxDesktop-bin"
+              tar -C pkg -czf "oxDesktop-linux-x64.$VERSION.tar.gz" oxDesktop
             '
-          ls -la "exDesktop-linux-x64.$VERSION.tar.gz"
+          ls -la "oxDesktop-linux-x64.$VERSION.tar.gz"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: exDesktop-linux-x64
-          path: exDesktop-linux-x64.*.tar.gz
+          name: oxDesktop-linux-x64
+          path: oxDesktop-linux-x64.*.tar.gz
           retention-days: 7
 
       - name: Attach to release
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" "exDesktop-linux-x64.$VERSION.tar.gz" --clobber
+        run: gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" "oxDesktop-linux-x64.$VERSION.tar.gz" --clobber

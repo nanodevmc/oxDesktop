@@ -72,7 +72,7 @@ class Stub:
 
     def __fspath__(self):
         import tempfile
-        path = os.path.join(tempfile.gettempdir(), "exdesktop_plugins")
+        path = os.path.join(tempfile.gettempdir(), "oxdesktop_plugins")
         os.makedirs(path, exist_ok=True)
         return path
     __lt__ = __le__ = __gt__ = __ge__ = lambda self, other: False

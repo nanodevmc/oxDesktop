@@ -308,7 +308,7 @@ void PaintPreview(QPainter &p, QRect rect) {
 				Avatar(),
 				QRect(left, channelTop, photo, photo));
 		},
-		u"@exDesktop"_q,
+		u"@oxDesktop"_q,
 		tr::lng_extera_streamer_preview_channel(tr::now));
 }
 
@@ -526,7 +526,7 @@ ChatHide ForPeer(not_null<PeerData*> peer) {
 }
 
 QString Name() {
-	return u"exDesktop"_q;
+	return u"oxDesktop"_q;
 }
 
 const QImage &Avatar() {

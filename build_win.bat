@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ========================================================
-echo  exDesktop Windows Native Builder with Compiler Cache
+echo  oxDesktop Windows Native Builder with Compiler Cache
 echo ========================================================
 
 :: Cache directory & size limits for .obj compiler caching
@@ -33,7 +33,7 @@ if "%ACTION%"=="build" (
         echo [ERROR] Build directory %BUILD_DIR% does not exist. Run configure first.
         exit /b 1
     )
-    echo [INFO] Compiling exDesktop in %BUILD_DIR% (%CONFIG%)...
+    echo [INFO] Compiling oxDesktop in %BUILD_DIR% (%CONFIG%)...
     cmake --build "%BUILD_DIR%" --config "%CONFIG%" --target Telegram
     exit /b %errorlevel%
 )

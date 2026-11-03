@@ -2313,15 +2313,15 @@ void PartMain2(SectionBuilder &builder) {
 			builder,
 			u"channel"_q,
 			tr::lng_extera_channel(),
-			u"@exDesktop"_q,
-			u"https://t.me/exDesktop"_q,
+			u"@oxDesktop"_q,
+			u"https://t.me/oxDesktop"_q,
 			{ &st::exteraIconChannel });
 		AddLink(
 			builder,
 			u"forum"_q,
 			tr::lng_extera_forum(),
-			u"@exDesktopChat"_q,
-			u"https://t.me/exDesktopChat"_q,
+			u"@oxDesktopChat"_q,
+			u"https://t.me/oxDesktopChat"_q,
 			{ &st::exteraIconForum });
 		AddLink(
 			builder,

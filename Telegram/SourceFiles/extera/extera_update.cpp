@@ -107,7 +107,7 @@ void Download(bool install) {
 		state.manager = new QNetworkAccessManager(qApp);
 	}
 	auto request = QNetworkRequest(QUrl(state.assetUrl));
-	request.setRawHeader("User-Agent", "exDesktop");
+	request.setRawHeader("User-Agent", "oxDesktop");
 	request.setAttribute(
 		QNetworkRequest::RedirectPolicyAttribute,
 		QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -123,7 +123,7 @@ void Download(bool install) {
 		if (bytes.size() < 1024) {
 			return;
 		}
-		const auto folder = QDir::tempPath() + u"/exDesktop/update"_q;
+		const auto folder = QDir::tempPath() + u"/oxDesktop/update"_q;
 		QDir().mkpath(folder);
 		const auto path = folder + '/' + state.assetName;
 		auto file = QFile(path);
@@ -145,9 +145,9 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 		state.manager = new QNetworkAccessManager(qApp);
 	}
 	auto request = QNetworkRequest(QUrl(
-		u"https://api.github.com/repos/nanodevmc/exDesktop/releases/latest"_q));
+		u"https://api.github.com/repos/nanodevmc/oxDesktop/releases/latest"_q));
 	request.setRawHeader("Accept", "application/vnd.github+json");
-	request.setRawHeader("User-Agent", "exDesktop");
+	request.setRawHeader("User-Agent", "oxDesktop");
 	const auto reply = state.manager->get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {
 		reply->deleteLater();
@@ -174,7 +174,7 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 		for (const auto &asset : object.value(u"assets"_q).toArray()) {
 			const auto info = asset.toObject();
 			const auto name = info.value(u"name"_q).toString();
-			if (name.startsWith(u"exDesktop-setup-x64"_q)
+			if (name.startsWith(u"oxDesktop-setup-x64"_q)
 				&& name.endsWith(u".exe"_q)) {
 				state.assetName = name;
 				state.assetUrl = info.value(
@@ -246,7 +246,7 @@ void Install() {
 void OpenRelease() {
 	const auto &url = Instance().url;
 	UrlClickHandler::Open(url.isEmpty()
-		? u"https://github.com/nanodevmc/exDesktop/releases/latest"_q
+		? u"https://github.com/nanodevmc/oxDesktop/releases/latest"_q
 		: url);
 }
 

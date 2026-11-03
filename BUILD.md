@@ -1,4 +1,4 @@
-# Сборка exDesktop / exDesktop Build Guide
+# Сборка oxDesktop / oxDesktop Build Guide
 
 ## Ускорение сборки: Кэширование объектных файлов (.obj / .o)
 В проекте реализована нативная поддержка компиляторного кэша (`sccache` / `ccache`) через параметр CMake `-DDESKTOP_APP_USE_COMPILER_CACHE=ON` для всех поддерживаемых операционных систем (Windows, Linux, macOS).

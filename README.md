@@ -1,12 +1,12 @@
 <p align="center">
-  <a href="https://github.com/metawka/exDesktop/stargazers"><img src="docs/banner.png" alt="Star exDesktop on GitHub" width="100%"></a>
+  <a href="https://github.com/metawka/oxDesktop/stargazers"><img src="docs/banner.png" alt="Star oxDesktop on GitHub" width="100%"></a>
 </p>
 
 <p align="center">
-  <img src="docs/logo.png" width="120" alt="exDesktop">
+  <img src="docs/logo.png" width="120" alt="oxDesktop">
 </p>
 
-<h1 align="center">exDesktop</h1>
+<h1 align="center">oxDesktop</h1>
 
 <p align="center">
   Unofficial Telegram client for Windows, Linux and macOS, built from the official
@@ -15,12 +15,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/metawka/exDesktop/releases/latest"><img src="https://img.shields.io/github/v/release/metawka/exDesktop?label=Release&color=ee6b54" alt="Release"></a>
-  <a href="https://github.com/metawka/exDesktop/releases"><img src="https://img.shields.io/github/downloads/metawka/exDesktop/total?label=Downloads&color=ee6b54" alt="Downloads"></a>
+  <a href="https://github.com/metawka/oxDesktop/releases/latest"><img src="https://img.shields.io/github/v/release/metawka/oxDesktop?label=Release&color=ee6b54" alt="Release"></a>
+  <a href="https://github.com/metawka/oxDesktop/releases"><img src="https://img.shields.io/github/downloads/metawka/oxDesktop/total?label=Downloads&color=ee6b54" alt="Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-ee6b54" alt="License"></a>
   <br>
-  <a href="https://t.me/exDesktop"><img src="https://img.shields.io/badge/Channel-@exDesktop-2aabee?logo=telegram&logoColor=white" alt="Channel"></a>
-  <a href="https://t.me/exDesktopChat"><img src="https://img.shields.io/badge/Chat-@exDesktopChat-2aabee?logo=telegram&logoColor=white" alt="Chat"></a>
+  <a href="https://t.me/oxDesktop"><img src="https://img.shields.io/badge/Channel-@oxDesktop-2aabee?logo=telegram&logoColor=white" alt="Channel"></a>
+  <a href="https://t.me/oxDesktopChat"><img src="https://img.shields.io/badge/Chat-@oxDesktopChat-2aabee?logo=telegram&logoColor=white" alt="Chat"></a>
   <a href="https://exteradesktop.xyz"><img src="https://img.shields.io/badge/Website-exteradesktop.xyz-2aabee" alt="Website"></a>
 </p>
 
@@ -30,7 +30,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/exdesktop.png" width="100%" alt="exDesktop">
+  <img src="docs/screenshots/oxdesktop.png" width="100%" alt="oxDesktop">
 </p>
 
 <table>
@@ -124,11 +124,11 @@
 
 | Platform | File |
 |:--|:--|
-| Windows | `exDesktop-setup-x64.*.exe` installer or `exDesktop-portable-x64.*.zip` portable version |
-| Linux | `exDesktop-linux-x64.*.tar.gz`, run `exDesktop` from the archive |
-| macOS | `exDesktop-macos-arm64.*.dmg` or `.zip` for Apple Silicon |
+| Windows | `oxDesktop-setup-x64.*.exe` installer or `oxDesktop-portable-x64.*.zip` portable version |
+| Linux | `oxDesktop-linux-x64.*.tar.gz`, run `oxDesktop` from the archive |
+| macOS | `oxDesktop-macos-arm64.*.dmg` or `.zip` for Apple Silicon |
 
-All files are available on the [releases page](https://github.com/metawka/exDesktop/releases/latest). exDesktop installs beside Telegram Desktop and keeps its data separate.
+All files are available on the [releases page](https://github.com/metawka/oxDesktop/releases/latest). oxDesktop installs beside Telegram Desktop and keeps its data separate.
 
 ## Building
 
@@ -169,16 +169,16 @@ cmake --build build --target Telegram
 **Gentoo**
 
 ```bash
-emerge net-im/exdesktop
+emerge net-im/oxdesktop
 ```
 
 **Python plugin runtime**
 
-Copy the runtime files to `/usr/share/exDesktop/python/extera/`, or keep them next to the binary in `python/extera/`:
+Copy the runtime files to `/usr/share/oxDesktop/python/extera/`, or keep them next to the binary in `python/extera/`:
 
 ```bash
-sudo mkdir -p /usr/share/exDesktop/python/extera
-sudo cp -r Telegram/SourceFiles/extera/python/* /usr/share/exDesktop/python/extera/
+sudo mkdir -p /usr/share/oxDesktop/python/extera
+sudo cp -r Telegram/SourceFiles/extera/python/* /usr/share/oxDesktop/python/extera/
 ```
 
 </details>
@@ -206,11 +206,11 @@ The `python` folder next to `Telegram.exe` is required for plugins.
 
 ## Localization
 
-Most strings follow Telegram Desktop translations. exDesktop strings are available in English and Russian.
+Most strings follow Telegram Desktop translations. oxDesktop strings are available in English and Russian.
 
 ## Credits
 
-| Project | Use in exDesktop |
+| Project | Use in oxDesktop |
 |:--|:--|
 | [Telegram Desktop](https://github.com/telegramdesktop/tdesktop) | Client sources |
 | [exteraGram](https://github.com/exteraSquad/exteraGram) | Features and plugin format |
@@ -219,4 +219,4 @@ Most strings follow Telegram Desktop translations. exDesktop strings are availab
 
 ## License
 
-exDesktop is distributed under the [GNU General Public License v3.0](LICENSE).
+oxDesktop is distributed under the [GNU General Public License v3.0](LICENSE).

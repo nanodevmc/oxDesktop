@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# exDesktop macOS Native Build & Validation Script with Compiler Cache
+# oxDesktop macOS Native Build & Validation Script with Compiler Cache
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,7 +21,7 @@ export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-15G}"
 
 show_help() {
     cat <<EOF
-exDesktop macOS Native Builder with Compiler Cache
+oxDesktop macOS Native Builder with Compiler Cache
 
 Usage:
   ./build_mac.sh [command] [options]
@@ -73,7 +73,7 @@ run_build() {
     if [ ! -f "${BUILD_DIR}/build.ninja" ] && [ ! -f "${BUILD_DIR}/Makefile" ]; then
         run_configure "$@"
     fi
-    echo "==> Compiling exDesktop macOS (${CONFIG})..."
+    echo "==> Compiling oxDesktop macOS (${CONFIG})..."
     cmake --build "${BUILD_DIR}" --config "${CONFIG}" --target Telegram
     echo "==> Build complete: ${BUILD_DIR}/bin/Telegram.app"
 }

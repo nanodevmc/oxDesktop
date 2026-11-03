@@ -9,7 +9,7 @@
 - Changelog in the client.
 - Full-screen music player.
 - Improved channel feed with categories of channels.
-- Updated main page of exDesktop settings.
+- Updated main page of oxDesktop settings.
 - "Same as app" option in the translation language choice.
 - Media filters in chat search.
 - Built-in PDF viewer.
@@ -22,9 +22,9 @@
 - Character counter.
 
 7.3.3.6 (30.10.26)
-- Redesigned exDesktop settings: eight categories as cards and an Other row. Search on the main page and inside every category handles typos, synonyms, Russian and English. Switches work right in the search results; other results open their section and highlight the option.
+- Redesigned oxDesktop settings: eight categories as cards and an Other row. Search on the main page and inside every category handles typos, synonyms, Russian and English. Switches work right in the search results; other results open their section and highlight the option.
 - Welcome wizard on first launch: introduction with links, app icon choice, main settings.
-- New exDesktop icon and logo. Five app icon variants: Default, Telegram, Windows Accent, Dark, Light. Each one is available in a rounded square shape.
+- New oxDesktop icon and logo. Five app icon variants: Default, Telegram, Windows Accent, Dark, Light. Each one is available in a rounded square shape.
 - Built-in tg-ws-proxy: connection to Telegram through WebSocket. Installed as a separate option in the Windows installer, enabled in Network and Notifications and in the Connection Type window.
 - Round video from a file: the ⋮ menu in the video sending window, Send as Round Video. The frame area is selected manually.
 - Notification settings: system or built-in notifications, position on screen, custom sound.
@@ -53,11 +53,11 @@
 - Reply in another topic for forum messages.
 - "Copy Link" in the context menu of any settings item.
 - GIF search bot setting.
-- exDesktop badge page and donation details in Other.
+- oxDesktop badge page and donation details in Other.
 - Round application icon and version shown as 7.3.3 (5).
 - Popular options are enabled by default.
 - Linux builds are made on Rocky Linux 8 and run on older distributions (fixes the GLIBC_2.44 error).
-- On Linux, exDesktop now stores data in its own folder and no longer uses the Telegram Desktop folder.
+- On Linux, oxDesktop now stores data in its own folder and no longer uses the Telegram Desktop folder.
 - The macOS build includes Python for plugins.
 
 7.3.3.4 (30.10.26)
@@ -82,8 +82,8 @@
 - Rounded the application icon across Windows icon sizes, the executable, and the installer.
 - Gave the Windows installer a separate application identity so it installs alongside Telegram Desktop.
 - Updated Windows packaging so release assets use the release version.
-- exDesktop-setup-x64.7.3.3.3.exe is the installer.
-- exDesktop-portable-x64.7.3.3.3.zip is the portable build.
+- oxDesktop-setup-x64.7.3.3.3.exe is the installer.
+- oxDesktop-portable-x64.7.3.3.3.zip is the portable build.
 
 7.3.3.2 (24.10.26)
 - Added a quick actions bar to the message menu with Reply, Delete, Copy and Edit. Choose up to five actions and set their order in Chats.
@@ -100,7 +100,7 @@
 
 7.3.3.1 (24.10.26)
 - Disabled the built-in updater. This release moves to Telegram Desktop 7.3.3, so install it manually.
-- Added update notifications with an Update exDesktop button in the chat list.
+- Added update notifications with an Update oxDesktop button in the chat list.
 - Added a Hide Everything option to Streamer Mode for names, avatars, messages and account details.
 - Added screen capture protection for screenshots, OBS and screen sharing.
 - Fixed additional usernames being hidden in profiles when usernames are set to visible.
@@ -114,5 +114,5 @@
 - AI chat with your own Gemini API key.
 - User IDs, data center and estimated registration date in profiles.
 - English and Russian interface.
-- exDesktop-setup-x64.7.3.3.exe is the installer.
-- exDesktop-portable-x64.7.3.3.zip is the portable version. Extract it and run Telegram.exe.
+- oxDesktop-setup-x64.7.3.3.exe is the installer.
+- oxDesktop-portable-x64.7.3.3.zip is the portable version. Extract it and run Telegram.exe.

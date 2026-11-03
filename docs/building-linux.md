@@ -1,6 +1,6 @@
-# Инструкция по сборке exDesktop под Linux (x86_64)
+# Инструкция по сборке oxDesktop под Linux (x86_64)
 
-exDesktop — это нативный клиент Telegram с расширенными функциями (меню настроек, лента каналов, режим стримера, интеграция с Gemini и движок Python-плагинов).
+oxDesktop — это нативный клиент Telegram с расширенными функциями (меню настроек, лента каналов, режим стримера, интеграция с Gemini и движок Python-плагинов).
 
 ---
 
@@ -102,21 +102,21 @@ git submodule update --init Telegram/lib_ui cmake
 
 - **Код хоста и вспомогательные скрипты Python:**
   - `<папка с бинарником>/python/extera/`
-  - или `~/.local/share/exDesktop/python/extera/`
-  - или `/usr/share/exDesktop/python/extera/`
+  - или `~/.local/share/oxDesktop/python/extera/`
+  - или `/usr/share/oxDesktop/python/extera/`
 - **Пользовательские плагины:**
-  - `~/.local/share/exDesktop/tdata/plugins/` (файлы с расширением `.plugin`)
+  - `~/.local/share/oxDesktop/tdata/plugins/` (файлы с расширением `.plugin`)
 - **Настройки плагинов:**
-  - `~/.local/share/exDesktop/tdata/settings/`
+  - `~/.local/share/oxDesktop/tdata/settings/`
 
 ---
 
 ## 6. Наложение патча на чистый исходный код
 
-Полный патч адаптации сохранен в файле [patches/exdesktop_linux_port.patch](file:///home/rorka/Projects/exDesktop/patches/exdesktop_linux_port.patch).
+Полный патч адаптации сохранен в файле [patches/oxdesktop_linux_port.patch](file:///home/rorka/Projects/oxDesktop/patches/oxdesktop_linux_port.patch).
 Для наложения на свежий репозиторий:
 ```bash
-git apply patches/exdesktop_linux_port.patch
+git apply patches/oxdesktop_linux_port.patch
 ```
 
 
