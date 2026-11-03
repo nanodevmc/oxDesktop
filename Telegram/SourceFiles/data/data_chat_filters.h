@@ -53,8 +53,11 @@ public:
 		HasMyLinks  = (1 << 9),
 		StaticTitle = (1 << 10),
 
-		NewChats      = (1 << 11), // Telegram Business exceptions.
+		NewChats      = (1 << 11),
 		ExistingChats = (1 << 12),
+
+		RoleOwner     = (1 << 13),
+		RoleAdmin     = (1 << 14),
 	};
 	friend constexpr inline bool is_flag_type(Flag) { return true; };
 	using Flags = base::flags<Flag>;

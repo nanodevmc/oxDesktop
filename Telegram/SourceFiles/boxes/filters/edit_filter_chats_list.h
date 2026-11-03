@@ -83,6 +83,7 @@ private:
 	Fn<void(PeerListRowId)> _deselectOption;
 
 	PeerListContentDelegate *_typesDelegate = nullptr;
+	PeerListContentDelegate *_roleDelegate = nullptr;
 
 	rpl::lifetime _lifetime;
 

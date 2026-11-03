@@ -32,6 +32,8 @@ constexpr auto kAllTypes = {
 	Flag::NoMuted,
 	Flag::NoRead,
 	Flag::NoArchived,
+	Flag::RoleOwner,
+	Flag::RoleAdmin,
 };
 
 } // namespace

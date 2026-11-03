@@ -734,7 +734,9 @@ void EditFilterBox(
 		| Flag::NonContacts
 		| Flag::Groups
 		| Flag::Channels
-		| Flag::Bots;
+		| Flag::Bots
+		| Flag::RoleOwner
+		| Flag::RoleAdmin;
 	constexpr auto kExcludeTypes = Flag::NoMuted
 		| Flag::NoArchived
 		| Flag::NoRead;

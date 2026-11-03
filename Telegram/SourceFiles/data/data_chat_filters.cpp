@@ -7,6 +7,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_chat_filters.h"
 
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+#include <QtCore/QFile>
+
 #include "api/api_text_entities.h"
 #include "history/history.h"
 #include "data/data_peer.h"
@@ -86,7 +90,8 @@ ChatFilter ChatFilter::FromTL(
 			| (data.is_exclude_muted() ? Flag::NoMuted : Flag(0))
 			| (data.is_exclude_read() ? Flag::NoRead : Flag(0))
 			| (data.is_exclude_archived() ? Flag::NoArchived : Flag(0))
-			| (data.is_title_noanimate() ? Flag::StaticTitle : Flag(0));
+			| (data.is_title_noanimate() ? Flag::StaticTitle : Flag(0))
+			| ([&] { LoadRoleFlagsOnce(); return FilterRoleFlags().value_or(data.vid().v, Flag(0)); })();
 		auto &&to_histories = ranges::views::transform([&](
 				const MTPInputPeer &input) {
 			const auto peer = Data::PeerFromInputMTP(owner, input);
@@ -336,6 +341,52 @@ const base::flat_set<not_null<History*>> &ChatFilter::never() const {
 	return _never;
 }
 
+namespace {
+
+base::flat_map<FilterId, ChatFilter::Flags> &FilterRoleFlags() {
+	static auto result = base::flat_map<FilterId, ChatFilter::Flags>();
+	return result;
+}
+
+void SaveRoleFlags() {
+	const auto &map = FilterRoleFlags();
+	auto obj = QJsonObject();
+	for (const auto &[id, flags] : map) {
+		obj.insert(QString::number(id), int(flags.value()));
+	}
+	auto file = QFile(cWorkingDir() + u"tdata/ox_filter_roles.json"_q);
+	if (file.open(QIODevice::WriteOnly)) {
+		file.write(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+	}
+}
+
+void LoadRoleFlagsOnce() {
+	static auto loaded = false;
+	if (loaded) {
+		return;
+	}
+	loaded = true;
+	auto file = QFile(cWorkingDir() + u"tdata/ox_filter_roles.json"_q);
+	if (!file.open(QIODevice::ReadOnly)) {
+		return;
+	}
+	const auto doc = QJsonDocument::fromJson(file.readAll());
+	if (!doc.isObject()) {
+		return;
+	}
+	auto &map = FilterRoleFlags();
+	const auto obj = doc.object();
+	for (auto i = obj.begin(); i != obj.end(); ++i) {
+		const auto id = i.key().toInt();
+		const auto val = i.value().toInt();
+		if (id > 0) {
+			map[id] = ChatFilter::Flag(val);
+		}
+	}
+}
+
+} // namespace
+
 bool ChatFilter::contains(
 		not_null<History*> history,
 		bool ignoreFakeUnread) const {
@@ -371,9 +422,33 @@ bool ChatFilter::contains(
 	const auto state = (_flags & (Flag::NoMuted | Flag::NoRead))
 		? history->chatListBadgesState()
 		: Dialogs::BadgesState();
+	const auto typesMask = Flag::Contacts
+		| Flag::NonContacts
+		| Flag::Groups
+		| Flag::Channels
+		| Flag::Bots;
+	const auto matchesType = (_flags & typesMask)
+		? bool(_flags & flag)
+		: (history->peer->isChat() || history->peer->isChannel());
+	if (!matchesType) {
+		return _always.contains(history);
+	}
+	if (_flags & (Flag::RoleOwner | Flag::RoleAdmin)) {
+		const auto isOwner = (channel && channel->amCreator())
+			|| (history->peer->isChat() && history->peer->asChat()->amCreator());
+		const auto isAdmin = isOwner
+			|| (channel && channel->hasAdminRights())
+			|| (history->peer->isChat() && history->peer->asChat()->amAdmin());
+		if ((_flags & Flag::RoleOwner) && !(_flags & Flag::RoleAdmin)) {
+			if (!isOwner) {
+				return _always.contains(history);
+			}
+		} else if (!isAdmin) {
+			return _always.contains(history);
+		}
+	}
 	return false
-		|| ((_flags & flag)
-			&& (!(_flags & Flag::NoMuted)
+		|| ((!(_flags & Flag::NoMuted)
 				|| !history->muted()
 				|| (state.mention
 					&& history->folderKnown()
@@ -656,6 +731,11 @@ void ChatFilters::set(ChatFilter filter) {
 	if (!filter.id()) {
 		return;
 	}
+	const auto roleFlags = filter.flags() & (Flag::RoleOwner | Flag::RoleAdmin);
+	if (roleFlags != FilterRoleFlags().value_or(filter.id(), Flag(0))) {
+		FilterRoleFlags()[filter.id()] = roleFlags;
+		SaveRoleFlags();
+	}
 	const auto i = ranges::find(_list, filter.id(), &ChatFilter::id);
 	if (i == end(_list)) {
 		applyInsert(std::move(filter), _list.size());
@@ -675,6 +755,8 @@ void ChatFilters::applyInsert(ChatFilter filter, int position) {
 }
 
 void ChatFilters::remove(FilterId id) {
+	FilterRoleFlags().remove(id);
+	SaveRoleFlags();
 	const auto i = ranges::find(_list, id, &ChatFilter::id);
 	if (i == end(_list)) {
 		return;
