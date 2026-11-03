@@ -397,7 +397,7 @@ void ShowAlert(const QString &payload) {
 				return;
 			}
 			*answered = true;
-			Call(u"alert_click"_q, QJsonObject{
+			(void)Call(u"alert_click"_q, QJsonObject{
 				{ u"id"_q, id },
 				{ u"which"_q, which },
 			});
@@ -435,11 +435,12 @@ void ShowAlert(const QString &payload) {
 		if (buttons.isEmpty()) {
 			box->addButton(tr::lng_close(), [=] { box->closeBox(); });
 		}
-		box->boxClosing() | rpl::on_next([=] {
+		box->boxClosing(
+		) | rpl::start_with_next([=] {
 			if (!*answered) {
 				answer(-2);
 			}
-		}) | rpl::lifetime(box->lifetime());
+		}, box->lifetime());
 	}));
 }
 

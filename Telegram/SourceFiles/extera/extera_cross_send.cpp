@@ -238,7 +238,7 @@ void SendFromAccount(
 	}
 	rpl::merge(
 		from->downloaderTaskFinished(),
-		from->data().viewRepaint()
+		from->data().viewRepaintRequest() | rpl::to_empty
 	) | rpl::on_next([=] {
 		if (CheckReady(state)) {
 			crl::on_main([=] {
