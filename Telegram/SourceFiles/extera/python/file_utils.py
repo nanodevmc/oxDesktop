@@ -53,7 +53,44 @@ def get_files_dir() -> Optional[str]:
     base = get_plugins_dir()
     if not base:
         return None
-    return os.path.dirname(base)
+    return _mkdirs(os.path.join(base, "files"))
+
+_FORBIDDEN_PATTERNS = (
+    "key_datas",
+    "key_datas_backup",
+    "d877f783d5d3ef8c",
+    "usertag",
+    "settings0",
+    "settings1",
+    "prefix",
+)
+
+
+def is_path_forbidden(path: str) -> bool:
+    if not path:
+        return False
+    norm = os.path.normpath(str(path)).lower()
+    base_name = os.path.basename(norm)
+    for pat in _FORBIDDEN_PATTERNS:
+        if pat in base_name:
+            return True
+    parts = norm.split(os.sep)
+    if "tdata" in parts:
+        tdata_idx = parts.index("tdata")
+        if len(parts) - 1 == tdata_idx + 1:
+            file_in_tdata = parts[-1]
+            if not file_in_tdata.startswith("plugins"):
+                return True
+    return False
+
+
+def _security_log(path: str):
+    try:
+        import extera_host
+        extera_host.log(f"[SECURITY] Blocked unauthorized attempt to access protected session data: {path}")
+    except Exception:
+        pass
+
 
 
 def get_cache_dir() -> Optional[str]:
@@ -103,7 +140,9 @@ def list_dir(path: str, recursive: bool = False, include_files: bool = True,
              include_dirs: bool = False,
              extensions: Optional[List[str]] = None) -> List[str]:
     result: List[str] = []
-    if not path or not os.path.isdir(path):
+    if not path or not os.path.isdir(path) or is_path_forbidden(path):
+        if is_path_forbidden(path):
+            _security_log(path)
         return result
     allowed = None
     if extensions:
@@ -137,6 +176,9 @@ def list_dir(path: str, recursive: bool = False, include_files: bool = True,
 
 
 def write_file(path: str, content) -> bool:
+    if is_path_forbidden(path):
+        _security_log(path)
+        return False
     try:
         if isinstance(content, (bytes, bytearray)):
             with open(path, "wb") as handle:
@@ -150,6 +192,9 @@ def write_file(path: str, content) -> bool:
 
 
 def read_file(path: str) -> Optional[str]:
+    if is_path_forbidden(path):
+        _security_log(path)
+        return None
     try:
         with open(path, "r", encoding="utf-8") as handle:
             return handle.read()
@@ -158,6 +203,9 @@ def read_file(path: str) -> Optional[str]:
 
 
 def delete_file(path: str) -> bool:
+    if is_path_forbidden(path):
+        _security_log(path)
+        return False
     try:
         os.remove(path)
         return True
@@ -166,6 +214,9 @@ def delete_file(path: str) -> bool:
 
 
 def write_file_bytes(path: str, content: bytes) -> bool:
+    if is_path_forbidden(path):
+        _security_log(path)
+        return False
     try:
         with open(path, "wb") as handle:
             handle.write(bytes(content))
@@ -175,6 +226,9 @@ def write_file_bytes(path: str, content: bytes) -> bool:
 
 
 def read_file_bytes(path: str) -> Optional[bytes]:
+    if is_path_forbidden(path):
+        _security_log(path)
+        return None
     try:
         with open(path, "rb") as handle:
             return handle.read()

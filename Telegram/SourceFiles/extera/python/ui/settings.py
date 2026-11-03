@@ -1,105 +1,188 @@
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 _registered = {}
 
 
-@dataclass
+def _norm_text(text: Optional[str], title: Optional[str]) -> str:
+    if text is not None and text != "":
+        return str(text)
+    if title is not None:
+        return str(title)
+    return ""
+
+
+def _norm_subtext(subtext: Optional[str], subtitle: Optional[str], hint: Optional[str]) -> Optional[str]:
+    if subtext is not None and subtext != "":
+        return str(subtext)
+    if subtitle is not None and subtitle != "":
+        return str(subtitle)
+    if hint is not None and hint != "":
+        return str(hint)
+    return None
+
+
 class Header:
-    text: str = ""
+    def __init__(self, text: str = "", title: Optional[str] = None, **kwargs):
+        self.text = _norm_text(text, title)
 
 
-@dataclass
 class Divider:
-    text: Optional[str] = None
+    def __init__(self, text: Optional[str] = None, title: Optional[str] = None, **kwargs):
+        norm = _norm_text(text, title)
+        self.text = norm if norm else None
 
 
-@dataclass
 class Switch:
-    key: str = ""
-    text: str = ""
-    default: bool = False
-    subtext: Optional[str] = None
-    icon: Optional[str] = None
-    on_change: Optional[Callable] = None
-    on_long_click: Optional[Callable] = None
-    link_alias: Optional[str] = None
+    def __init__(self, key: str = "", text: str = "", default: bool = False,
+                 subtext: Optional[str] = None, icon: Optional[str] = None,
+                 on_change: Optional[Callable] = None, on_long_click: Optional[Callable] = None,
+                 link_alias: Optional[str] = None, title: Optional[str] = None,
+                 subtitle: Optional[str] = None, get_value: Optional[Callable] = None, **kwargs):
+        self.key = key or kwargs.get("id", "")
+        self.text = _norm_text(text, title)
+        self.subtext = _norm_subtext(subtext, subtitle, None)
+        self.default = bool(default)
+        self.icon = icon
+        self.on_change = on_change
+        self.on_long_click = on_long_click
+        self.link_alias = link_alias
+        self.get_value = get_value
 
 
-@dataclass
 class Selector:
-    key: str = ""
-    text: str = ""
-    default: int = 0
-    items: List[str] = field(default_factory=list)
-    subtext: Optional[str] = None
-    icon: Optional[str] = None
-    on_change: Optional[Callable] = None
-    on_long_click: Optional[Callable] = None
-    link_alias: Optional[str] = None
+    def __init__(self, key: str = "", text: str = "", default: Union[int, str] = 0,
+                 items: Optional[List[str]] = None, subtext: Optional[str] = None,
+                 icon: Optional[str] = None, on_change: Optional[Callable] = None,
+                 on_long_click: Optional[Callable] = None, link_alias: Optional[str] = None,
+                 title: Optional[str] = None, subtitle: Optional[str] = None,
+                 options: Optional[Union[Dict[str, str], List[str]]] = None,
+                 get_value: Optional[Callable] = None, **kwargs):
+        self.key = key or kwargs.get("id", "")
+        self.text = _norm_text(text, title)
+        self.subtext = _norm_subtext(subtext, subtitle, None)
+        self.icon = icon
+        self.on_change = on_change
+        self.on_long_click = on_long_click
+        self.link_alias = link_alias
+        self.get_value = get_value
+
+        self.options_map: Dict[str, str] = {}
+        self.options_keys: List[str] = []
+        if isinstance(options, dict):
+            self.options_map = dict(options)
+            self.items = list(options.values())
+            self.options_keys = list(options.keys())
+        elif isinstance(options, (list, tuple)):
+            self.items = [str(x) for x in options]
+            self.options_keys = [str(i) for i in range(len(options))]
+        elif items is not None:
+            self.items = [str(x) for x in items]
+            self.options_keys = [str(i) for i in range(len(items))]
+        else:
+            self.items = []
+            self.options_keys = []
+
+        self.default = default
 
 
-@dataclass
 class Input:
-    key: str = ""
-    text: str = ""
-    default: Optional[str] = None
-    subtext: Optional[str] = None
-    icon: Optional[str] = None
-    on_change: Optional[Callable] = None
-    on_long_click: Optional[Callable] = None
-    link_alias: Optional[str] = None
+    def __init__(self, key: str = "", text: str = "", default: Optional[str] = None,
+                 subtext: Optional[str] = None, icon: Optional[str] = None,
+                 on_change: Optional[Callable] = None, on_long_click: Optional[Callable] = None,
+                 link_alias: Optional[str] = None, title: Optional[str] = None,
+                 subtitle: Optional[str] = None, hint: Optional[str] = None,
+                 on_save: Optional[Callable] = None, get_value: Optional[Callable] = None, **kwargs):
+        self.key = key or kwargs.get("id", "")
+        self.text = _norm_text(text, title or hint)
+        self.hint = hint or self.text
+        self.subtext = _norm_subtext(subtext, subtitle, hint)
+        self.default = str(default) if default is not None else None
+        self.icon = icon
+        self.on_change = on_save or on_change
+        self.on_long_click = on_long_click
+        self.link_alias = link_alias
+        self.get_value = get_value
 
 
-@dataclass
+class EditText(Input):
+    def __init__(self, key: str = "", hint: str = "", default: str = "",
+                 multiline: bool = False, max_length: Optional[int] = None,
+                 mask: Optional[str] = None, on_change: Optional[Callable] = None,
+                 text: Optional[str] = None, title: Optional[str] = None,
+                 subtext: Optional[str] = None, subtitle: Optional[str] = None,
+                 on_save: Optional[Callable] = None, get_value: Optional[Callable] = None, **kwargs):
+        super().__init__(
+            key=key,
+            text=text or hint,
+            default=default,
+            subtext=subtext,
+            hint=hint,
+            title=title,
+            subtitle=subtitle,
+            on_change=on_change,
+            on_save=on_save,
+            get_value=get_value,
+            **kwargs
+        )
+        self.multiline = bool(multiline)
+        self.max_length = max_length
+        self.mask = mask
+
+
 class Text:
-    text: str = ""
-    subtext: Optional[str] = None
-    icon: Optional[str] = None
-    accent: bool = False
-    red: bool = False
-    on_click: Optional[Callable] = None
-    on_long_click: Optional[Callable] = None
-    create_sub_fragment: Optional[Callable[[], list]] = None
-    link_alias: Optional[str] = None
+    def __init__(self, text: str = "", subtext: Optional[str] = None,
+                 icon: Optional[str] = None, accent: bool = False, red: bool = False,
+                 on_click: Optional[Callable] = None, on_long_click: Optional[Callable] = None,
+                 create_sub_fragment: Optional[Callable[[], list]] = None,
+                 link_alias: Optional[str] = None, title: Optional[str] = None,
+                 subtitle: Optional[str] = None, **kwargs):
+        self.text = _norm_text(text, title)
+        self.subtext = _norm_subtext(subtext, subtitle, None)
+        self.icon = icon
+        self.accent = bool(accent)
+        self.red = bool(red)
+        self.on_click = on_click
+        self.on_long_click = on_long_click
+        self.create_sub_fragment = create_sub_fragment
+        self.link_alias = link_alias
 
 
-@dataclass
-class EditText:
-    key: str = ""
-    hint: str = ""
-    default: str = ""
-    multiline: bool = False
-    max_length: Optional[int] = None
-    mask: Optional[str] = None
-    on_change: Optional[Callable] = None
-
-
-@dataclass
 class Slider:
-    key: str = ""
-    text: str = ""
-    default: float = 0
-    min: float = 0
-    max: float = 100
-    step: float = 1
-    subtext: Optional[str] = None
-    icon: Optional[str] = None
-    on_change: Optional[Callable] = None
-    on_long_click: Optional[Callable] = None
-    link_alias: Optional[str] = None
+    def __init__(self, key: str = "", text: str = "", default: float = 0,
+                 min: float = 0, max: float = 100, step: float = 1,
+                 subtext: Optional[str] = None, icon: Optional[str] = None,
+                 on_change: Optional[Callable] = None, on_long_click: Optional[Callable] = None,
+                 link_alias: Optional[str] = None, title: Optional[str] = None,
+                 subtitle: Optional[str] = None, get_value: Optional[Callable] = None, **kwargs):
+        self.key = key or kwargs.get("id", "")
+        self.text = _norm_text(text, title)
+        self.subtext = _norm_subtext(subtext, subtitle, None)
+        self.default = float(default)
+        self.min = float(min)
+        self.max = float(max)
+        self.step = float(step)
+        self.icon = icon
+        self.on_change = on_change
+        self.on_long_click = on_long_click
+        self.link_alias = link_alias
+        self.get_value = get_value
 
 
-@dataclass
 class Custom:
-    item: Optional[Any] = None
-    view: Optional[Any] = None
-    factory: Optional[Any] = None
-    factory_args: Optional[tuple] = None
-    on_click: Optional[Callable] = None
-    on_long_click: Optional[Callable] = None
-    create_sub_fragment: Optional[Callable[[], list]] = None
-    link_alias: Optional[str] = None
+    def __init__(self, item: Optional[Any] = None, view: Optional[Any] = None,
+                 factory: Optional[Any] = None, factory_args: Optional[tuple] = None,
+                 on_click: Optional[Callable] = None, on_long_click: Optional[Callable] = None,
+                 create_sub_fragment: Optional[Callable[[], list]] = None,
+                 link_alias: Optional[str] = None, **kwargs):
+        self.item = item
+        self.view = view
+        self.factory = factory
+        self.factory_args = factory_args
+        self.on_click = on_click
+        self.on_long_click = on_long_click
+        self.create_sub_fragment = create_sub_fragment
+        self.link_alias = link_alias
 
 
 class _FactoryPeer:
@@ -148,22 +231,22 @@ class SimpleSettingFactory:
 PluginItemFactory = SimpleSettingFactory
 
 
-def register_items(plugin_id, items):
+def register_items(plugin_id: str, items: List[Any]):
     _registered[plugin_id] = list(items)
 
 
-def unregister_items(plugin_id):
+def unregister_items(plugin_id: str):
     _registered.pop(plugin_id, None)
 
 
-def find_item(plugin_id, index):
+def find_item(plugin_id: str, index: int) -> Optional[Any]:
     items = _registered.get(plugin_id, [])
     if 0 <= index < len(items):
         return items[index]
     return None
 
 
-def describe(item, index):
+def describe(item: Any, index: int) -> Optional[Dict[str, Any]]:
     kind = type(item).__name__.lower()
     if kind == "custom":
         return None
@@ -176,6 +259,27 @@ def describe(item, index):
         value = getattr(item, key)
         if value is not None and not callable(value):
             data[key] = value
+
+    # Dynamic value evaluation via get_value
+    get_val = getattr(item, "get_value", None)
+    if callable(get_val):
+        try:
+            val = get_val()
+            if val is not None:
+                data["value"] = val
+                data["default"] = val
+        except Exception:
+            pass
+
+    # Normalize Selector default/value to integer index for UI
+    if kind == "selector":
+        cur_val = data.get("value", data.get("default", 0))
+        keys = getattr(item, "options_keys", [])
+        if keys and isinstance(cur_val, str) and cur_val in keys:
+            data["default"] = keys.index(cur_val)
+        elif isinstance(cur_val, int):
+            data["default"] = cur_val
+
     data["clickable"] = bool(getattr(item, "on_click", None))
     data["long_clickable"] = bool(getattr(item, "on_long_click", None))
     return data
