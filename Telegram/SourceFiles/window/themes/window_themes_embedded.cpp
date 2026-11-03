@@ -404,6 +404,7 @@ std::vector<QColor> DefaultAccentColors(EmbeddedType type) {
 	switch (type) {
 	case EmbeddedType::DayBlue:
 		return {
+			qColor("da3018"),
 			qColor("45bce7"),
 			qColor("52b440"),
 			qColor("d46c99"),
@@ -415,6 +416,7 @@ std::vector<QColor> DefaultAccentColors(EmbeddedType type) {
 		};
 	case EmbeddedType::Default:
 		return {
+			qColor("da3018"),
 			qColor("45bce7"),
 			qColor("52b440"),
 			qColor("d46c99"),
@@ -426,6 +428,7 @@ std::vector<QColor> DefaultAccentColors(EmbeddedType type) {
 		};
 	case EmbeddedType::Night:
 		return {
+			qColor("da3018"),
 			qColor("58bfe8"),
 			qColor("466f42"),
 			qColor("aa6084"),

@@ -37,7 +37,7 @@ namespace {
 		return QColor(abgr & 0xFF, (abgr >> 8) & 0xFF, (abgr >> 16) & 0xFF);
 	}
 #endif
-	return QColor(34, 135, 203);
+	return QColor(218, 48, 24);
 }
 
 [[nodiscard]] const QImage &Glyph() {
@@ -164,7 +164,7 @@ void UpdatePinned(const QString &icon) {
 std::vector<Variant> Variants() {
 	const auto accent = AccentColor();
 	return {
-		{ QString(), QColor(233, 89, 51), QColor(251, 123, 119), Qt::white },
+		{ QString(), QColor(218, 48, 24), QColor(255, 108, 42), Qt::white },
 		{
 			u"telegram"_q,
 			QColor(34, 135, 203),
@@ -176,13 +176,13 @@ std::vector<Variant> Variants() {
 			u"dark"_q,
 			QColor(28, 28, 32),
 			QColor(58, 58, 66),
-			QColor(251, 124, 116),
+			QColor(255, 108, 42),
 		},
 		{
 			u"light"_q,
 			QColor(240, 240, 244),
 			QColor(255, 255, 255),
-			QColor(233, 89, 51),
+			QColor(218, 48, 24),
 		},
 	};
 }

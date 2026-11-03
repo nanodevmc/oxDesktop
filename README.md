@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/metawka/oxDesktop/stargazers"><img src="docs/banner.png" alt="Star oxDesktop on GitHub" width="100%"></a>
+  <a href="https://github.com/nanodevmc/oxDesktop/stargazers"><img src="docs/banner.png" alt="Star oxDesktop on GitHub" width="100%"></a>
 </p>
 
 <p align="center">
@@ -15,18 +15,18 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/metawka/oxDesktop/releases/latest"><img src="https://img.shields.io/github/v/release/metawka/oxDesktop?label=Release&color=ee6b54" alt="Release"></a>
-  <a href="https://github.com/metawka/oxDesktop/releases"><img src="https://img.shields.io/github/downloads/metawka/oxDesktop/total?label=Downloads&color=ee6b54" alt="Downloads"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-ee6b54" alt="License"></a>
+  <a href="https://github.com/nanodevmc/oxDesktop/releases/latest"><img src="https://img.shields.io/github/v/release/nanodevmc/oxDesktop?label=Release&color=da3018" alt="Release"></a>
+  <a href="https://github.com/nanodevmc/oxDesktop/releases"><img src="https://img.shields.io/github/downloads/nanodevmc/oxDesktop/total?label=Downloads&color=da3018" alt="Downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-da3018" alt="License"></a>
   <br>
-  <a href="https://t.me/oxDesktop"><img src="https://img.shields.io/badge/Channel-@oxDesktop-2aabee?logo=telegram&logoColor=white" alt="Channel"></a>
-  <a href="https://t.me/oxDesktopChat"><img src="https://img.shields.io/badge/Chat-@oxDesktopChat-2aabee?logo=telegram&logoColor=white" alt="Chat"></a>
-  <a href="https://exteradesktop.xyz"><img src="https://img.shields.io/badge/Website-exteradesktop.xyz-2aabee" alt="Website"></a>
+  <a href="https://t.me/WineSquad"><img src="https://img.shields.io/badge/Channel-WineSquad-da3018?logo=telegram&logoColor=white" alt="Channel"></a>
+  <a href="https://t.me/radoqi"><img src="https://img.shields.io/badge/Dev-NanoDev-2aabee?logo=telegram&logoColor=white" alt="Dev"></a>
+  <a href="https://github.com/nanodevmc/oxDesktop"><img src="https://img.shields.io/badge/GitHub-nanodevmc%2FoxDesktop-181717?logo=github&logoColor=white" alt="GitHub"></a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/English-selected-555?style=for-the-badge" alt="English">
-  <a href="README.ru.md"><img src="https://img.shields.io/badge/Русский-open-ee6b54?style=for-the-badge" alt="Русский"></a>
+  <a href="README.ru.md"><img src="https://img.shields.io/badge/Русский-open-da3018?style=for-the-badge" alt="Русский"></a>
 </p>
 
 <p align="center">
@@ -128,7 +128,7 @@
 | Linux | `oxDesktop-linux-x64.*.tar.gz`, run `oxDesktop` from the archive |
 | macOS | `oxDesktop-macos-arm64.*.dmg` or `.zip` for Apple Silicon |
 
-All files are available on the [releases page](https://github.com/metawka/oxDesktop/releases/latest). oxDesktop installs beside Telegram Desktop and keeps its data separate.
+All files are available on the [releases page](https://github.com/nanodevmc/oxDesktop/releases/latest). oxDesktop installs beside Telegram Desktop and keeps its data separate.
 
 ## Building
 
@@ -213,6 +213,7 @@ Most strings follow Telegram Desktop translations. oxDesktop strings are availab
 | Project | Use in oxDesktop |
 |:--|:--|
 | [Telegram Desktop](https://github.com/telegramdesktop/tdesktop) | Client sources |
+| [NanoDev](https://github.com/nanodevmc) | Lead developer & oxDesktop maintainer |
 | [exteraGram](https://github.com/exteraSquad/exteraGram) | Features and plugin format |
 | [AyuGram Desktop](https://github.com/AyuGram/AyuGramDesktop) | Desktop implementation references |
 | [tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy) | Built-in WebSocket proxy, MIT License |
