@@ -1,6 +1,5 @@
 <RCC>
   <qresource prefix="/gui">
-    <file alias="art/devpfpprew.jpg">../../art/devpfpprew.jpg</file>
     <file alias="art/oxdesktop.png">../../art/oxdesktop.png</file>
     <file alias="art/background.tgv">../../art/background.tgv</file>
     <file alias="art/bg_thumbnail.png">../../art/bg_thumbnail.png</file>
