@@ -158,8 +158,7 @@ void Apply() {
 }
 
 [[nodiscard]] const QImage &PreviewAvatar() {
-	static const auto result = QImage(u":/gui/art/devpfpprew.jpg"_q);
-	return result;
+	return Avatar();
 }
 
 void PaintBar(QPainter &p, int x, int y, int width, int height) {
