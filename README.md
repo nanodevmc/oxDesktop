@@ -19,8 +19,10 @@
   <a href="https://github.com/nanodevmc/oxDesktop/releases"><img src="https://img.shields.io/github/downloads/nanodevmc/oxDesktop/total?label=Downloads&color=da3018" alt="Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-da3018" alt="License"></a>
   <br>
-  <a href="https://t.me/WineSquad"><img src="https://img.shields.io/badge/Channel-WineSquad-da3018?logo=telegram&logoColor=white" alt="Channel"></a>
-  <a href="https://t.me/radoqi"><img src="https://img.shields.io/badge/Dev-NanoDev-2aabee?logo=telegram&logoColor=white" alt="Dev"></a>
+  <a href="https://t.me/oxDesktop"><img src="https://img.shields.io/badge/Telegram-@oxDesktop-da3018?logo=telegram&logoColor=white" alt="Telegram"></a>
+  <a href="https://t.me/oxDesktopCl"><img src="https://img.shields.io/badge/Changelog-@oxDesktopCl-da3018?logo=telegram&logoColor=white" alt="Changelog"></a>
+  <a href="https://www.tiktok.com/@exDesktop"><img src="https://img.shields.io/badge/TikTok-@exDesktop-000000?logo=tiktok&logoColor=white" alt="TikTok"></a>
+  <a href="https://t.me/radoqi"><img src="https://img.shields.io/badge/Developer-@radoqi-2aabee?logo=telegram&logoColor=white" alt="Developer"></a>
   <a href="https://github.com/nanodevmc/oxDesktop"><img src="https://img.shields.io/badge/GitHub-nanodevmc%2FoxDesktop-181717?logo=github&logoColor=white" alt="GitHub"></a>
 </p>
 
@@ -207,6 +209,13 @@ The `python` folder next to `Telegram.exe` is required for plugins.
 ## Localization
 
 Most strings follow Telegram Desktop translations. oxDesktop strings are available in English and Russian.
+
+## Official Resources
+
+- **Telegram Channel**: [@oxDesktop](https://t.me/oxDesktop)
+- **Telegram Changelog**: [@oxDesktopCl](https://t.me/oxDesktopCl)
+- **TikTok**: [@exDesktop](https://www.tiktok.com/@exDesktop)
+- **Owner / CEO / Developer**: [@radoqi](https://t.me/radoqi)
 
 ## Credits
 
