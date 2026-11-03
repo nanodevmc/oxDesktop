@@ -26,9 +26,9 @@ const PROPERTYKEY pkey_AppUserModel_StartPinOption = { { 0x9F4C2855, 0x9F79, 0x4
 const PROPERTYKEY pkey_AppUserModel_ToastActivator = { { 0x9F4C2855, 0x9F79, 0x4B39, { 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3 } }, 26 };
 
 #ifdef OS_WIN_STORE
-const WCHAR AppUserModelIdBase[] = L"exDesktop.exDesktop.Store";
+const WCHAR AppUserModelIdBase[] = L"oxDesktop.oxDesktop.Store";
 #else // OS_WIN_STORE
-const WCHAR AppUserModelIdBase[] = L"exDesktop.exDesktop";
+const WCHAR AppUserModelIdBase[] = L"oxDesktop.oxDesktop";
 #endif // OS_WIN_STORE
 
 [[nodiscard]] QString PinnedIconsPath() {
@@ -213,7 +213,7 @@ void CleanupShortcut() {
 		return;
 	}
 
-	QString path = systemShortcutPath() + u"exDesktop.lnk"_q;
+	QString path = systemShortcutPath() + u"oxDesktop.lnk"_q;
 	std::wstring p = QDir::toNativeSeparators(path).toStdWString();
 
 	DWORD attributes = GetFileAttributes(p.c_str());
@@ -345,7 +345,7 @@ bool checkInstalled(QString path = {}) {
 		}
 	}
 
-	const auto installed = u"exDesktop/exDesktop.lnk"_q;
+	const auto installed = u"oxDesktop/oxDesktop.lnk"_q;
 	return validateShortcutAt(path + installed);
 }
 
@@ -356,7 +356,7 @@ bool ValidateShortcut() {
 	}
 
 	if (cAlphaVersion()) {
-		path += u"exDesktopAlpha.lnk"_q;
+		path += u"oxDesktopAlpha.lnk"_q;
 		if (validateShortcutAt(path)) {
 			return true;
 		}
@@ -365,7 +365,7 @@ bool ValidateShortcut() {
 			return true;
 		}
 
-		path += u"exDesktop.lnk"_q;
+		path += u"oxDesktop.lnk"_q;
 		if (validateShortcutAt(path)) {
 			return true;
 		}

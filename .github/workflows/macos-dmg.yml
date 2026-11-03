@@ -21,10 +21,10 @@ jobs:
         run: |
           VERSION="${TAG#v}"
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
-            --pattern "exDesktop-macos-arm64.$VERSION.zip"
-          ditto -x -k "exDesktop-macos-arm64.$VERSION.zip" dmg
+            --pattern "oxDesktop-macos-arm64.$VERSION.zip"
+          ditto -x -k "oxDesktop-macos-arm64.$VERSION.zip" dmg
           ln -s /Applications dmg/Applications
-          hdiutil create -volname exDesktop -srcfolder dmg -ov -format UDZO \
-            "exDesktop-macos-arm64.$VERSION.dmg"
+          hdiutil create -volname oxDesktop -srcfolder dmg -ov -format UDZO \
+            "oxDesktop-macos-arm64.$VERSION.dmg"
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
-            "exDesktop-macos-arm64.$VERSION.dmg" --clobber
+            "oxDesktop-macos-arm64.$VERSION.dmg" --clobber

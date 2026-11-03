@@ -126,11 +126,11 @@ private:
 	if (QFile::exists(appData + u"extera/extera_host.py"_q)) {
 		return appData;
 	}
-	const auto localShare = QDir::homePath() + u"/.local/share/exDesktop/python/"_q;
+	const auto localShare = QDir::homePath() + u"/.local/share/oxDesktop/python/"_q;
 	if (QFile::exists(localShare + u"extera/extera_host.py"_q)) {
 		return localShare;
 	}
-	const auto systemShare = u"/usr/share/exDesktop/python/"_q;
+	const auto systemShare = u"/usr/share/oxDesktop/python/"_q;
 	if (QFile::exists(systemShare + u"extera/extera_host.py"_q)) {
 		return systemShare;
 	}

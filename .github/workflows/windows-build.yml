@@ -184,13 +184,13 @@ jobs:
           $version = $Matches[1]
           $packageVersion = $version
           if ($env:GITHUB_EVENT_NAME -eq 'release') { $packageVersion = $env:GITHUB_REF_NAME.TrimStart('v') }
-          $portable = Join-Path $env:GITHUB_WORKSPACE 'exDesktop-windows-x64'
+          $portable = Join-Path $env:GITHUB_WORKSPACE 'oxDesktop-windows-x64'
           New-Item -ItemType Directory -Path $portable -Force | Out-Null
           Copy-Item (Join-Path $release 'Telegram.exe') $portable
           Copy-Item (Join-Path $release 'python') $portable -Recurse
           Copy-Item (Join-Path $release 'modules') $portable -Recurse
           if (Test-Path (Join-Path $release 'Updater.exe')) { Copy-Item (Join-Path $release 'Updater.exe') $portable }
-          $portableZip = "exDesktop-portable-x64.$packageVersion.zip"
+          $portableZip = "oxDesktop-portable-x64.$packageVersion.zip"
           Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $env:GITHUB_WORKSPACE $portableZip) -Force
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           $setup = Join-Path $env:GITHUB_WORKSPACE 'tdesktop\Telegram\build\setup.iss'
@@ -199,7 +199,7 @@ jobs:
             "/dMyAppVersion=$version",
             "/dMyAppVersionZero=$version.0",
             "/dMyAppVersionFull=$packageVersion",
-            "/dMyOutputBaseFilename=exDesktop-setup-x64.$packageVersion",
+            "/dMyOutputBaseFilename=oxDesktop-setup-x64.$packageVersion",
             "/dReleasePath=$release",
             '/dMyBuildTarget=win64',
             $setup
@@ -211,10 +211,10 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: exDesktop-windows-x64
+          name: oxDesktop-windows-x64
           path: |
-            exDesktop-portable-x64.*.zip
-            tdesktop/out/Release/exDesktop-setup-x64.*.exe
+            oxDesktop-portable-x64.*.zip
+            tdesktop/out/Release/oxDesktop-setup-x64.*.exe
 
       - name: Attach to release
         if: github.event_name == 'release'
@@ -222,4 +222,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$env:RELEASE_TAG" "exDesktop-portable-x64.$env:BUILD_VERSION.zip" "tdesktop\out\Release\exDesktop-setup-x64.$env:BUILD_VERSION.exe" --clobber
+        run: gh release upload "$env:RELEASE_TAG" "oxDesktop-portable-x64.$env:BUILD_VERSION.zip" "tdesktop\out\Release\oxDesktop-setup-x64.$env:BUILD_VERSION.exe" --clobber

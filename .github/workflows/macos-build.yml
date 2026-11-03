@@ -127,25 +127,25 @@ jobs:
           find "$APP" -type l ! -exec test -e {} \; -print -delete
           mkdir -p "$APP/Contents/MacOS/python/extera"
           cp -r "$GITHUB_WORKSPACE/tdesktop/Telegram/SourceFiles/extera/python/." "$APP/Contents/MacOS/python/extera/"
-          rm -rf exDesktop.app
-          mv "$APP" exDesktop.app
-          codesign --force --deep --sign - exDesktop.app
-          codesign --verify --deep --strict exDesktop.app
-          ditto -c -k --sequesterRsrc --keepParent exDesktop.app \
-            "$GITHUB_WORKSPACE/exDesktop-macos-arm64.$VERSION.zip"
+          rm -rf oxDesktop.app
+          mv "$APP" oxDesktop.app
+          codesign --force --deep --sign - oxDesktop.app
+          codesign --verify --deep --strict oxDesktop.app
+          ditto -c -k --sequesterRsrc --keepParent oxDesktop.app \
+            "$GITHUB_WORKSPACE/oxDesktop-macos-arm64.$VERSION.zip"
           mkdir -p dmg
-          ditto exDesktop.app dmg/exDesktop.app
+          ditto oxDesktop.app dmg/oxDesktop.app
           ln -s /Applications dmg/Applications
-          hdiutil create -volname exDesktop -srcfolder dmg -ov -format UDZO \
-            "$GITHUB_WORKSPACE/exDesktop-macos-arm64.$VERSION.dmg"
+          hdiutil create -volname oxDesktop -srcfolder dmg -ov -format UDZO \
+            "$GITHUB_WORKSPACE/oxDesktop-macos-arm64.$VERSION.dmg"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: exDesktop-macos-arm64
+          name: oxDesktop-macos-arm64
           path: |
-            exDesktop-macos-arm64.*.zip
-            exDesktop-macos-arm64.*.dmg
+            oxDesktop-macos-arm64.*.zip
+            oxDesktop-macos-arm64.*.dmg
           retention-days: 7
 
       - name: Attach to release
@@ -154,5 +154,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-            "exDesktop-macos-arm64.$VERSION.zip" \
-            "exDesktop-macos-arm64.$VERSION.dmg" --clobber
+            "oxDesktop-macos-arm64.$VERSION.zip" \
+            "oxDesktop-macos-arm64.$VERSION.dmg" --clobber

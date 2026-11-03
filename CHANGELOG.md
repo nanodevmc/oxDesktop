@@ -1,6 +1,6 @@
-# Журнал изменений exDesktop (exteraGram Desktop Fork)
+# Журнал изменений oxDesktop (exteraGram Desktop Fork)
 
-## [Fork v1.0.0] — Независимый релиз от NanoDev (`nanodevmc/exDesktop`)
+## [Fork v1.0.0] — Независимый релиз от NanoDev (`nanodevmc/oxDesktop`)
 
 ### Ключевые изменения и архитектурные улучшения форка:
 * **Интеграция официального API бейджей exteraGram:**

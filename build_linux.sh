@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# exDesktop Linux Native Build & Validation Script
+# oxDesktop Linux Native Build & Validation Script
 # Supports:
 #   1. Native Host Build (using system Qt6, Python3-dev and dependencies)
 #   2. Docker Hermetic Build (official tdesktop container with full WebRTC/Qt6 stack)
@@ -27,7 +27,7 @@ export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-15G}"
 
 show_help() {
     cat <<EOF
-exDesktop Linux Native Porter & Builder
+oxDesktop Linux Native Porter & Builder
 
 Usage:
   ./build_linux.sh [command] [options]
@@ -92,7 +92,7 @@ run_build() {
     if [ ! -f "${BUILD_DIR}/build.ninja" ] && [ ! -f "${BUILD_DIR}/Makefile" ]; then
         run_configure "$@"
     fi
-    echo "==> Compiling exDesktop (${CONFIG})..."
+    echo "==> Compiling oxDesktop (${CONFIG})..."
     cmake --build "${BUILD_DIR}" --config "${CONFIG}" --target Telegram
     echo "==> Build complete: ${BUILD_DIR}/bin/Telegram"
 }
@@ -142,8 +142,8 @@ run_docker() {
 
 run_patch() {
     mkdir -p patches
-    git diff main > patches/exdesktop_linux_port.patch || git diff HEAD~1 > patches/exdesktop_linux_port.patch
-    echo "==> Patch saved to patches/exdesktop_linux_port.patch ($(wc -l < patches/exdesktop_linux_port.patch) lines)"
+    git diff main > patches/oxdesktop_linux_port.patch || git diff HEAD~1 > patches/oxdesktop_linux_port.patch
+    echo "==> Patch saved to patches/oxdesktop_linux_port.patch ($(wc -l < patches/oxdesktop_linux_port.patch) lines)"
 }
 
 case "$MODE" in

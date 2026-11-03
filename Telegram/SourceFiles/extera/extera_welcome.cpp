@@ -89,8 +89,8 @@ void FillUnofficialInfo(not_null<Ui::VerticalLayout*> container) {
 	AddLinkButton(
 		container,
 		tr::lng_extera_welcome_channel(),
-		u"@exDesktop"_q,
-		u"https://t.me/exDesktop"_q,
+		u"@oxDesktop"_q,
+		u"https://t.me/oxDesktop"_q,
 		&st::exteraIconChannel);
 }
 
@@ -165,14 +165,14 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			AddLinkButton(
 				content,
 				tr::lng_extera_channel(),
-				u"@exDesktop"_q,
-				u"https://t.me/exDesktop"_q,
+				u"@oxDesktop"_q,
+				u"https://t.me/oxDesktop"_q,
 				&st::exteraIconChannel);
 			AddLinkButton(
 				content,
 				tr::lng_extera_forum(),
-				u"@exDesktopChat"_q,
-				u"https://t.me/exDesktopChat"_q,
+				u"@oxDesktopChat"_q,
+				u"https://t.me/oxDesktopChat"_q,
 				&st::exteraIconForum);
 			AddLinkButton(
 				content,
