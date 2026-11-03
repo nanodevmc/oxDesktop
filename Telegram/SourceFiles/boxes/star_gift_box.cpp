@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/star_gift_box.h"
+#include "extera/extera_security.h"
 
 #include "boxes/star_gift_cover_box.h"
 
@@ -1281,24 +1282,41 @@ void SendStarsFormRequest(
 	const auto session = &show->session();
 	if (result == BalanceResult::Success
 		|| result == BalanceResult::Already) {
-		session->api().request(MTPpayments_SendStarsForm(
-			MTP_long(formId),
-			invoice
-		)).done([=](const MTPpayments_PaymentResult &result) {
-			result.match([&](const MTPDpayments_paymentResult &data) {
-				session->api().applyUpdates(data.vupdates());
-				session->credits().tonLoad(true);
-				session->credits().load(true);
-				done(Payments::CheckoutResult::Paid, &data.vupdates());
-			}, [&](const MTPDpayments_paymentVerificationNeeded &data) {
+		const auto execute = [=] {
+			session->api().request(MTPpayments_SendStarsForm(
+				MTP_long(formId),
+				invoice
+			)).done([=](const MTPpayments_PaymentResult &result) {
+				result.match([&](const MTPDpayments_paymentResult &data) {
+					session->api().applyUpdates(data.vupdates());
+					session->credits().tonLoad(true);
+					session->credits().load(true);
+					done(Payments::CheckoutResult::Paid, &data.vupdates());
+				}, [&](const MTPDpayments_paymentVerificationNeeded &data) {
+					done(Payments::CheckoutResult::Failed, nullptr);
+				});
+			}).fail([=](const MTP::Error &error) {
+				if (!ShowGiftErrorToast(show, error)) {
+					show->showToast(error.type());
+				}
 				done(Payments::CheckoutResult::Failed, nullptr);
-			});
-		}).fail([=](const MTP::Error &error) {
-			if (!ShowGiftErrorToast(show, error)) {
-				show->showToast(error.type());
+			}).send();
+		};
+
+		Extera::Security::SensitiveAction action;
+		action.type = Extera::Security::ActionType::BuyGift;
+		action.category = u"Payments"_q;
+		action.title = u"Buy a gift"_q;
+		action.account = session->user()->name();
+		action.recipient = session->user()->name();
+		action.requestMethod = u"payments.sendStarsForm"_q;
+		Extera::Security::ConfirmAction(show, action, [=](bool confirmed) {
+			if (confirmed) {
+				execute();
+			} else {
+				done(Payments::CheckoutResult::Cancelled, nullptr);
 			}
-			done(Payments::CheckoutResult::Failed, nullptr);
-		}).send();
+		});
 	} else if (result == BalanceResult::Cancelled) {
 		done(Payments::CheckoutResult::Cancelled, nullptr);
 	} else {
