@@ -431,11 +431,11 @@ void FillDetails(
 			const auto path = document->filepath();
 			if (!path.isEmpty()) {
 				const auto platform = Extera::Platform::DetectFromFile(path);
-				if (!platform.isEmpty()) {
+				if (platform != Extera::Platform::SenderPlatform::Unknown) {
 					add(
 						&st::menuIconInfo,
 						tr::lng_extera_platform_sender(tr::now),
-						platform);
+						Extera::Platform::FormatPlatform(platform));
 				}
 			}
 		}
@@ -488,7 +488,7 @@ void AddMessageMenuActions(
 				const auto song = document->song();
 				const auto artist = song ? song->performer : QString();
 				const auto title = song ? song->title : document->filename();
-				const auto duration = song ? song->duration : 0;
+				const auto duration = int(document->duration() / 1000);
 				menu->addAction(tr::lng_extera_player_lyrics(tr::now), [=] {
 					Extera::Lyrics::ShowBox(controller, artist, title, duration);
 				}, &st::menuIconInfo);

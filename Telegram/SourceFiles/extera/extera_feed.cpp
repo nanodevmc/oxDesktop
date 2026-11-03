@@ -101,6 +101,7 @@ struct Category {
 	QString name;
 	QString emoji;
 	std::vector<uint64> channels;
+	bool hidden = false;
 };
 
 [[nodiscard]] std::vector<Category> Categories() {
@@ -112,6 +113,8 @@ struct Category {
 		auto category = Category{
 			.name = object.value(u"name"_q).toString(),
 			.emoji = object.value(u"emoji"_q).toString(),
+			.channels = {},
+			.hidden = object.value(u"hidden"_q).toBool(false),
 		};
 		for (const auto &id : object.value(u"channels"_q).toArray()) {
 			if (const auto value = id.toString().toULongLong()) {
@@ -136,6 +139,7 @@ void SaveCategories(const std::vector<Category> &list) {
 		object.insert(u"name"_q, category.name);
 		object.insert(u"emoji"_q, category.emoji);
 		object.insert(u"channels"_q, channels);
+		object.insert(u"hidden"_q, category.hidden);
 		array.push_back(object);
 	}
 	Config::Instance().setString(
@@ -547,6 +551,7 @@ private:
 	object_ptr<Ui::RpWidget> _tabs;
 	std::vector<QRect> _tabRects;
 	std::vector<Ui::Text::String> _tabTexts;
+	std::vector<int> _tabCategoryIndices;
 	Ui::Text::String _titleText;
 	void rebuildTexts();
 	void setupTabs();
@@ -690,10 +695,17 @@ void FeedWidget::rebuildTexts() {
 	};
 	const auto categories = Categories();
 	_tabTexts.clear();
+	_tabCategoryIndices.clear();
+	_tabCategoryIndices.push_back(0);
 	_tabTexts.emplace_back(
 		st::semiboldTextStyle,
 		tr::lng_exd_feed_all(tr::now));
-	for (const auto &category : categories) {
+	for (auto i = 0; i != int(categories.size()); ++i) {
+		const auto &category = categories[i];
+		if (category.hidden) {
+			continue;
+		}
+		_tabCategoryIndices.push_back(i + 1);
 		auto text = Ui::Text::String();
 		text.setMarkedText(
 			st::semiboldTextStyle,
@@ -713,7 +725,12 @@ void FeedWidget::rebuildTexts() {
 }
 
 int FeedWidget::tabsHeight() const {
-	return Categories().empty() ? 0 : st::topBarHeight;
+	for (const auto &cat : Categories()) {
+		if (!cat.hidden) {
+			return st::topBarHeight;
+		}
+	}
+	return 0;
 }
 
 void FeedWidget::setupTabs() {
@@ -733,7 +750,10 @@ void FeedWidget::setupTabs() {
 			const auto width = text.maxWidth() + padding * 2;
 			const auto rect = QRect(left, top, width, height);
 			_tabRects.push_back(rect);
-			const auto active = (i == current);
+			const auto categoryIndex = (i < int(_tabCategoryIndices.size()))
+				? _tabCategoryIndices[i]
+				: i;
+			const auto active = (categoryIndex == current);
 			p.setPen(Qt::NoPen);
 			p.setBrush(active ? st::activeButtonBg : st::windowBgOver);
 			p.drawRoundedRect(rect, height / 2., height / 2.);
@@ -768,11 +788,17 @@ void FeedWidget::setupTabs() {
 			_tabs->setCursor((index >= 0)
 				? style::cur_pointer
 				: style::cur_default);
-		} else if (index >= 0 && index != Int(u"feed_category"_q)) {
-			Config::Instance().setInt(u"feed_category"_q, index);
-			refresh();
-			_topBar->update();
-			_tabs->update();
+		} else if (index >= 0) {
+			const auto targetCategory = (index < int(_tabCategoryIndices.size()))
+				? _tabCategoryIndices[index]
+				: index;
+			if (targetCategory != Int(u"feed_category"_q)) {
+				Config::Instance().setInt(u"feed_category"_q, targetCategory);
+				refresh();
+				_topBar->update();
+				_tabs->update();
+			}
+		}
 		}
 	}, _tabs->lifetime());
 	Config::Instance().changes(
@@ -1142,6 +1168,18 @@ void ShowCategoryBox(
 					*selected = std::move(result);
 				});
 		});
+		const auto isHidden = box->lifetime().make_state<rpl::variable<bool>>(
+			existing.hidden);
+		const auto hiddenButton = content->add(
+			object_ptr<Ui::SettingsButton>(
+				content,
+				rpl::single(QString::fromUtf8("Скрыть вкладку из ленты")),
+				st::settingsButtonNoIcon));
+		hiddenButton->toggleOn(isHidden->value());
+		hiddenButton->toggledChanges(
+		) | rpl::on_next([=](bool value) {
+			*isHidden = value;
+		}, hiddenButton->lifetime());
 		Ui::AddSkip(content);
 		box->setFocusCallback([=] { name->setFocusFast(); });
 		box->addButton(tr::lng_settings_save(), [=] {
@@ -1156,6 +1194,7 @@ void ShowCategoryBox(
 				.name = title,
 				.emoji = emoji->current(),
 				.channels = { list.begin(), list.end() },
+				.hidden = isHidden->current(),
 			};
 			if (index >= 0 && index < int(updated.size())) {
 				updated[index] = std::move(category);
@@ -1248,13 +1287,18 @@ void ShowFeedSettings(not_null<Window::SessionController*> controller) {
 		};
 		const auto categories = Categories();
 		for (auto i = 0; i != int(categories.size()); ++i) {
+			const auto catIndex = i;
+			const auto isHidden = categories[i].hidden;
+			const auto label = isHidden
+				? (CategoryTitle(categories[i]) + QString::fromUtf8(" (скрыто)"))
+				: CategoryTitle(categories[i]);
 			const auto button = content->add(
 				object_ptr<Ui::SettingsButton>(
 					content,
-					rpl::single(CategoryTitle(categories[i])),
+					rpl::single(label),
 					st::settingsButtonNoIcon));
 			button->setClickedCallback([=] {
-				ShowCategoryBox(controller, i, reopen);
+				ShowCategoryBox(controller, catIndex, reopen);
 			});
 		}
 		const auto create = content->add(
@@ -1265,7 +1309,10 @@ void ShowFeedSettings(not_null<Window::SessionController*> controller) {
 		create->setClickedCallback([=] {
 			ShowCategoryBox(controller, -1, reopen);
 		});
-		Ui::AddDividerText(content, tr::lng_exd_feed_categories_about());
+		Ui::AddDividerText(
+			content,
+			rpl::single(QString::fromUtf8(
+				"Категории отображаются в виде вкладок вверху ленты. Нажмите на категорию для редактирования или скрытия вкладки.")));
 		const auto shownCount = [=] {
 			const auto hidden = HiddenChannels();
 			const auto all = AllChannels(owner);
