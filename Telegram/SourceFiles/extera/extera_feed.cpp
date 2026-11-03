@@ -799,7 +799,6 @@ void FeedWidget::setupTabs() {
 				_tabs->update();
 			}
 		}
-		}
 	}, _tabs->lifetime());
 	Config::Instance().changes(
 	) | rpl::filter([](const QString &key) {
