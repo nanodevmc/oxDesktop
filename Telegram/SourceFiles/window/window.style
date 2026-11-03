@@ -313,6 +313,8 @@ windowFilterTypeNoArchived: icon {{ "folders/folders_type_archived", historyPeer
 windowFilterTypeNoRead: icon {{ "folders/folders_type_read", historyPeerUserpicFg }};
 windowFilterTypeNewChats: icon {{ "folders/folder_new_chats", historyPeerUserpicFg }};
 windowFilterTypeExistingChats: icon {{ "folders/folder_existing_chats", historyPeerUserpicFg }};
+windowFilterTypeRoleOwner: icon {{ "folders/folders_crown", historyPeerUserpicFg }};
+windowFilterTypeRoleAdmin: icon {{ "menu/admin", historyPeerUserpicFg }};
 windowFilterChatsSectionSubtitleHeight: 28px;
 windowFilterChatsSectionSubtitle: FlatLabel(defaultFlatLabel) {
 	style: TextStyle(defaultTextStyle) {

@@ -41,6 +41,8 @@ constexpr auto kAllTypes = {
 	Flag::NoMuted,
 	Flag::NoRead,
 	Flag::NoArchived,
+	Flag::RoleOwner,
+	Flag::RoleAdmin,
 };
 
 struct RowSelectionChange {
@@ -92,7 +94,8 @@ public:
 	TypeController(
 		not_null<Main::Session*> session,
 		Flags options,
-		Flags selected);
+		Flags selected,
+		std::vector<Flag> flags = {});
 
 	Main::Session &session() const override;
 	void prepare() override;
@@ -108,6 +111,7 @@ private:
 
 	const not_null<Main::Session*> _session;
 	Flags _options;
+	std::vector<Flag> _flags;
 
 	rpl::event_stream<> _selectionChanged;
 	rpl::event_stream<RowSelectionChange> _rowSelectionChanges;
@@ -242,9 +246,11 @@ void ExceptionRow::paintStatusText(
 TypeController::TypeController(
 	not_null<Main::Session*> session,
 	Flags options,
-	Flags selected)
+	Flags selected,
+	std::vector<Flag> flags)
 : _session(session)
-, _options(options) {
+, _options(options)
+, _flags(std::move(flags)) {
 }
 
 Main::Session &TypeController::session() const {
@@ -252,7 +258,8 @@ Main::Session &TypeController::session() const {
 }
 
 void TypeController::prepare() {
-	for (const auto flag : kAllTypes) {
+	const auto &list = _flags.empty() ? std::vector<Flag>(kAllTypes) : _flags;
+	for (const auto flag : list) {
 		if (_options & flag) {
 			delegate()->peerListAppendRow(createRow(flag));
 		}
@@ -262,7 +269,8 @@ void TypeController::prepare() {
 
 Flags TypeController::collectSelectedOptions() const {
 	auto result = Flags();
-	for (const auto flag : kAllTypes) {
+	const auto &list = _flags.empty() ? std::vector<Flag>(kAllTypes) : _flags;
+	for (const auto flag : list) {
 		if (const auto row = delegate()->peerListFindRow(TypeId(flag))) {
 			if (row->checked()) {
 				result |= flag;
@@ -309,6 +317,8 @@ auto TypeController::rowSelectionChanges() const
 	case Flag::NoMuted: return tr::lng_filters_type_no_muted(tr::now);
 	case Flag::NoArchived: return tr::lng_filters_type_no_archived(tr::now);
 	case Flag::NoRead: return tr::lng_filters_type_no_read(tr::now);
+	case Flag::RoleOwner: return tr::lng_channel_admin_status_creator(tr::now);
+	case Flag::RoleAdmin: return u"Admin"_q;
 	}
 	Unexpected("Flag in TypeName.");
 }
@@ -332,6 +342,8 @@ void PaintFilterChatsTypeIcon(
 		case Flag::NoMuted: return st::historyPeer6UserpicBg;
 		case Flag::NoArchived: return st::historyPeer4UserpicBg;
 		case Flag::NoRead: return st::historyPeer7UserpicBg;
+		case Flag::RoleOwner: return st::historyPeer1UserpicBg;
+		case Flag::RoleAdmin: return st::historyPeer3UserpicBg;
 		}
 		Unexpected("Flag in color paintFlagIcon.");
 	}();
@@ -347,6 +359,8 @@ void PaintFilterChatsTypeIcon(
 		case Flag::NoMuted: return st::historyPeer6UserpicBg2;
 		case Flag::NoArchived: return st::historyPeer4UserpicBg2;
 		case Flag::NoRead: return st::historyPeer7UserpicBg2;
+		case Flag::RoleOwner: return st::historyPeer1UserpicBg2;
+		case Flag::RoleAdmin: return st::historyPeer3UserpicBg2;
 		}
 		Unexpected("Flag in color paintFlagIcon.");
 	}();
@@ -362,6 +376,8 @@ void PaintFilterChatsTypeIcon(
 		case Flag::NoMuted: return st::windowFilterTypeNoMuted;
 		case Flag::NoArchived: return st::windowFilterTypeNoArchived;
 		case Flag::NoRead: return st::windowFilterTypeNoRead;
+		case Flag::RoleOwner: return st::windowFilterTypeRoleOwner;
+		case Flag::RoleAdmin: return st::windowFilterTypeRoleAdmin;
 		}
 		Unexpected("Flag in icon paintFlagIcon.");
 	}();
@@ -439,6 +455,13 @@ int EditFilterChatsListController::selectedTypesCount() const {
 			++result;
 		}
 	}
+	if (_roleDelegate) {
+		for (auto i = 0; i != _roleDelegate->peerListFullRowsCount(); ++i) {
+			if (_roleDelegate->peerListRowAt(i)->checked()) {
+				++result;
+			}
+		}
+	}
 	return result;
 }
 
@@ -504,17 +527,30 @@ object_ptr<Ui::RpWidget> EditFilterChatsListController::prepareTypesList() {
 	_typesDelegate = container->lifetime().make_state<
 		PeerListContentDelegateSimple
 	>();
+	const auto standardList = std::vector<Flag>{
+		Flag::NewChats,
+		Flag::ExistingChats,
+		Flag::Contacts,
+		Flag::NonContacts,
+		Flag::Groups,
+		Flag::Channels,
+		Flag::Bots,
+		Flag::NoMuted,
+		Flag::NoRead,
+		Flag::NoArchived,
+	};
 	const auto controller = container->lifetime().make_state<TypeController>(
 		&session(),
 		_options,
-		_selected);
+		_selected,
+		standardList);
 	controller->setStyleOverrides(&st::windowFilterSmallList);
 	const auto content = result->add(object_ptr<PeerListContent>(
 		container,
 		controller));
 	_typesDelegate->setContent(content);
 	controller->setDelegate(_typesDelegate);
-	for (const auto flag : kAllTypes) {
+	for (const auto flag : standardList) {
 		if (_selected & flag) {
 			if (const auto row = _typesDelegate->peerListFindRow(TypeId(flag))) {
 				content->changeCheckState(row, true, anim::type::instant);
@@ -525,6 +561,60 @@ object_ptr<Ui::RpWidget> EditFilterChatsListController::prepareTypesList() {
 			}
 		}
 	}
+
+	if (_options & (Flag::RoleOwner | Flag::RoleAdmin)) {
+		container->add(object_ptr<Ui::FixedHeightWidget>(
+			container,
+			st::membersMarginBottom));
+		container->add(CreatePeerListSectionSubtitle(
+			container,
+			rpl::single(u"My role"_q)));
+		container->add(object_ptr<Ui::FixedHeightWidget>(
+			container,
+			st::membersMarginTop));
+		_roleDelegate = container->lifetime().make_state<
+			PeerListContentDelegateSimple
+		>();
+		const auto roleList = std::vector<Flag>{
+			Flag::RoleOwner,
+			Flag::RoleAdmin,
+		};
+		const auto roleController = container->lifetime().make_state<TypeController>(
+			&session(),
+			_options,
+			_selected,
+			roleList);
+		roleController->setStyleOverrides(&st::windowFilterSmallList);
+		const auto roleContent = result->add(object_ptr<PeerListContent>(
+			container,
+			roleController));
+		_roleDelegate->setContent(roleContent);
+		roleController->setDelegate(_roleDelegate);
+		for (const auto flag : roleList) {
+			if (_selected & flag) {
+				if (const auto row = _roleDelegate->peerListFindRow(TypeId(flag))) {
+					roleContent->changeCheckState(row, true, anim::type::instant);
+					this->delegate()->peerListSetForeignRowChecked(
+						row,
+						true,
+						anim::type::instant);
+				}
+			}
+		}
+		roleController->selectedChanges(
+		) | rpl::on_next([=](Flags selected) {
+			_selected = (_selected & ~Flags(Flag::RoleOwner | Flag::RoleAdmin)) | selected;
+		}, _lifetime);
+
+		roleController->rowSelectionChanges(
+		) | rpl::on_next([=](RowSelectionChange update) {
+			this->delegate()->peerListSetForeignRowChecked(
+				update.row,
+				update.checked,
+				anim::type::normal);
+		}, _lifetime);
+	}
+
 	container->add(object_ptr<Ui::FixedHeightWidget>(
 		container,
 		st::membersMarginBottom));
@@ -534,7 +624,7 @@ object_ptr<Ui::RpWidget> EditFilterChatsListController::prepareTypesList() {
 
 	controller->selectedChanges(
 	) | rpl::on_next([=](Flags selected) {
-		_selected = selected;
+		_selected = (_selected & (Flag::RoleOwner | Flag::RoleAdmin)) | selected;
 	}, _lifetime);
 
 	controller->rowSelectionChanges(
@@ -548,6 +638,10 @@ object_ptr<Ui::RpWidget> EditFilterChatsListController::prepareTypesList() {
 	_deselectOption = [=](PeerListRowId itemId) {
 		if (const auto row = _typesDelegate->peerListFindRow(itemId)) {
 			_typesDelegate->peerListSetRowChecked(row, false);
+		} else if (_roleDelegate) {
+			if (const auto row = _roleDelegate->peerListFindRow(itemId)) {
+				_roleDelegate->peerListSetRowChecked(row, false);
+			}
 		}
 	};
 
