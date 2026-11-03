@@ -119,7 +119,6 @@ git submodule update --init Telegram/lib_ui cmake
 git apply patches/oxdesktop_linux_port.patch
 ```
 
-
 ---
 
 ## 7. Ускорение повторных сборок (ccache / sccache)

@@ -25,10 +25,10 @@ jobs:
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
       - run: |
-          git config user.name metawka
-          git config user.email matveus0608@gmail.com
+          git config user.name nanodevmc
+          git config user.email nanodevmc@gmail.com
           git add trusted_hashes.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Edited trusted hashes"
+          git commit -m "auto Edited trusted hashes"
           git pull --rebase origin main
           git push origin HEAD:main

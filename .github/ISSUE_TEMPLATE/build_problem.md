@@ -1,11 +1,11 @@
 ---
-name: Build problem
-about: Can't build the app
+name: Проблема со сборкой
+about: Не удаётся собрать приложение
 labels: build
 ---
 
-**Platform and toolchain** (OS, Xcode / Visual Studio version, Python version)
+**Платформа и тулчейн** (ОС, версия Xcode / Visual Studio, версия Python)
 
-**Which step failed** (`prepare` stage number, configure, or compile)
+**На каком шаге упало** (номер стадии `prepare`, configure или компиляция)
 
-**Error output** (the last lines, not the whole log)
+**Вывод ошибки** (последние ~150 строк, а не весь лог)
