@@ -48,11 +48,11 @@ rpl::producer<TextWithEntities> Text2() {
 		lt_gpl_link,
 		rpl::single(tr::link(
 			"GNU GPL",
-			"https://github.com/metawka/oxDesktop/blob/main/LICENSE")),
+			"https://github.com/nanodevmc/oxDesktop/blob/main/LICENSE")),
 		lt_github_link,
 		rpl::single(tr::link(
 			"GitHub",
-			"https://github.com/metawka/oxDesktop")),
+			"https://github.com/nanodevmc/oxDesktop")),
 		tr::marked);
 }
 
@@ -60,8 +60,8 @@ rpl::producer<TextWithEntities> Text3() {
 	return tr::lng_exd_about_links(
 		lt_site_link,
 		rpl::single(tr::link(
-			"exteradesktop.xyz",
-			"https://exteradesktop.xyz")),
+			"В разработке...",
+			"https://t.me/oxDesktop")),
 		lt_channel_link,
 		rpl::single(tr::link("@oxDesktop", "https://t.me/oxDesktop")),
 		lt_chat_link,

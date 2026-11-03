@@ -617,7 +617,7 @@ void PaintFolderTabsPreview(QPainter &p, QRect frame) {
 }
 
 void PaintStickerPreview(QPainter &p, QRect frame, int value) {
-	static const auto image = QImage(u":/gui/art/exteradesktop.png"_q);
+	static const auto image = QImage(u":/gui/art/oxdesktop.png"_q);
 	const auto skip = st::exteraPreviewSkip;
 	const auto side = HistoryView::Sticker::Size().width();
 	const auto bubble = QRectF(
@@ -861,12 +861,8 @@ void ShowAppIconBox(not_null<Window::SessionController*> controller) {
 		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 		const auto variants = Extera::AppIcon::Variants();
 		const auto count = int(variants.size());
-		const auto titles = std::vector<QString>{
-			tr::lng_extera_app_icon_default(tr::now),
-			tr::lng_exd_app_icon_telegram(tr::now),
-			tr::lng_exd_app_icon_accent(tr::now),
-			tr::lng_exd_app_icon_dark(tr::now),
-			tr::lng_exd_app_icon_light(tr::now),
+		const auto titleFor = [&](int index) {
+			return (index >= 0 && index < count) ? variants[index].title : QString();
 		};
 		const auto currentId = Extera::String(u"app_icon"_q);
 		const auto currentSquare = Extera::Bool(u"app_icon_square"_q);
@@ -941,7 +937,7 @@ void ShowAppIconBox(not_null<Window::SessionController*> controller) {
 						st::exteraAppIconCaptionFont->height),
 					Qt::AlignHCenter | Qt::AlignTop,
 					st::exteraAppIconCaptionFont->elided(
-						titles[i],
+						titleFor(i),
 						cell - 4));
 			}
 		}, grid->lifetime());
@@ -2306,8 +2302,8 @@ void PartMain2(SectionBuilder &builder) {
 			builder,
 			u"developer"_q,
 			tr::lng_extera_port_developer(),
-			u"@metawka"_q,
-			u"https://t.me/metawka"_q,
+			u"@radoqi"_q,
+			u"https://t.me/radoqi"_q,
 			{ &st::exteraIconDeveloper });
 		AddLink(
 			builder,
@@ -2318,17 +2314,17 @@ void PartMain2(SectionBuilder &builder) {
 			{ &st::exteraIconChannel });
 		AddLink(
 			builder,
-			u"forum"_q,
-			tr::lng_extera_forum(),
-			u"@oxDesktopChat"_q,
-			u"https://t.me/oxDesktopChat"_q,
+			u"changelog"_q,
+			u"Changelog"_q,
+			u"@oxDesktopCl"_q,
+			u"https://t.me/oxDesktopCl"_q,
 			{ &st::exteraIconForum });
 		AddLink(
 			builder,
 			u"website"_q,
 			tr::lng_extera_website(),
-			u"exteradesktop.xyz"_q,
-			u"https://exteradesktop.xyz"_q,
+			u"В разработке..."_q,
+			u"https://t.me/oxDesktop"_q,
 			{ &st::exteraIconWebsite });
 	});
 }
@@ -2868,7 +2864,7 @@ void AddCategoryGrid(SectionBuilder &builder) {
 				p.drawText(
 					QRect(textLeft, top, textWidth, st::semiboldFont->height),
 					Qt::AlignLeft | Qt::AlignTop,
-					st::semiboldFont->elided(state->titles[i], textWidth));
+					st::semiboldFont->elided(state->titleFor(i), textWidth));
 				top += st::semiboldFont->height + st::exteraCategoryAboutSkip;
 				p.setPen(st::windowSubTextFg);
 				p.setFont(aboutFont);

@@ -530,7 +530,7 @@ QString Name() {
 }
 
 const QImage &Avatar() {
-	static const auto result = QImage(u":/gui/art/exteradesktop.png"_q);
+	static const auto result = QImage(u":/gui/art/oxdesktop.png"_q);
 	return result;
 }
 

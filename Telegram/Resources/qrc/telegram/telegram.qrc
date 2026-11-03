@@ -1,7 +1,7 @@
 <RCC>
   <qresource prefix="/gui">
     <file alias="art/devpfpprew.jpg">../../art/devpfpprew.jpg</file>
-    <file alias="art/exteradesktop.png">../../art/exteradesktop.png</file>
+    <file alias="art/oxdesktop.png">../../art/oxdesktop.png</file>
     <file alias="art/background.tgv">../../art/background.tgv</file>
     <file alias="art/bg_thumbnail.png">../../art/bg_thumbnail.png</file>
     <file alias="art/bg_initial.jpg">../../art/bg_initial.jpg</file>
@@ -10,6 +10,8 @@
     <file alias="art/logo_256.png">../../art/logo_256.png</file>
     <file alias="art/app_icon.png">../../art/app_icon.png</file>
     <file alias="art/app_icon_glyph.png">../../art/app_icon_glyph.png</file>
+    <file alias="art/app_icon_glyph_cyber_ox.png">../../art/app_icon_glyph_cyber_ox.png</file>
+    <file alias="art/app_icon_glyph_ox_monogram.png">../../art/app_icon_glyph_ox_monogram.png</file>
     <file alias="art/logo_256_no_margin.png">../../art/logo_256_no_margin.png</file>
     <file alias="art/themeimage.jpg">../../art/themeimage.jpg</file>
     <file alias="art/round_placeholder.jpg">../../art/round_placeholder.jpg</file>

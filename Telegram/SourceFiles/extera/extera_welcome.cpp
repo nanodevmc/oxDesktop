@@ -77,8 +77,8 @@ void FillUnofficialInfo(not_null<Ui::VerticalLayout*> container) {
 	AddLinkButton(
 		container,
 		tr::lng_extera_welcome_site(),
-		u"exteradesktop.xyz"_q,
-		u"https://exteradesktop.xyz"_q,
+		u"В разработке..."_q,
+		u"https://t.me/oxDesktop"_q,
 		&st::exteraIconWebsite);
 	AddLinkButton(
 		container,
@@ -177,8 +177,8 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			AddLinkButton(
 				content,
 				tr::lng_extera_website(),
-				u"exteradesktop.xyz"_q,
-				u"https://exteradesktop.xyz"_q,
+				u"В разработке..."_q,
+				u"https://t.me/oxDesktop"_q,
 				&st::exteraIconWebsite);
 			box->addButton(tr::lng_exd_wizard_setup(), [=] {
 				crl::on_main(box, [=] {
@@ -191,12 +191,8 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			addTitle(tr::lng_exd_wizard_icon());
 			const auto variants = AppIcon::Variants();
 			const auto count = int(variants.size());
-			const auto titles = std::vector<QString>{
-				tr::lng_extera_app_icon_default(tr::now),
-				tr::lng_exd_app_icon_telegram(tr::now),
-				tr::lng_exd_app_icon_accent(tr::now),
-				tr::lng_exd_app_icon_dark(tr::now),
-				tr::lng_exd_app_icon_light(tr::now),
+			const auto titleFor = [&](int index) {
+				return (index >= 0 && index < count) ? variants[index].title : QString();
 			};
 			const auto images = std::make_shared<std::vector<QImage>>();
 			const auto ratio = style::DevicePixelRatio();
@@ -268,7 +264,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 							st::exteraAppIconCaptionFont->height),
 						Qt::AlignHCenter | Qt::AlignTop,
 						st::exteraAppIconCaptionFont->elided(
-							titles[i],
+							titleFor(i),
 							cell - 4));
 				}
 			}, grid->lifetime());
