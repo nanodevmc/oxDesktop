@@ -26,9 +26,13 @@ namespace Extera {
 namespace {
 
 const auto kModels = std::array{
-	u"gemini-2.5-flash"_q,
-	u"gemini-2.5-pro"_q,
-	u"gemini-2.5-flash-lite"_q,
+	u"gemini-4-argon"_q,
+	u"gemini-3.8-flash"_q,
+	u"gemini-3.6-flash"_q,
+	u"gemini-3.5-flash-lite"_q,
+	u"gemini-3.1-flash-lite"_q,
+	u"gemini-3.1-pro-preview"_q,
+	u"gemini-3-flash-preview"_q,
 };
 
 struct Message {
@@ -58,9 +62,12 @@ State &Chat() {
 
 [[nodiscard]] QString RolePrompt() {
 	switch (Int(u"ai_chat_role"_q)) {
-	case 1: return u"You are a translator. Translate the user's text into Russian if it is in another language, otherwise into English. Reply with the translation only."_q;
-	case 2: return u"You are an editor. Fix spelling, grammar and style of the user's text and reply with the corrected text only."_q;
-	case 3: return u"You summarize the user's text in a few short sentences."_q;
+	case 1: 
+		return u"You are a translator. Translate the user's text into Russian if it is in another language, otherwise into English. Reply with the translation only."_q;
+	case 2: 
+		return u"You are an editor. Fix spelling, grammar and style of the user's text and reply with the corrected text only."_q;
+	case 3: 
+		return u"You summarize the user's text in a few short sentences."_q;
 	}
 	return u"You are a helpful assistant."_q;
 }
