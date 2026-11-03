@@ -1076,7 +1076,6 @@ void ShowCategoryBox(
 		not_null<Window::SessionController*> controller,
 		int index,
 		Fn<void()> done) {
-	const auto owner = &controller->session().data();
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		const auto list = Categories();
 		const auto exists = (index >= 0 && index < int(list.size()));
