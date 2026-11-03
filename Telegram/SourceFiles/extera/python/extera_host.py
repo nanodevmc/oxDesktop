@@ -765,13 +765,25 @@ def _setting_changed(args):
         return False
     key = getattr(item, "key", None)
     value = args.get("value")
+
+    mapped_value = value
+    keys = getattr(item, "options_keys", None)
+    if keys and isinstance(value, int) and 0 <= value < len(keys):
+        mapped_value = keys[value]
+
     if key:
-        set_setting(plugin_id, key, value)
-    callback = getattr(item, "on_change", None)
+        set_setting(plugin_id, key, mapped_value)
+    callback = getattr(item, "on_change", None) or getattr(item, "on_save", None)
     if callback:
         try:
             with _plugin_context(plugin_id):
-                callback(value)
+                try:
+                    callback(mapped_value)
+                except TypeError:
+                    try:
+                        callback(_compat.Stub("view"), mapped_value)
+                    except TypeError:
+                        callback()
         except Exception:
             log(f"[{plugin_id}] on_change failed:\n{traceback.format_exc(limit=4)}")
     return True
