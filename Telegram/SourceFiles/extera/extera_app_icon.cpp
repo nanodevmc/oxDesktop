@@ -1,6 +1,7 @@
 #include "extera/extera_app_icon.h"
 
 #include "extera/extera_config.h"
+#include "lang/lang_keys.h"
 #include "core/application.h"
 #include "main/main_domain.h"
 #include "tray.h"

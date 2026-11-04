@@ -2470,10 +2470,64 @@ void HistoryWidget::insertDiagnosticInfo() {
 	}
 }
 
+namespace {
+
+struct ShadowDraftsStore {
+	std::map<PeerId, std::deque<TextWithTags>> history;
+	crl::time lastSaveTime = 0;
+};
+
+ShadowDraftsStore &GetShadowDrafts() {
+	static auto store = ShadowDraftsStore();
+	return store;
+}
+
+} // namespace
+
+bool HistoryWidget::restorePreviousShadowDraft() {
+	if (!Extera::Bool(u"shadow_drafts_enabled"_q) || !_peer || !_field) {
+		return false;
+	}
+	auto &store = GetShadowDrafts();
+	auto it = store.history.find(_peer->id);
+	if (it == store.history.end() || it->second.empty()) {
+		return false;
+	}
+	const auto currentText = _field->getTextWithTags();
+	if (!it->second.empty() && it->second.back().text == currentText.text) {
+		it->second.pop_back();
+	}
+	if (it->second.empty()) {
+		return false;
+	}
+	const auto restored = it->second.back();
+	it->second.pop_back();
+	_field->setTextWithTags(restored, Ui::InputField::HistoryAction::NewEntry);
+	controller()->showToast(u"\u0427\u0435\u0440\u043D\u043E\u0432\u0438\u043A \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D"_q);
+	return true;
+}
+
 void HistoryWidget::fieldChanged() {
 	const auto original = _field->getLastText();
 	updateExdMathGhost();
 	updateExdBugHelper();
+	if (Extera::Bool(u"shadow_drafts_enabled"_q) && _peer) {
+		const auto now = crl::now();
+		auto &store = GetShadowDrafts();
+		if (now - store.lastSaveTime > 1500) {
+			const auto currentText = _field->getTextWithTags();
+			if (!currentText.text.trimmed().isEmpty()) {
+				auto &list = store.history[_peer->id];
+				if (list.empty() || list.back().text != currentText.text) {
+					list.push_back(currentText);
+					if (list.size() > 10) {
+						list.pop_front();
+					}
+					store.lastSaveTime = now;
+				}
+			}
+		}
+	}
 	if (const auto math = Extera::InlineMathResult(original)) {
 		const auto result = *math;
 		InvokeQueued(_field, [=] {
@@ -6991,7 +7045,22 @@ void HistoryWidget::insertTextAtCursor(const QString &text) {
 bool HistoryWidget::eventFilter(QObject *obj, QEvent *e) {
 	if (e->type() == QEvent::KeyPress) {
 		const auto k = static_cast<QKeyEvent*>(e);
+		if ((k->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) == (Qt::ControlModifier | Qt::ShiftModifier)
+			&& k->key() == Qt::Key_Z) {
+			if (restorePreviousShadowDraft()) {
+				return true;
+			}
+		}
 		if ((k->modifiers() & kCommonModifiers) == Qt::ControlModifier) {
+			if (k->key() == Qt::Key_K) {
+				if (Extera::Bool(u"hud_quick_switcher"_q, true)) {
+					Window::ShowChooseRecipientBox(_controller, [=](not_null<Data::Thread*> thread) {
+						_controller->showThread(thread);
+						return true;
+					}, tr::lng_exd_hud_switcher());
+					return true;
+				}
+			}
 			if (k->key() == Qt::Key_Up) {
 #ifdef Q_OS_MAC
 				// Cmd + Up is used instead of Home.

@@ -1392,6 +1392,28 @@ void Instance::updatePlaybackSpeed() {
 	}
 }
 
+void Instance::setLoopPointA(crl::time point) {
+	_loopRegion.start = point;
+	if (_loopRegion.end > _loopRegion.start) {
+		_loopRegion.active = true;
+	}
+}
+
+void Instance::setLoopPointB(crl::time point) {
+	_loopRegion.end = point;
+	if (_loopRegion.end > _loopRegion.start) {
+		_loopRegion.active = true;
+	}
+}
+
+void Instance::clearLoopRegion() {
+	_loopRegion = AudioLoopRegion();
+}
+
+Instance::AudioLoopRegion Instance::loopRegion() const {
+	return _loopRegion;
+}
+
 void Instance::emitUpdate(AudioMsgId::Type type) {
 	emitUpdate(type, [](const AudioMsgId &playing) { return true; });
 }
@@ -1494,6 +1516,14 @@ void Instance::emitUpdate(AudioMsgId::Type type, CheckCallback check) {
 		}
 		if (type == AudioMsgId::Type::Song) {
 			_listenTracker->update(state);
+			if (Extera::Bool(u"audio_looper_enabled"_q, true) && _loopRegion.active && state.length > 0 && state.frequency > 0) {
+				const auto curMs = (state.position * crl::time(1000)) / state.frequency;
+				if (_loopRegion.end > _loopRegion.start && curMs >= _loopRegion.end) {
+					if (const auto streamed = data->streamed.get()) {
+						streamed->instance.play(streamingOptions(streamed->id, _loopRegion.start));
+					}
+				}
+			}
 			if (Extera::Bool(u"gapless_playback"_q) && state.length > 0 && state.position > 0) {
 				const auto leftMs = (state.length - state.position) / 1000;
 				if (leftMs <= 3000 && leftMs > 0) {

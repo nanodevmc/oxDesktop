@@ -1996,6 +1996,20 @@ void PartChats5(SectionBuilder &builder) {
 			{ u"poll"_q, u"pm"_q },
 			tr::lng_exd_polls_in_pm_about(),
 			true);
+		AddToggle(
+			builder,
+			u"shadow_drafts_enabled"_q,
+			tr::lng_exd_shadow_drafts(),
+			{ u"draft"_q, u"history"_q, u"undo"_q },
+			tr::lng_exd_shadow_drafts_about(),
+			true);
+		AddToggle(
+			builder,
+			u"hud_quick_switcher"_q,
+			tr::lng_exd_hud_switcher(),
+			{ u"hud"_q, u"spotlight"_q, u"switcher"_q },
+			tr::lng_exd_hud_switcher_about(),
+			true);
 		AddChoice(
 			builder,
 			u"default_forward_mode"_q,
@@ -2118,6 +2132,20 @@ void PartChats7(SectionBuilder &builder) {
 			tr::lng_exd_gapless_playback(),
 			{ u"gapless"_q, u"audio"_q, u"music"_q },
 			tr::lng_exd_gapless_playback_about(),
+			true);
+		AddToggle(
+			builder,
+			u"audio_looper_enabled"_q,
+			tr::lng_exd_audio_looper(),
+			{ u"loop"_q, u"audio"_q, u"clip"_q },
+			tr::lng_exd_audio_looper_about(),
+			true);
+		AddToggle(
+			builder,
+			u"pitch_preserved_speed"_q,
+			tr::lng_exd_pitch_preserved(),
+			{ u"speed"_q, u"pitch"_q, u"voice"_q },
+			tr::lng_exd_pitch_preserved_about(),
 			true);
 	});
 	AddAbout(builder, tr::lng_extera_auto_pause_about());
@@ -3352,8 +3380,37 @@ void BuildPlugins(SectionBuilder &builder) {
 	});
 }
 
+void PartSmartGhost(SectionBuilder &builder) {
+	builder.addSkip();
+	builder.addSubsectionTitle(rpl::single(u"Smart Ghost Mode (\u041F\u0440\u0438\u0437\u0440\u0430\u043A)"_q));
+	builder.card([&] {
+		AddToggle(
+			builder,
+			u"ghost_hide_read_channels"_q,
+			tr::lng_exd_smart_ghost_channels(),
+			{ u"ghost"_q, u"channel"_q },
+			tr::lng_exd_smart_ghost_channels_about(),
+			true);
+		AddToggle(
+			builder,
+			u"ghost_hide_read_groups"_q,
+			tr::lng_exd_smart_ghost_groups(),
+			{ u"ghost"_q, u"group"_q },
+			tr::lng_exd_smart_ghost_groups_about(),
+			true);
+		AddToggle(
+			builder,
+			u"ghost_hide_read_pms"_q,
+			tr::lng_exd_smart_ghost_pms(),
+			{ u"ghost"_q, u"pm"_q, u"private"_q },
+			tr::lng_exd_smart_ghost_pms_about(),
+			true);
+	});
+}
+
 void BuildPrivacy(SectionBuilder &builder) {
 	AddCategorySearch(builder, { ExteraPrivacyId() }, [&] {
+		PartSmartGhost(builder);
 		PartGeneral0(builder);
 		PartGeneral6(builder);
 		PartGeneral7(builder);

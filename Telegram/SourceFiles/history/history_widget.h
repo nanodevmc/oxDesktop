@@ -969,6 +969,7 @@ private:
 	base::unique_qptr<Ui::FadeWrap<Ui::RpWidget>> _exdBugHelperPill;
 	void updateExdBugHelper();
 	void insertDiagnosticInfo();
+	bool restorePreviousShadowDraft();
 	std::unique_ptr<HistoryView::Controls::RichDraftPreview> _richDraftPreview;
 	base::unique_qptr<Ui::RpWidget> _fieldDisabled;
 	std::unique_ptr<Ui::RpWidget> _sendRestriction;

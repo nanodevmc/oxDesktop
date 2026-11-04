@@ -784,11 +784,22 @@ void Histories::sendReadRequest(not_null<History*> history, State &state) {
 			finish();
 		};
 		if (const auto channel = history->peer->asChannel()) {
+			if (Extera::Bool(u"ghost_hide_read_channels"_q)) {
+				finished();
+				return 0;
+			}
 			return session().api().request(MTPchannels_ReadHistory(
 				channel->inputChannel(),
 				MTP_int(tillId)
 			)).done(finished).fail(finished).send();
 		} else {
+			if (history->peer->isUser() && Extera::Bool(u"ghost_hide_read_pms"_q)) {
+				finished();
+				return 0;
+			} else if ((history->peer->isChat() || history->peer->isMegagroup()) && Extera::Bool(u"ghost_hide_read_groups"_q)) {
+				finished();
+				return 0;
+			}
 			return session().api().request(MTPmessages_ReadHistory(
 				history->peer->input(),
 				MTP_int(tillId)
