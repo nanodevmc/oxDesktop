@@ -1516,7 +1516,7 @@ void Instance::emitUpdate(AudioMsgId::Type type, CheckCallback check) {
 		}
 		if (type == AudioMsgId::Type::Song) {
 			_listenTracker->update(state);
-			if (Extera::Bool(u"audio_looper_enabled"_q, true) && _loopRegion.active && state.length > 0 && state.frequency > 0) {
+			if (Extera::Bool(u"audio_looper_enabled"_q) && _loopRegion.active && state.length > 0 && state.frequency > 0) {
 				const auto curMs = (state.position * crl::time(1000)) / state.frequency;
 				if (_loopRegion.end > _loopRegion.start && curMs >= _loopRegion.end) {
 					if (const auto streamed = data->streamed.get()) {
