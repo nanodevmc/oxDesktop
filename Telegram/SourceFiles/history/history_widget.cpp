@@ -7053,9 +7053,12 @@ bool HistoryWidget::eventFilter(QObject *obj, QEvent *e) {
 		}
 		if ((k->modifiers() & kCommonModifiers) == Qt::ControlModifier) {
 			if (k->key() == Qt::Key_K) {
-				if (Extera::Bool(u"hud_quick_switcher"_q, true)) {
-					Window::ShowChooseRecipientBox(_controller, [=](not_null<Data::Thread*> thread) {
-						_controller->showThread(thread);
+				if (Extera::Bool(u"hud_quick_switcher"_q)) {
+					const auto weak = base::make_weak(controller());
+					Window::ShowChooseRecipientBox(controller(), [=](not_null<Data::Thread*> thread) {
+						if (const auto strong = weak.get()) {
+							strong->showThread(thread);
+						}
 						return true;
 					}, tr::lng_exd_hud_switcher());
 					return true;
