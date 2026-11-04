@@ -147,12 +147,12 @@ Histories::Histories(not_null<Session*> owner)
 : _owner(owner)
 , _readRequestsTimer([=] { sendReadRequests(); }) {
 	_owner->itemIdChanged(
-	) | rpl::start_with_next([=](const Session::IdChange &event) {
+	) | rpl::on_next([=](const Session::IdChange &event) {
 		checkSendingReplyResolved(event.newId.peer, event.oldId, event.newId.msg);
 	}, _lifetime);
 
 	_owner->itemRemoved(
-	) | rpl::start_with_next([=](not_null<const HistoryItem*> item) {
+	) | rpl::on_next([=](not_null<const HistoryItem*> item) {
 		checkSendingReplyFailed(item->fullId());
 	}, _lifetime);
 }
@@ -1163,9 +1163,9 @@ int Histories::sendPreparedMessage(
 		Fn<void(const MTPUpdates&, const MTP::Response&)> done,
 		Fn<void(const MTP::Error&, const MTP::Response&)> fail) {
 	if (Extera::Bool(u"queue_reply"_q) && replyTo.messageId) {
-		if (const auto replyItem = history->owner().message(history->peer->id, replyTo.messageId)) {
+		if (const auto replyItem = history->owner().message(replyTo.messageId)) {
 			if (replyItem->isSending()) {
-				const auto parentId = FullMsgId(history->peer->id, replyTo.messageId);
+				const auto parentId = replyItem->fullId();
 				auto &list = _pendingSendingReplies[parentId];
 				if (list.size() < 50) {
 					const auto id = ++_requestAutoincrement;
@@ -1380,8 +1380,8 @@ void Histories::checkSendingReplyResolved(PeerId peer, MsgId oldId, MsgId newId)
 	const auto history = _owner->history(peer);
 	for (auto &entry : scheduled) {
 		auto replyTo = std::move(entry.replyTo);
-		if (replyTo.messageId == oldId) {
-			replyTo.messageId = newId;
+		if (replyTo.messageId.msg == oldId) {
+			replyTo.messageId = FullMsgId(peer, newId);
 		}
 		if (replyTo.topicRootId == oldId) {
 			replyTo.topicRootId = newId;
@@ -1407,8 +1407,8 @@ void Histories::checkSendingReplyFailed(FullMsgId id) {
 	const auto history = _owner->history(id.peer);
 	for (auto &entry : scheduled) {
 		auto replyTo = std::move(entry.replyTo);
-		if (replyTo.messageId == id.msg) {
-			replyTo.messageId = MsgId(0);
+		if (replyTo.messageId == id) {
+			replyTo.messageId = FullMsgId();
 		}
 		sendPreparedMessage(
 			history,

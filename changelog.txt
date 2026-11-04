@@ -4,131 +4,30 @@
 - Automatic malicious threat scanner detecting DPAPI theft, process memory injection, keyloggers, and cookie grabbers.
 - Advanced AST taint analysis for obfuscated and decoded payloads in capability scanner.
 - Sandboxed file system and execution: access to session tdata, key_datas, Chrome, and Discord credentials blocked.
+- Official 3D animated Extera badges (Developer, Bughunter, Helper, Supporter/Donor, Trusted) and tg://support deeplink.
+- Centralized NEW and BETA badges registry with refined liquid glass badge styling.
+- Queue Reply: reply to pending and outgoing messages in chain up to 50 items with automatic parent resolution.
+- Smart bug report helper with one-click insertion of system, build, and Qt diagnostic information.
+- Floating mini player with Always-on-Top pinned mode and ultra-compact 380px layout.
+- Gapless audio playback with 3-second pre-buffering.
+- Lyrics quote card generation with markdown formatting from player context menu.
+- Polls creation in private chats and Saved Messages.
+- Default forward mode setting (forward without author, without author and caption).
+- Virtual media deduplication cache based on SHA-256 hashes without repeated data transfer.
+- Static quick reactions bar in chats.
+- TgWsProxy Flowseal v1.11.4 with MTU protection, MLKEM TLS safety, and parent PID watchdog.
+- Inline math calculator and converter: units, currencies, percentages, base radices, and timezones.
+- Search by numeric Telegram ID for users, basic groups, channels, and supergroups.
+- Option to disable automatic Markdown formatting on text input.
+- Cross-platform update checking directly via oxDesktop GitHub Releases API for Windows, Linux, and macOS.
+- Fixed Windows MSVC compilation and Linux Docker build cache invalidation.
 - Fixed session persistence and instance locking on first launch from installer.
 - Fixed badges disappearing during scrolling of member and chat lists.
 - Zalgo filter now properly inspects and strips symbols from formatted messages while preserving entities.
 - Phone numbers with brackets and special characters correctly parsed and searched.
-- TG WS Proxy gracefully resets and disables on connection limit failures.
-- Added FileLoader, DownloadController, NotificationCenter observer pub-sub, and MessagesStorage bridges.
-- Direct message management helpers: delete_messages, delete_message, pin_message, save_draft, clear_draft, forward_messages.
-- Advanced settings UI components: Button, Category, ColorPicker, MultiChoice mapped to native client controls.
-- Updated settings menu icon and branding to Aero Delta glyph.
-
-7.3.3.7 (01.11.26)
-- Updated plugin engine: significantly improved compatibility, ready for full use.
-- Improved verification of trusted plugin sources.
-- Plugin check before installation.
-- Plugin code viewer.
-- Plugin description translation.
-- Installation from unknown sources only after enabling it in settings.
-- Safe mode is complete.
-- Changelog in the client.
-- Full-screen music player.
-- Improved channel feed with categories of channels.
-- Updated main page of oxDesktop settings.
-- "Same as app" option in the translation language choice.
-- Media filters in chat search.
-- Built-in PDF viewer.
-- Animated 👋 instead of the greeting sticker.
-- Search by ID from a message.
-- Compact menu froze when opening a submenu.
-- The app icon changed only after a restart.
-- Poll options were hidden in polls with results before voting.
-- Duplicated notification settings.
-- Character counter.
-
-7.3.3.6 (30.10.26)
-- Redesigned oxDesktop settings: eight categories as cards and an Other row. Search on the main page and inside every category handles typos, synonyms, Russian and English. Switches work right in the search results; other results open their section and highlight the option.
-- Welcome wizard on first launch: introduction with links, app icon choice, main settings.
-- New oxDesktop icon and logo. Five app icon variants: Default, Telegram, Windows Accent, Dark, Light. Each one is available in a rounded square shape.
-- Built-in tg-ws-proxy: connection to Telegram through WebSocket. Installed as a separate option in the Windows installer, enabled in Network and Notifications and in the Connection Type window.
-- Round video from a file: the ⋮ menu in the video sending window, Send as Round Video. The frame area is selected manually.
-- Notification settings: system or built-in notifications, position on screen, custom sound.
-- Premium emoji in the article editor without Telegram Premium.
-- Groups with a hidden member list show administrators and message authors in the profile and the member list.
-- More than three accounts.
-- Copy Emoji ID in the context menu of the emoji panel and of messages.
-- tg://donate and tg://support links open the support page. Badges in profiles link to it.
-- Crash when clicking a reply that leads to another chat.
-- Esc opened the hidden All Chats folder.
-- The character counter merged with the chat background and overlapped the text. It is now in the input bar.
-- The badge in messages is now shown to the left of the name.
-- Auto-update downloads new versions by default and installs them only after confirmation.
-- macOS build packaging.
-
-7.3.3.5 (30.10.26)
-- Automatic updates: the client downloads and installs new releases by itself. Modes in Other: download and install, download only, off.
-- Send messages from another account: the account button in the Forward window.
-- Favorites section in the emoji panel with a star in the pack bar.
-- Reordering of emoji and sticker packs in the pack bar: hold an icon and drag it.
-- Inline math: the result appears after "=" and is inserted with Space or on sending.
-- Badges next to sender names in chats and in the main menu.
-- Mentions in groups with a hidden member list show chat members and search all users.
-- Selection of service messages for bulk deletion.
-- Translation of bot buttons and translation that keeps formatting and custom emoji.
-- Reply in another topic for forum messages.
-- "Copy Link" in the context menu of any settings item.
-- GIF search bot setting.
-- oxDesktop badge page and donation details in Other.
-- Round application icon and version shown as 7.3.3 (5).
-- Popular options are enabled by default.
-- Linux builds are made on Rocky Linux 8 and run on older distributions (fixes the GLIBC_2.44 error).
-- On Linux, oxDesktop now stores data in its own folder and no longer uses the Telegram Desktop folder.
-- The macOS build includes Python for plugins.
-
-7.3.3.4 (30.10.26)
-- Quick actions bar in the message menu now highlights on hover and stays above the reactions block.
-- Fixed menu items losing hover highlight in the message menu.
-- "Copy Image" in the quick actions bar for photos.
-- "Schedule for Maximum Date" in the send button menu.
-- Reply with Quote: a reply quotes the text of the original message.
-- Option to hide the copy notification.
-- Accent color for sender names.
-- Character counter in the message field.
-- Double click sets a reaction when the message cannot be edited.
-- M4A files play as audio.
-- "Copy Emoji ID" in the emoji pack menu.
-- Own badges for developers, bug hunters, helpers and supporters.
-- Plugins: option to disable automatic safe mode and export of all plugins to a folder.
-- Sticker size preview no longer overlaps the message bubble.
-- Update notification no longer stays after updating.
-- Updated links: developer, channel, chat and website.
-
-7.3.3.3 (25.10.26)
-- Rounded the application icon across Windows icon sizes, the executable, and the installer.
-- Gave the Windows installer a separate application identity so it installs alongside Telegram Desktop.
-- Updated Windows packaging so release assets use the release version.
-- oxDesktop-setup-x64.7.3.3.3.exe is the installer.
-- oxDesktop-portable-x64.7.3.3.3.zip is the portable build.
-
-7.3.3.2 (24.10.26)
-- Added a quick actions bar to the message menu with Reply, Delete, Copy and Edit. Choose up to five actions and set their order in Chats.
-- Moved message details into a submenu with message and chat IDs, sender, dates, forwarded message date, file name and size. Select a row to copy its value.
-- Added an edit time line to the message menu.
-- Disabled Repeat in the message menu by default.
-- Added Plugins to the main menu.
-- Fixed menu items moving to Hidden while arranging App Navigation.
-- Added Check for Updates to Other.
-- Matched the sticker size preview to its display in chats.
-- Hide Phone Number now also hides the number in your profile.
-- Replaced the unread count in the taskbar preview icon with the application logo.
-- Fixed several Material Design 3 switch icons and the close button in the app icon picker.
-
-7.3.3.1 (24.10.26)
-- Disabled the built-in updater. This release moves to Telegram Desktop 7.3.3, so install it manually.
-- Added update notifications with an Update oxDesktop button in the chat list.
-- Added a Hide Everything option to Streamer Mode for names, avatars, messages and account details.
-- Added screen capture protection for screenshots, OBS and screen sharing.
-- Fixed additional usernames being hidden in profiles when usernames are set to visible.
-
-7.3.3 (24.10.26)
-- Settings for General, Appearance, Chats, Plugins and Other.
-- Material Design 3 controls, adjustable avatar corners and application icons.
-- Channel feed, wide channel posts, message seconds, edit marks and forward counts.
-- Streamer Mode with separate settings for personal chats, bots, groups and channels.
-- Python plugin engine with crash recovery and safe mode.
-- AI chat with your own Gemini API key.
-- User IDs, data center and estimated registration date in profiles.
-- English and Russian interface.
-- oxDesktop-setup-x64.7.3.3.exe is the installer.
-- oxDesktop-portable-x64.7.3.3.zip is the portable version. Extract it and run Telegram.exe.
+- Full-screen music player and channel feed categories.
+- Built-in PDF viewer and round video from local file sender.
+- Redesigned settings UI with instant switch toggles and typo-tolerant search.
+- Streamer mode with granular hiding of avatars, names, and message previews.
+- Screen capture protection for OBS, screenshot utilities, and screen sharing.
+- More than three accounts support and custom application icon choices.

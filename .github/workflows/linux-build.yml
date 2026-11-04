@@ -60,20 +60,21 @@ jobs:
           cache-from: type=gha,scope=docker-centos
           cache-to: type=gha,mode=max,scope=docker-centos
 
-      - name: Build cache
-        uses: actions/cache@v4
+      - name: Restore Build cache
+        uses: actions/cache/restore@v4
         with:
           path: out
           key: ${{ runner.os }}-build-out-${{ hashFiles('Telegram/SourceFiles/**', 'Telegram/CMakeLists.txt') }}
           restore-keys: |
             ${{ runner.os }}-build-out-
 
-      - name: Compiler cache (ccache)
-        uses: actions/cache@v4
+      - name: Restore Compiler cache (ccache)
+        uses: actions/cache/restore@v4
         with:
           path: .ccache
-          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          key: ${{ runner.os }}-ccache-${{ github.sha }}-${{ github.run_id }}
           restore-keys: |
+            ${{ runner.os }}-ccache-${{ github.sha }}-
             ${{ runner.os }}-ccache-
 
       - name: Build
@@ -103,6 +104,20 @@ jobs:
               -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON \
               && ccache -s'
           test -f out/Release/Telegram
+
+      - name: Save Compiler cache (ccache)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-ccache-${{ github.sha }}-${{ github.run_id }}
+
+      - name: Save Build cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: out
+          key: ${{ runner.os }}-build-out-${{ hashFiles('Telegram/SourceFiles/**', 'Telegram/CMakeLists.txt') }}
 
       - name: Package
         run: |
