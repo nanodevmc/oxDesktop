@@ -148,6 +148,48 @@ class Text:
         self.link_alias = link_alias
 
 
+class Category(Header):
+    def __init__(self, text: str = "", title: Optional[str] = None, **kwargs):
+        super().__init__(text=text, title=title, **kwargs)
+
+
+class Button(Text):
+    def __init__(self, text: str = "", title: Optional[str] = None, on_click: Optional[Callable] = None,
+                 subtext: Optional[str] = None, icon: Optional[str] = None, **kwargs):
+        super().__init__(text=text, title=title, on_click=on_click, subtext=subtext,
+                         icon=icon, accent=kwargs.get("accent", True), **kwargs)
+
+
+class ColorPicker:
+    def __init__(self, key: str = "", text: str = "", default: Union[int, str] = "#FFFFFF",
+                 subtext: Optional[str] = None, icon: Optional[str] = None,
+                 on_change: Optional[Callable] = None, title: Optional[str] = None,
+                 subtitle: Optional[str] = None, get_value: Optional[Callable] = None, **kwargs):
+        self.key = key or kwargs.get("id", "")
+        self.text = _norm_text(text, title)
+        self.subtext = _norm_subtext(subtext, subtitle, None)
+        self.default = default
+        self.icon = icon
+        self.on_change = on_change
+        self.get_value = get_value
+
+
+class MultiChoice:
+    def __init__(self, key: str = "", text: str = "", items: Optional[List[str]] = None,
+                 default: Optional[List[int]] = None, subtext: Optional[str] = None,
+                 icon: Optional[str] = None, on_change: Optional[Callable] = None,
+                 title: Optional[str] = None, subtitle: Optional[str] = None,
+                 get_value: Optional[Callable] = None, **kwargs):
+        self.key = key or kwargs.get("id", "")
+        self.text = _norm_text(text, title)
+        self.subtext = _norm_subtext(subtext, subtitle, None)
+        self.items = [str(x) for x in (items or ())]
+        self.default = list(default or ())
+        self.icon = icon
+        self.on_change = on_change
+        self.get_value = get_value
+
+
 class Slider:
     def __init__(self, key: str = "", text: str = "", default: float = 0,
                  min: float = 0, max: float = 100, step: float = 1,
