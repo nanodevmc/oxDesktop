@@ -218,8 +218,7 @@ jobs:
             -D CMAKE_C_COMPILER_LAUNCHER=sccache ^
             -D CMAKE_CXX_COMPILER_LAUNCHER=sccache ^
             -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
-            -D CMAKE_POLICY_CMP0141=NEW ^
-            -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+            -D CMAKE_POLICY_CMP0141=NEW
           cd ..\out
           cmake --build . --config Release --target Telegram --parallel
 
