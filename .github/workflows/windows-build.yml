@@ -1,5 +1,9 @@
 name: Windows build
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main ]
@@ -22,7 +26,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 360
     env:
-      SCCACHE_GHA_ENABLED: "true"
+      SCCACHE_DIR: "${{ github.workspace }}\\.sccache"
+      SCCACHE_CACHE_SIZE: "2G"
       CLEAR_QT_BUILD_TREE: "1"
     permissions:
       contents: write
@@ -137,6 +142,26 @@ jobs:
         shell: pwsh
         run: choco install innosetup --yes --no-progress
 
+      - name: Restore Compiler cache (sccache)
+        uses: actions/cache/restore@v4
+        with:
+          path: .sccache
+          key: ${{ runner.os }}-sccache-${{ github.sha }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ github.sha }}-
+            ${{ runner.os }}-sccache-
+
+      - name: Check restored sccache size
+        shell: pwsh
+        run: |
+          $sizeMb = 0
+          if (Test-Path '.sccache') {
+            $bytes = (Get-ChildItem -Path '.sccache' -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+            if ($bytes) { $sizeMb = [math]::Round($bytes / 1MB, 2) }
+          }
+          "RESTORED_SCCACHE_MB=$sizeMb" >> $env:GITHUB_ENV
+          Write-Host "Restored sccache size: $sizeMb MB"
+
       - name: Enable sccache
         id: sccache
         uses: mozilla-actions/sccache-action@v0.0.11
@@ -190,6 +215,34 @@ jobs:
         run: |
           & $env:SCCACHE_PATH --show-stats
           & $env:SCCACHE_PATH --stop-server
+
+      - name: Validate sccache size before save
+        id: check_sccache
+        if: always()
+        shell: pwsh
+        run: |
+          $currentMb = 0
+          if (Test-Path '.sccache') {
+            $bytes = (Get-ChildItem -Path '.sccache' -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+            if ($bytes) { $currentMb = [math]::Round($bytes / 1MB, 2) }
+          }
+          $restoredMb = [double]($env:RESTORED_SCCACHE_MB ?? 0)
+          Write-Host "Current sccache: $currentMb MB | Restored sccache: $restoredMb MB"
+          $minAllowed = $restoredMb - 100
+          if ($restoredMb -gt 100 -and $currentMb -lt $minAllowed) {
+            Write-Warning "Current sccache ($currentMb MB) is smaller than restored ($restoredMb MB) by more than 100 MB. Skipping save to preserve existing cache!"
+            "should_save=false" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "Sccache size check passed. Saving cache."
+            "should_save=true" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Save Compiler cache (sccache)
+        if: always() && steps.check_sccache.outputs.should_save == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .sccache
+          key: ${{ runner.os }}-sccache-${{ github.sha }}-${{ github.run_id }}
 
       - name: Package
         shell: pwsh
