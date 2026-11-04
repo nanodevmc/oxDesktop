@@ -50,7 +50,7 @@ import file_utils
 
 
 def test_markdown():
-    print("[1/18] Testing Markdown & Entity Parsing...")
+    print("[1/19] Testing Markdown & Entity Parsing...")
     cases = [
         ("Hello **bold** [link](https://test.com) ~~strike~~", [
             ("bold", "bold"),
@@ -71,7 +71,7 @@ def test_markdown():
 
 
 def test_arraylist():
-    print("[2/18] Testing ArrayList & Java Bridge Types...")
+    print("[2/19] Testing ArrayList & Java Bridge Types...")
     al1 = _compat.ArrayList([10, 20, 30])
     al2 = _compat.ArrayList([10, 20, 30])
     assert al1 == al2
@@ -84,7 +84,7 @@ def test_arraylist():
 
 
 def test_settings_descriptors():
-    print("[3/18] Testing Settings Components & Dynamic Descriptors...")
+    print("[3/19] Testing Settings Components & Dynamic Descriptors...")
     switch = s.Switch(title="Enable Mod", subtitle="Toggle on/off", default=True)
     assert switch.text == "Enable Mod"
     assert switch.subtext == "Toggle on/off"
@@ -122,7 +122,7 @@ def test_settings_descriptors():
 
 
 def test_alert_builder():
-    print("[4/18] Testing AlertDialogBuilder & CamelCase Aliases...")
+    print("[4/19] Testing AlertDialogBuilder & CamelCase Aliases...")
     builder = alert.AlertDialogBuilder()
     builder.setTitle("Notice").setMessage("Operation complete").setPositiveButton("OK", lambda b, w: None)
     payload = builder._payload()
@@ -140,7 +140,7 @@ def test_alert_builder():
 
 
 def test_plugin_lifecycle():
-    print("[5/18] Testing Plugin Lifecycle (Load, Unload, Settings, Deletion)...")
+    print("[5/19] Testing Plugin Lifecycle (Load, Unload, Settings, Deletion)...")
     with tempfile.TemporaryDirectory() as tmpdir:
         p_dir = os.path.join(tmpdir, "plugins")
         s_dir = os.path.join(tmpdir, "settings")
@@ -179,7 +179,7 @@ class Plugin(BasePlugin):
 
 
 def test_outgoing_message_hooks():
-    print("[6/18] Testing Outgoing Message Interception & Modification...")
+    print("[6/19] Testing Outgoing Message Interception & Modification...")
     class MessageModifierPlugin(BasePlugin):
         def on_send_message_hook(self, account, params):
             if params.message == "/spoiler":
@@ -210,7 +210,7 @@ def test_outgoing_message_hooks():
 
 
 def test_incoming_update_wrapping():
-    print("[7/18] Testing Incoming Update TL Wrapping...")
+    print("[7/19] Testing Incoming Update TL Wrapping...")
     class UpdateListenerPlugin(BasePlugin):
         def on_update_hook(self, name, account, update):
             self.received_msg = getattr(update, "message", None)
@@ -245,7 +245,7 @@ def test_incoming_update_wrapping():
 
 
 def test_pre_request_hook_cancel():
-    print("[8/18] Testing Pre-Request Hook Cancellation (Ghost Mode)...")
+    print("[8/19] Testing Pre-Request Hook Cancellation (Ghost Mode)...")
     raw_requests.clear()
 
     class StealthPlugin(BasePlugin):
@@ -270,7 +270,7 @@ def test_pre_request_hook_cancel():
 
 
 def test_post_request_hook():
-    print("[9/18] Testing Post-Request Hook Dispatch...")
+    print("[9/19] Testing Post-Request Hook Dispatch...")
     class AuditPlugin(BasePlugin):
         def on_plugin_load(self):
             self.add_hook("TL_help_getConfig")
@@ -293,7 +293,7 @@ def test_post_request_hook():
 
 
 def test_cactuslib():
-    print("[10/18] Testing CactusLib (@command, Command context, DB)...")
+    print("[10/19] Testing CactusLib (@command, Command context, DB)...")
     sent_messages.clear()
 
     class MathPlugin(CactusUtils.Plugin):
@@ -326,7 +326,7 @@ def test_cactuslib():
 
 
 def test_controllers_bridge():
-    print("[11/18] Testing Controllers Bridge (Messages, Contacts, Media, SendHelper)...")
+    print("[11/19] Testing Controllers Bridge (Messages, Contacts, Media, SendHelper)...")
     from org.telegram.messenger import (
         MessagesController,
         ContactsController,
@@ -349,7 +349,7 @@ def test_controllers_bridge():
 
 
 def test_session_file_protection():
-    print("[12/18] Testing Security: Session & Credential File Protection...")
+    print("[12/19] Testing Security: Session & Credential File Protection...")
     assert file_utils.read_file("tdata/key_datas") is None
     assert file_utils.read_file_bytes("tdata/D877F783D5D3EF8C0") is None
     assert file_utils.write_file("tdata/settings0", "hack") is False
@@ -359,7 +359,7 @@ def test_session_file_protection():
 
 
 def test_token_and_env_shield():
-    print("[13/18] Testing Security: Environment & Token Shielding...")
+    print("[13/19] Testing Security: Environment & Token Shielding...")
     os.environ["GH_TOKEN"] = "ghp_secret_access_token_123"
     os.environ["GITHUB_TOKEN"] = "ghs_token_xyz"
     os.environ["TDESKTOP_API_HASH"] = "hash_344583"
@@ -384,7 +384,7 @@ def test_token_and_env_shield():
 
 
 def test_hybrid_send_message_params():
-    print("[14/18] Testing Hybrid SendMessageParams & _ReplyStub...")
+    print("[14/19] Testing Hybrid SendMessageParams & _ReplyStub...")
     p = _compat.SendMessageParams(peer=123456, message="initial text", reply_to=789)
     assert p.text == "initial text"
     assert p["message"] == "initial text"
@@ -414,7 +414,7 @@ def test_hybrid_send_message_params():
 
 
 def test_sandboxed_open_and_subprocess():
-    print("[15/18] Testing Sandboxed builtins.open, os.remove, subprocess inside Plugin Context...")
+    print("[15/19] Testing Sandboxed builtins.open, os.remove, subprocess inside Plugin Context...")
     import subprocess
     # Outside plugin context, operations work normally
     with tempfile.NamedTemporaryFile("w+", delete=False) as tf:
@@ -468,7 +468,7 @@ def test_sandboxed_open_and_subprocess():
 
 
 def test_tl_name_and_extended_updates():
-    print("[16/18] Testing TLName Single-Dispatch & Extended Update Wrapping...")
+    print("[16/19] Testing TLName Single-Dispatch & Extended Update Wrapping...")
     tl_name = extera_host.TLName("TL_updateNewMessage")
     assert tl_name == "TL_updateNewMessage"
     assert tl_name == "updateNewMessage"
@@ -500,7 +500,7 @@ def test_tl_name_and_extended_updates():
 
 
 def test_plugin_lifecycle_fallbacks():
-    print("[17/18] Testing BasePlugin Lifecycle Fallbacks (on_load, on_unload)...")
+    print("[17/19] Testing BasePlugin Lifecycle Fallbacks (on_load, on_unload)...")
     load_events = []
 
     class OnLoadPlugin(BasePlugin):
@@ -519,7 +519,7 @@ def test_plugin_lifecycle_fallbacks():
 
 
 def test_run_on_queue_context_propagation():
-    print("[18/18] Testing run_on_queue Context Propagation...")
+    print("[18/19] Testing run_on_queue Context Propagation...")
     import time
     events = []
 
@@ -533,6 +533,47 @@ def test_run_on_queue_context_propagation():
     time.sleep(0.1)
     assert len(events) == 1
     assert events[0] == "queue_test_plugin"
+    print("  -> PASSED")
+
+
+def test_elyx_archive_plugin():
+    print("[19/19] Testing Elyx/EAF Multi-File Archive Plugin Loading...")
+    import zipfile
+    import metadata_parser
+    with tempfile.TemporaryDirectory() as tmpdir:
+        p_path = os.path.join(tmpdir, "archive_plug.elyx")
+        meta = {
+            "id": "archived_test_plugin",
+            "name": "Archived Test Plugin",
+            "version": "1.5",
+            "author": "Community",
+            "permissions": ["ui"]
+        }
+        py_helper = "def secret(): return 42\n"
+        py_main = """from base_plugin import BasePlugin
+import my_helper
+
+class ArchivePlugin(BasePlugin):
+    def on_load(self):
+        self._val = my_helper.secret()
+"""
+        with zipfile.ZipFile(p_path, "w") as zf:
+            zf.writestr("metadata.json", json.dumps(meta))
+            zf.writestr("my_helper.py", py_helper)
+            zf.writestr("plugin.py", py_main)
+
+        m = metadata_parser.read_metadata(p_path)
+        assert m["id"] == "archived_test_plugin"
+        assert m["is_archive"] is True
+        
+        record = extera_host.Record(p_path, m)
+        extera_host._records[record.id] = record
+        extera_host._install_plugin_importer()
+        extera_host._activate(record)
+
+        assert record.instance is not None
+        assert record.instance._val == 42
+        extera_host._deactivate(record)
     print("  -> PASSED")
 
 
@@ -558,6 +599,7 @@ if __name__ == "__main__":
     test_tl_name_and_extended_updates()
     test_plugin_lifecycle_fallbacks()
     test_run_on_queue_context_propagation()
+    test_elyx_archive_plugin()
     print("=" * 60)
-    print(">>> ALL 18/18 TESTS PASSED WITH 100% SUCCESS! <<<")
+    print(">>> ALL 19/19 TESTS PASSED WITH 100% SUCCESS! <<<")
     print("=" * 60)

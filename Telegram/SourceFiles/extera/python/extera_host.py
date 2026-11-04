@@ -383,9 +383,29 @@ class _PluginModuleFinder(importlib.abc.MetaPathFinder):
         record = _records.get(fullname)
         if record is None:
             return None
-        loader = importlib.machinery.SourceFileLoader(fullname, record.path)
+        entry_path = record.path
+        is_zip = record.meta.get("is_archive") or (os.path.isfile(record.path) and zipfile.is_zipfile(record.path))
+        if is_zip:
+            import tempfile
+            import zipfile
+            base_dir = PLUGINS_DIR or tempfile.gettempdir()
+            extract_dir = os.path.join(base_dir, ".extracted", record.id)
+            os.makedirs(extract_dir, exist_ok=True)
+            try:
+                with zipfile.ZipFile(record.path, "r") as zf:
+                    zf.extractall(extract_dir)
+            except Exception as e:
+                log(f"failed to extract archive plugin {record.id}: {e}")
+            if extract_dir not in sys.path:
+                sys.path.insert(0, extract_dir)
+            for cand in ("plugin.py", "main.py", "__init__.py"):
+                candidate = os.path.join(extract_dir, cand)
+                if os.path.exists(candidate):
+                    entry_path = candidate
+                    break
+        loader = importlib.machinery.SourceFileLoader(fullname, entry_path)
         return importlib.util.spec_from_file_location(
-            fullname, record.path, loader=loader)
+            fullname, entry_path, loader=loader)
 
 
 def _install_plugin_importer():
@@ -525,8 +545,11 @@ def _deactivate(record):
 
 
 def load_all():
+    valid_exts = (".plugin", ".elyx", ".eaf", ".py")
     for name in sorted(os.listdir(PLUGINS_DIR)) if os.path.isdir(PLUGINS_DIR) else []:
-        if not name.endswith(".plugin"):
+        if not any(name.endswith(ext) for ext in valid_exts):
+            continue
+        if name.startswith("."):
             continue
         path = os.path.join(PLUGINS_DIR, name)
         try:
