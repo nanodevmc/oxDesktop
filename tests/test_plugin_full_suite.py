@@ -99,6 +99,25 @@ def test_settings_descriptors():
 
     edit = s.EditText(title="Prefix", hint="Enter prefix", default="!", on_save=lambda val: None)
     assert edit.text == "Prefix"
+
+    btn = s.Button(title="Action", on_click=lambda: None)
+    assert btn.text == "Action"
+    assert btn.accent == True
+    desc_btn = s.describe(btn, 3)
+    assert desc_btn["clickable"] == True
+
+    cat = s.Category(title="Category Header")
+    assert cat.text == "Category Header"
+
+    cp = s.ColorPicker(key="col", title="Color", default="#FF0000")
+    assert cp.default == "#FF0000"
+    desc_cp = s.describe(cp, 4)
+    assert desc_cp["default"] == "#FF0000"
+
+    mc = s.MultiChoice(key="mc", title="Multi", items=["Opt1", "Opt2"], default=[0])
+    assert mc.items == ["Opt1", "Opt2"]
+    desc_mc = s.describe(mc, 5)
+    assert desc_mc["items"] == ["Opt1", "Opt2"]
     print("  -> PASSED")
 
 
@@ -110,6 +129,13 @@ def test_alert_builder():
     assert payload["title"] == "Notice"
     assert payload["message"] == "Operation complete"
     assert len(payload["buttons"]) == 1
+
+    assert not builder.is_showing()
+    builder.show()
+    assert builder.is_showing()
+    assert builder.isShowing()
+    builder.cancel()
+    assert not builder.is_showing()
     print("  -> PASSED")
 
 

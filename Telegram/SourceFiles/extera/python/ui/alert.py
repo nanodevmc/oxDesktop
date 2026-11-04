@@ -154,6 +154,14 @@ class AlertDialogBuilder:
     def get_button(self, which):
         return None
 
+    def cancel(self):
+        return self.dismiss()
+
+    def is_showing(self):
+        return self._shown and self._id in _builders
+
+    isShowing = is_showing
+
 
     # CamelCase aliases for Android / Java convention compatibility
     setTitle = set_title
