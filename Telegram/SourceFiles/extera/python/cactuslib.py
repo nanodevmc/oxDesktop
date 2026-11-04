@@ -241,6 +241,22 @@ class CactusUtils:
             with self._lock:
                 return dict(self._data)
 
+    @staticmethod
+    def get_all_commands() -> List[Dict[str, Any]]:
+        """Get all registered commands across all active CactusLib plugins."""
+        out = []
+        for pid, cmds in _COMMANDS_REGISTRY.items():
+            for cmd_name, info in cmds.items():
+                prefixes = info.get("prefixes", ("/", "."))
+                out.append({
+                    "name": cmd_name,
+                    "doc": info.get("doc", ""),
+                    "prefix": prefixes[0] if prefixes else "/",
+                    "prefixes": prefixes,
+                    "plugin_id": pid,
+                })
+        return out
+
     class Plugin(BasePlugin):
         """
         Base plugin class for CactusLib plugins.
@@ -255,6 +271,9 @@ class CactusUtils:
             self.Telegram = CactusUtils.Telegram
 
         def _register_cactus_commands(self):
+            pid = self.id or getattr(self, "_extera_plugin_id", "default")
+            if pid not in _COMMANDS_REGISTRY:
+                _COMMANDS_REGISTRY[pid] = {}
             for attr_name in dir(self):
                 try:
                     attr = getattr(self, attr_name)
@@ -262,10 +281,20 @@ class CactusUtils:
                         cmd_info = attr._cactus_command
                         cmd_name = cmd_info["name"]
                         self._cactus_commands[cmd_name] = attr
+                        _COMMANDS_REGISTRY[pid][cmd_name] = {
+                            "name": cmd_name,
+                            "doc": cmd_info.get("doc", ""),
+                            "prefixes": cmd_info.get("prefixes", ("/", ".")),
+                            "handler": attr,
+                            "plugin_id": pid,
+                        }
                 except Exception:
                     continue
             if self._cactus_commands:
                 self.add_on_send_message_hook(priority=100)
+
+        def get_all_commands(self) -> List[Dict[str, Any]]:
+            return CactusUtils.get_all_commands()
 
         def _extera_attach(self, plugin_id: str):
             super()._extera_attach(plugin_id)
@@ -274,6 +303,11 @@ class CactusUtils:
         def on_plugin_load(self):
             self._register_cactus_commands()
             super().on_plugin_load()
+
+        def on_plugin_unload(self):
+            pid = self.id or getattr(self, "_extera_plugin_id", "default")
+            _COMMANDS_REGISTRY.pop(pid, None)
+            super().on_plugin_unload()
 
         @property
         def db(self) -> CactusUtils.Database:

@@ -621,8 +621,11 @@ def _send_hook(args):
         try:
             with client_utils.hook_scope(args.get("account", 0)):
                 with _plugin_context(plugin_id):
-                    result = record.instance.on_send_message_hook(
-                        args.get("account", 0), params)
+                    try:
+                        result = record.instance.on_send_message_hook(
+                            args.get("account", 0), params)
+                    except TypeError:
+                        result = record.instance.on_send_message_hook(params)
         except Exception:
             log(f"[{plugin_id}] send hook failed:\n{traceback.format_exc(limit=4)}")
             continue
@@ -849,7 +852,13 @@ def _event(args):
             try:
                 with client_utils.hook_scope(account):
                     with _plugin_context(record.id):
-                        record.instance.on_update_hook(dispatch_name, account, update)
+                        try:
+                            record.instance.on_update_hook(dispatch_name, account, update)
+                        except TypeError:
+                            try:
+                                record.instance.on_update_hook(account, update)
+                            except TypeError:
+                                record.instance.on_update_hook(update)
             except Exception:
                 log(f"[{record.id}] update hook failed:\n{traceback.format_exc(limit=4)}")
         return True
