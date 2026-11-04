@@ -111,7 +111,7 @@ void Start(not_null<Window::Controller*> window) {
 	const auto delay = DelayMs();
 	const auto exit = AutoExit();
 
-	base::call_delayed(std::chrono::milliseconds(delay), window->widget(), [=] {
+	base::call_delayed(crl::time(delay), [=] {
 		if (!path.isEmpty()) {
 			const auto widget = window->widget();
 			const auto pixmap = widget->grab();

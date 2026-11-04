@@ -1,5 +1,6 @@
 #include "extera/extera_security.h"
 
+#include "rpl/single.h"
 #include "main/session/session_show.h"
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/labels.h"
@@ -49,7 +50,6 @@ void SetupConfirmActionBox(
 			u"Confirm action"_q,
 			st::boxTitle),
 		style::margins(st::boxRowPadding.left(), 0, st::boxRowPadding.right(), 2));
-	title->setAlignment(Qt::AlignCenter);
 
 	const auto category = content->add(
 		object_ptr<Ui::FlatLabel>(
@@ -57,7 +57,6 @@ void SetupConfirmActionBox(
 			action.category.isEmpty() ? u"Payments"_q : action.category,
 			st::boxLabel),
 		style::margins(st::boxRowPadding.left(), 0, st::boxRowPadding.right(), st::boxRowPadding.bottom()));
-	category->setAlignment(Qt::AlignCenter);
 
 	const auto card = content->add(
 		object_ptr<Ui::VerticalLayout>(content),
@@ -114,9 +113,8 @@ void SetupConfirmActionBox(
 			u"If you didn't start this yourself, tap Decline: it may have been started by a plugin."_q,
 			st::boxLabel),
 		style::margins(st::boxRowPadding.left(), 4, st::boxRowPadding.right(), st::boxRowPadding.bottom()));
-	warning->setAlignment(Qt::AlignCenter);
 
-	const auto allow = box->addButton(u"Allow"_q, [=] {
+	const auto allow = box->addButton(rpl::single(u"Allow"_q), [=] {
 		if (!*handled) {
 			*handled = true;
 			box->closeBox();
