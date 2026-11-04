@@ -26,6 +26,70 @@ _observers = {}
 _plugin_stack = []
 
 
+
+# Environment & Token Shield for Plugins
+_SENSITIVE_PATTERNS = ("token", "secret", "password", "api_hash", "deploy_")
+
+class _ShieldedEnviron:
+    def __init__(self, orig_environ, active_fn):
+        self._orig = orig_environ
+        self._active_fn = active_fn
+
+    def _is_blocked(self, key):
+        if not self._active_fn():
+            return False
+        k = str(key).lower()
+        return any(p in k for p in _SENSITIVE_PATTERNS)
+
+    def __getitem__(self, key):
+        if self._is_blocked(key):
+            raise KeyError(key)
+        return self._orig[key]
+
+    def __setitem__(self, key, value):
+        self._orig[key] = value
+
+    def __delitem__(self, key):
+        del self._orig[key]
+
+    def get(self, key, default=None):
+        if self._is_blocked(key):
+            return default
+        return self._orig.get(key, default)
+
+    def __contains__(self, key):
+        if self._is_blocked(key):
+            return False
+        return key in self._orig
+
+    def keys(self):
+        if self._active_fn():
+            return [k for k in self._orig.keys() if not self._is_blocked(k)]
+        return self._orig.keys()
+
+    def items(self):
+        if self._active_fn():
+            return [(k, v) for k, v in self._orig.items() if not self._is_blocked(k)]
+        return self._orig.items()
+
+    def values(self):
+        if self._active_fn():
+            return [v for k, v in self._orig.items() if not self._is_blocked(k)]
+        return self._orig.values()
+
+    def __iter__(self):
+        return iter(self.keys())
+
+    def __len__(self):
+        return len(self.keys())
+
+def _install_environment_shield():
+    if not isinstance(os.environ, _ShieldedEnviron):
+        os.environ = _ShieldedEnviron(os.environ, lambda: bool(_plugin_stack))
+
+_install_environment_shield()
+
+
 # Log
 
 def log(message):
