@@ -356,7 +356,11 @@ def _parse_entities(text, parse_mode, is_caption=False):
     return parsed.get(key, str(text)), parsed.get("entities") or []
 
 
-def send_text(peer_id, text, replyToMsg=None, parse_mode=None, account=None):
+def send_text(peer_id, text=None, replyToMsg=None, parse_mode=None, account=None, **kwargs):
+    if text is None:
+        text = kwargs.get("message", kwargs.get("caption", ""))
+    if replyToMsg is None:
+        replyToMsg = kwargs.get("reply_to", kwargs.get("reply_to_msg", kwargs.get("reply_to_id", None)))
     resolved = _resolve_account(account, "send_text")
     plain, entities = _parse_entities(text, parse_mode)
     native = _native("send_message")
