@@ -705,8 +705,9 @@ def _settings_items(plugin_id):
         log(f"[{plugin_id}] create_settings failed:\n{traceback.format_exc(limit=4)}")
         return []
     settings.register_items(plugin_id, items)
+    flat_items = settings._registered.get(plugin_id, items)
     result = []
-    for index, item in enumerate(items):
+    for index, item in enumerate(flat_items):
         data = settings.describe(item, index)
         if data is None:
             continue
