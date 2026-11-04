@@ -3,6 +3,16 @@ name: Linux build
 on:
   push:
     branches: [ fix/audit-critical-fixes-and-improvements, main ]
+    paths-ignore:
+      - 'badges.json'
+      - 'trusted_hashes.json'
+      - 'README.md'
+      - 'README.ru.md'
+      - 'CHANGELOG*'
+      - 'changelog.txt'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
   release:
     types: [published]
   workflow_dispatch:
@@ -59,8 +69,10 @@ jobs:
 
       - name: Move cache
         run: |
-          rm -rf ${{ runner.temp }}/.buildx-cache
-          mv ${{ runner.temp }}/.buildx-cache-new ${{ runner.temp }}/.buildx-cache
+          if [ -d "${{ runner.temp }}/.buildx-cache-new" ]; then
+            rm -rf ${{ runner.temp }}/.buildx-cache
+            mv ${{ runner.temp }}/.buildx-cache-new ${{ runner.temp }}/.buildx-cache
+          fi
 
       - name: Build cache
         uses: actions/cache@v4

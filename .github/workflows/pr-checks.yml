@@ -2,10 +2,18 @@ name: PR checks
 
 on:
   pull_request:
-    paths-ignore:
-      - 'badges.json'
 
 jobs:
+  validate-badges:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate badges.json
+        run: python tools/trusted/validate_badges.py
+
   changes:
     runs-on: ubuntu-latest
     outputs:
