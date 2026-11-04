@@ -124,6 +124,12 @@ def run_on_queue(fn, queue: str = PLUGINS_QUEUE, delay: int = 0, delay_ms: int =
     if delay_ms is not None:
         delay = delay_ms
     account = get_hook_account()
+    plugin_id = None
+    try:
+        import extera_host
+        plugin_id = extera_host.current_plugin_id()
+    except Exception:
+        pass
 
     def runner():
         try:
@@ -131,11 +137,23 @@ def run_on_queue(fn, queue: str = PLUGINS_QUEUE, delay: int = 0, delay_ms: int =
                 time.sleep(delay / 1000)
         except Exception:
             pass
-        if account is None:
-            safe_call(fn)
-        else:
-            with hook_scope(account):
+
+        def run_body():
+            if account is None:
                 safe_call(fn)
+            else:
+                with hook_scope(account):
+                    safe_call(fn)
+
+        if plugin_id:
+            try:
+                import extera_host
+                with extera_host._plugin_context(plugin_id):
+                    run_body()
+            except Exception:
+                run_body()
+        else:
+            run_body()
 
     threading.Thread(target=runner, daemon=True).start()
     return get_queue_by_name(queue)
@@ -403,7 +421,11 @@ def _parse_entities(text, parse_mode, is_caption=False):
     return parsed.get(key, str(text)), parsed.get("entities") or []
 
 
-def send_text(peer_id, text=None, replyToMsg=None, parse_mode=None, account=None, **kwargs):
+def send_text(peer_id=None, text=None, replyToMsg=None, parse_mode=None, account=None, **kwargs):
+    if peer_id is None:
+        peer_id = kwargs.get("peer", kwargs.get("dialog_id", 0))
+    if not peer_id:
+        peer_id = get_current_dialog_id()
     if text is None:
         text = kwargs.get("message", kwargs.get("caption", ""))
     if replyToMsg is None:

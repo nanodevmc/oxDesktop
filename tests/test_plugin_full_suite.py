@@ -50,7 +50,7 @@ import file_utils
 
 
 def test_markdown():
-    print("[1/13] Testing Markdown & Entity Parsing...")
+    print("[1/18] Testing Markdown & Entity Parsing...")
     cases = [
         ("Hello **bold** [link](https://test.com) ~~strike~~", [
             ("bold", "bold"),
@@ -71,7 +71,7 @@ def test_markdown():
 
 
 def test_arraylist():
-    print("[2/13] Testing ArrayList & Java Bridge Types...")
+    print("[2/18] Testing ArrayList & Java Bridge Types...")
     al1 = _compat.ArrayList([10, 20, 30])
     al2 = _compat.ArrayList([10, 20, 30])
     assert al1 == al2
@@ -84,7 +84,7 @@ def test_arraylist():
 
 
 def test_settings_descriptors():
-    print("[3/13] Testing Settings Components & Dynamic Descriptors...")
+    print("[3/18] Testing Settings Components & Dynamic Descriptors...")
     switch = s.Switch(title="Enable Mod", subtitle="Toggle on/off", default=True)
     assert switch.text == "Enable Mod"
     assert switch.subtext == "Toggle on/off"
@@ -103,7 +103,7 @@ def test_settings_descriptors():
 
 
 def test_alert_builder():
-    print("[4/13] Testing AlertDialogBuilder & CamelCase Aliases...")
+    print("[4/18] Testing AlertDialogBuilder & CamelCase Aliases...")
     builder = alert.AlertDialogBuilder()
     builder.setTitle("Notice").setMessage("Operation complete").setPositiveButton("OK", lambda b, w: None)
     payload = builder._payload()
@@ -114,7 +114,7 @@ def test_alert_builder():
 
 
 def test_plugin_lifecycle():
-    print("[5/13] Testing Plugin Lifecycle (Load, Unload, Settings, Deletion)...")
+    print("[5/18] Testing Plugin Lifecycle (Load, Unload, Settings, Deletion)...")
     with tempfile.TemporaryDirectory() as tmpdir:
         p_dir = os.path.join(tmpdir, "plugins")
         s_dir = os.path.join(tmpdir, "settings")
@@ -153,7 +153,7 @@ class Plugin(BasePlugin):
 
 
 def test_outgoing_message_hooks():
-    print("[6/13] Testing Outgoing Message Interception & Modification...")
+    print("[6/18] Testing Outgoing Message Interception & Modification...")
     class MessageModifierPlugin(BasePlugin):
         def on_send_message_hook(self, account, params):
             if params.message == "/spoiler":
@@ -184,7 +184,7 @@ def test_outgoing_message_hooks():
 
 
 def test_incoming_update_wrapping():
-    print("[7/13] Testing Incoming Update TL Wrapping...")
+    print("[7/18] Testing Incoming Update TL Wrapping...")
     class UpdateListenerPlugin(BasePlugin):
         def on_update_hook(self, name, account, update):
             self.received_msg = getattr(update, "message", None)
@@ -219,7 +219,7 @@ def test_incoming_update_wrapping():
 
 
 def test_pre_request_hook_cancel():
-    print("[8/13] Testing Pre-Request Hook Cancellation (Ghost Mode)...")
+    print("[8/18] Testing Pre-Request Hook Cancellation (Ghost Mode)...")
     raw_requests.clear()
 
     class StealthPlugin(BasePlugin):
@@ -244,7 +244,7 @@ def test_pre_request_hook_cancel():
 
 
 def test_post_request_hook():
-    print("[9/13] Testing Post-Request Hook Dispatch...")
+    print("[9/18] Testing Post-Request Hook Dispatch...")
     class AuditPlugin(BasePlugin):
         def on_plugin_load(self):
             self.add_hook("TL_help_getConfig")
@@ -267,7 +267,7 @@ def test_post_request_hook():
 
 
 def test_cactuslib():
-    print("[10/13] Testing CactusLib (@command, Command context, DB)...")
+    print("[10/18] Testing CactusLib (@command, Command context, DB)...")
     sent_messages.clear()
 
     class MathPlugin(CactusUtils.Plugin):
@@ -300,7 +300,7 @@ def test_cactuslib():
 
 
 def test_controllers_bridge():
-    print("[11/13] Testing Controllers Bridge (Messages, Contacts, Media, SendHelper)...")
+    print("[11/18] Testing Controllers Bridge (Messages, Contacts, Media, SendHelper)...")
     from org.telegram.messenger import (
         MessagesController,
         ContactsController,
@@ -323,7 +323,7 @@ def test_controllers_bridge():
 
 
 def test_session_file_protection():
-    print("[12/13] Testing Security: Session & Credential File Protection...")
+    print("[12/18] Testing Security: Session & Credential File Protection...")
     assert file_utils.read_file("tdata/key_datas") is None
     assert file_utils.read_file_bytes("tdata/D877F783D5D3EF8C0") is None
     assert file_utils.write_file("tdata/settings0", "hack") is False
@@ -333,7 +333,7 @@ def test_session_file_protection():
 
 
 def test_token_and_env_shield():
-    print("[13/13] Testing Security: Environment & Token Shielding...")
+    print("[13/18] Testing Security: Environment & Token Shielding...")
     os.environ["GH_TOKEN"] = "ghp_secret_access_token_123"
     os.environ["GITHUB_TOKEN"] = "ghs_token_xyz"
     os.environ["TDESKTOP_API_HASH"] = "hash_344583"
@@ -357,6 +357,159 @@ def test_token_and_env_shield():
     print("  -> PASSED")
 
 
+def test_hybrid_send_message_params():
+    print("[14/18] Testing Hybrid SendMessageParams & _ReplyStub...")
+    p = _compat.SendMessageParams(peer=123456, message="initial text", reply_to=789)
+    assert p.text == "initial text"
+    assert p["message"] == "initial text"
+    assert p["text"] == "initial text"
+    assert p["dialog_id"] == 123456
+    assert p["reply_to_id"] == 789
+    assert int(p.replyToMsg) == 789
+    assert p.replyToMsg.id == 789
+
+    # Dict modification
+    p["message"] = "modified text"
+    assert p.message == "modified text"
+    assert p.text == "modified text"
+
+    # Property modification
+    p.text = "property modified"
+    assert p["message"] == "property modified"
+    assert p.message == "property modified"
+
+    # Dict containment & helpers
+    assert "message" in p
+    assert "dialog_id" in p
+    assert p.get("missing", "fallback") == "fallback"
+    p.setdefault("custom_param", "stored")
+    assert p.get("custom_param") == "stored"
+    print("  -> PASSED")
+
+
+def test_sandboxed_open_and_subprocess():
+    print("[15/18] Testing Sandboxed builtins.open, os.remove, subprocess inside Plugin Context...")
+    import subprocess
+    # Outside plugin context, operations work normally
+    with tempfile.NamedTemporaryFile("w+", delete=False) as tf:
+        tf.write("normal content")
+        temp_name = tf.name
+
+    try:
+        with open(temp_name, "r") as f:
+            assert f.read() == "normal content"
+
+        with extera_host._plugin_context("malicious_stealer_plugin"):
+            # Reading normal temp file inside plugin context works
+            with open(temp_name, "r") as f:
+                assert f.read() == "normal content"
+
+            # Attempting to read tdata/key_datas via builtins.open MUST raise PermissionError
+            try:
+                with open("tdata/key_datas", "rb") as f:
+                    assert False, "Stealer access to key_datas should be blocked!"
+            except PermissionError:
+                pass
+
+            # Attempting to delete tdata files via os.remove MUST raise PermissionError
+            try:
+                os.remove("tdata/D877F783D5D3EF8C0")
+                assert False, "Deletion of tdata should be blocked!"
+            except PermissionError:
+                pass
+
+            # Attempting to execute os.system MUST raise PermissionError
+            try:
+                os.system("echo hack")
+                assert False, "os.system should be blocked inside plugins!"
+            except PermissionError:
+                pass
+
+            # Attempting to spawn subprocess.Popen MUST raise PermissionError
+            try:
+                subprocess.Popen(["cmd.exe", "/c", "echo hack"])
+                assert False, "subprocess.Popen should be blocked inside plugins!"
+            except PermissionError:
+                pass
+
+        # Outside plugin context, normal open works again
+        with open(temp_name, "r") as f:
+            assert f.read() == "normal content"
+    finally:
+        if os.path.exists(temp_name):
+            os.remove(temp_name)
+    print("  -> PASSED")
+
+
+def test_tl_name_and_extended_updates():
+    print("[16/18] Testing TLName Single-Dispatch & Extended Update Wrapping...")
+    tl_name = extera_host.TLName("TL_updateNewMessage")
+    assert tl_name == "TL_updateNewMessage"
+    assert tl_name == "updateNewMessage"
+    assert "updateNewMessage" in tl_name
+
+    # Test updateEditMessage wrapping
+    edit_dict = {
+        "id": 444,
+        "dialog_id": 555,
+        "sender_id": 666,
+        "text": "Edited content",
+        "out": True,
+        "date": 1700000000,
+        "edit_date": 1700000050,
+    }
+    wrapped_edit = extera_host._wrap_update("updateEditMessage", edit_dict)
+    assert type(wrapped_edit).__name__ == "TL_updateEditMessage"
+    assert wrapped_edit.message.message == "Edited content"
+    assert wrapped_edit.message.edit_date == 1700000050
+
+    # Test updateDeleteMessages wrapping
+    delete_dict = {
+        "messages": [101, 102, 103],
+    }
+    wrapped_del = extera_host._wrap_update("updateDeleteMessages", delete_dict)
+    assert type(wrapped_del).__name__ == "TL_updateDeleteMessages"
+    assert list(wrapped_del.messages) == [101, 102, 103]
+    print("  -> PASSED")
+
+
+def test_plugin_lifecycle_fallbacks():
+    print("[17/18] Testing BasePlugin Lifecycle Fallbacks (on_load, on_unload)...")
+    load_events = []
+
+    class OnLoadPlugin(BasePlugin):
+        def on_load(self):
+            load_events.append("loaded")
+
+        def on_unload(self):
+            load_events.append("unloaded")
+
+    p = OnLoadPlugin()
+    p.on_plugin_load()
+    assert load_events == ["loaded"]
+    p.on_plugin_unload()
+    assert load_events == ["loaded", "unloaded"]
+    print("  -> PASSED")
+
+
+def test_run_on_queue_context_propagation():
+    print("[18/18] Testing run_on_queue Context Propagation...")
+    import time
+    events = []
+
+    with extera_host._plugin_context("queue_test_plugin"):
+        def task():
+            current = extera_host.current_plugin_id()
+            events.append(current)
+
+        client_utils.run_on_queue(task)
+
+    time.sleep(0.1)
+    assert len(events) == 1
+    assert events[0] == "queue_test_plugin"
+    print("  -> PASSED")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print(" oxDesktop Master Python Plugin & Security Test Harness")
@@ -374,6 +527,11 @@ if __name__ == "__main__":
     test_controllers_bridge()
     test_session_file_protection()
     test_token_and_env_shield()
+    test_hybrid_send_message_params()
+    test_sandboxed_open_and_subprocess()
+    test_tl_name_and_extended_updates()
+    test_plugin_lifecycle_fallbacks()
+    test_run_on_queue_context_propagation()
     print("=" * 60)
-    print(">>> ALL 13/13 TESTS PASSED WITH 100% SUCCESS! <<<")
+    print(">>> ALL 18/18 TESTS PASSED WITH 100% SUCCESS! <<<")
     print("=" * 60)

@@ -372,9 +372,27 @@ class BasePlugin:
     error_message: Optional[str] = None
 
     def on_plugin_load(self):
-        pass
+        if hasattr(self, "on_load") and callable(self.on_load) and type(self).on_load is not BasePlugin.on_load:
+            self.on_load()
+        elif hasattr(self, "on_enable") and callable(self.on_enable) and type(self).on_enable is not BasePlugin.on_enable:
+            self.on_enable()
 
     def on_plugin_unload(self):
+        if hasattr(self, "on_unload") and callable(self.on_unload) and type(self).on_unload is not BasePlugin.on_unload:
+            self.on_unload()
+        elif hasattr(self, "on_disable") and callable(self.on_disable) and type(self).on_disable is not BasePlugin.on_disable:
+            self.on_disable()
+
+    def on_load(self):
+        pass
+
+    def on_unload(self):
+        pass
+
+    def on_enable(self):
+        pass
+
+    def on_disable(self):
         pass
 
     def on_app_event(self, event_type: str):

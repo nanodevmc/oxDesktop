@@ -363,7 +363,7 @@ def _fcntl_module():
 class SendMessageParams:
     def __init__(self, peer=None, message="", reply_to=0):
         self.peer = peer
-        self.message = message
+        self.message = str(message or "")
         self.caption = None
         self.entities = []
         self.replyToMsg = _ReplyStub(reply_to) if reply_to else None
@@ -380,13 +380,124 @@ class SendMessageParams:
         self.document = None
         self.path = None
 
+    @property
+    def text(self):
+        return self.message
+
+    @text.setter
+    def text(self, val):
+        self.message = str(val or "")
+
+    @property
+    def dialog_id(self):
+        return to_dialog_id(self.peer)
+
+    @dialog_id.setter
+    def dialog_id(self, val):
+        self.peer = val
+
+    @property
+    def peer_id(self):
+        return self.dialog_id
+
+    @peer_id.setter
+    def peer_id(self, val):
+        self.peer = val
+
+    @property
+    def reply_to_id(self):
+        if self.replyToMsg is not None:
+            return getattr(self.replyToMsg, "id", 0)
+        return 0
+
+    def __getitem__(self, key):
+        if key == "text":
+            return self.message
+        if key in ("dialog_id", "peer_id"):
+            return self.dialog_id
+        if key == "reply_to_id":
+            return self.reply_to_id
+        if hasattr(self, key):
+            return getattr(self, key)
+        raise KeyError(key)
+
+    def __setitem__(self, key, value):
+        if key == "text":
+            self.message = str(value or "")
+        elif key in ("dialog_id", "peer_id"):
+            self.peer = value
+        elif key == "reply_to_id":
+            self.replyToMsg = _ReplyStub(value)
+        else:
+            setattr(self, key, value)
+
+    def __delitem__(self, key):
+        if hasattr(self, key):
+            setattr(self, key, None)
+
+    def __contains__(self, key):
+        if key in ("text", "dialog_id", "peer_id", "reply_to_id"):
+            return True
+        return hasattr(self, key)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def setdefault(self, key, default=None):
+        if key in self:
+            return self[key]
+        self[key] = default
+        return default
+
+    def keys(self):
+        base_keys = [k for k in self.__dict__.keys() if not k.startswith("_")]
+        for extra in ("text", "dialog_id", "peer_id", "reply_to_id"):
+            if extra not in base_keys:
+                base_keys.append(extra)
+        return base_keys
+
+    def values(self):
+        return [self.get(k) for k in self.keys()]
+
+    def items(self):
+        return [(k, self.get(k)) for k in self.keys()]
+
+    def to_dict(self):
+        return {
+            "peer": self.peer,
+            "message": self.message,
+            "text": self.text,
+            "caption": self.caption,
+            "entities": self.entities,
+            "reply_to_id": self.reply_to_id,
+            "dialog_id": self.dialog_id,
+            "notify": self.notify,
+            "scheduleDate": self.scheduleDate,
+            "searchLinks": self.searchLinks,
+            "photo": self.photo,
+            "document": self.document,
+            "path": self.path,
+        }
+
 
 class _ReplyStub(Stub):
-    def __init__(self, msg_id):
+    def __init__(self, msg_id, text="", dialog_id=0, from_id=0):
         Stub.__init__(self, "replyToMsg")
-        object.__setattr__(self, "id", msg_id)
-        object.__setattr__(self, "messageText", "")
+        mid = int(msg_id or 0)
+        object.__setattr__(self, "id", mid)
+        object.__setattr__(self, "messageText", str(text or ""))
+        object.__setattr__(self, "text", str(text or ""))
+        object.__setattr__(self, "message", str(text or ""))
         object.__setattr__(self, "messageOwner", None)
+        object.__setattr__(self, "dialog_id", int(dialog_id or 0))
+        object.__setattr__(self, "from_id", int(from_id or 0))
+        object.__setattr__(self, "date", 0)
+
+    def __int__(self):
+        return int(object.__getattribute__(self, "id") or 0)
 
 
 # Formatting
