@@ -21,7 +21,7 @@
   <br>
   <a href="https://t.me/oxDesktop"><img src="https://img.shields.io/badge/Telegram-@oxDesktop-da3018?logo=telegram&logoColor=white" alt="Telegram"></a>
   <a href="https://t.me/oxDesktopCl"><img src="https://img.shields.io/badge/Чейнджлог-@oxDesktopCl-da3018?logo=telegram&logoColor=white" alt="Чейнджлог"></a>
-  <a href="https://www.tiktok.com/@exDesktop"><img src="https://img.shields.io/badge/TikTok-@exDesktop-000000?logo=tiktok&logoColor=white" alt="TikTok"></a>
+  <a href="https://www.tiktok.com/@oxDesktop"><img src="https://img.shields.io/badge/TikTok-@oxDesktop-000000?logo=tiktok&logoColor=white" alt="TikTok"></a>
   <a href="https://t.me/radoqi"><img src="https://img.shields.io/badge/Разработчик-@radoqi-2aabee?logo=telegram&logoColor=white" alt="Разработчик"></a>
   <a href="https://github.com/nanodevmc/oxDesktop"><img src="https://img.shields.io/badge/GitHub-nanodevmc%2FoxDesktop-181717?logo=github&logoColor=white" alt="GitHub"></a>
 </p>
@@ -214,7 +214,7 @@ cmake --build out --config Release --target Telegram
 
 - **Telegram-канал**: [@oxDesktop](https://t.me/oxDesktop)
 - **Канал с чейнджлогами**: [@oxDesktopCl](https://t.me/oxDesktopCl)
-- **TikTok**: [@exDesktop](https://www.tiktok.com/@exDesktop)
+- **TikTok**: [@oxDesktop](https://www.tiktok.com/@oxDesktop)
 - **Owner / CEO / Developer**: [@radoqi](https://t.me/radoqi)
 
 ## Благодарности
