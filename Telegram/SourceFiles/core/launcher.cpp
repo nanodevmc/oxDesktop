@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "core/launcher.h"
+#include "extera/extera_demo.h"
 
 #include "platform/platform_launcher.h"
 #include "platform/platform_specific.h"
@@ -610,6 +611,16 @@ void Launcher::processArguments() {
 		{ "-workdir"        , KeyFormat::OneValue },
 		{ "--"              , KeyFormat::AllLeftValues },
 		{ "-scale"          , KeyFormat::OneValue },
+		{ "-demo-mode"      , KeyFormat::NoValues },
+		{ "--demo-mode"     , KeyFormat::NoValues },
+		{ "-demo-view"      , KeyFormat::OneValue },
+		{ "--demo-view"     , KeyFormat::OneValue },
+		{ "-demo-screenshot", KeyFormat::OneValue },
+		{ "--demo-screenshot", KeyFormat::OneValue },
+		{ "-demo-delay"     , KeyFormat::OneValue },
+		{ "--demo-delay"    , KeyFormat::OneValue },
+		{ "-demo-exit"      , KeyFormat::NoValues },
+		{ "--demo-exit"     , KeyFormat::NoValues },
 	};
 	auto parseResult = QMap<QByteArray, QStringList>();
 	auto parsingKey = QByteArray();
@@ -665,6 +676,31 @@ void Launcher::processArguments() {
 	gStartUrls = startUrls | ranges::views::transform([&](const QString &url) {
 		return QUrl::fromUserInput(url, _initialWorkingDir);
 	}) | ranges::views::filter(&QUrl::isValid) | ranges::to<QList<QUrl>>;
+
+	if (parseResult.contains("-demo-mode") || parseResult.contains("--demo-mode")) {
+		Extera::Demo::SetEnabled(true);
+	}
+	const auto demoView = parseResult.contains("--demo-view")
+		? parseResult.value("--demo-view").join(QString())
+		: parseResult.value("-demo-view").join(QString());
+	if (!demoView.isEmpty()) {
+		Extera::Demo::SetView(demoView);
+	}
+	const auto demoScreenshot = parseResult.contains("--demo-screenshot")
+		? parseResult.value("--demo-screenshot").join(QString())
+		: parseResult.value("-demo-screenshot").join(QString());
+	if (!demoScreenshot.isEmpty()) {
+		Extera::Demo::SetScreenshot(demoScreenshot);
+	}
+	const auto demoDelay = parseResult.contains("--demo-delay")
+		? parseResult.value("--demo-delay").join(QString()).toInt()
+		: parseResult.value("-demo-delay").join(QString()).toInt();
+	if (demoDelay > 0) {
+		Extera::Demo::SetDelay(demoDelay);
+	}
+	if (parseResult.contains("-demo-exit") || parseResult.contains("--demo-exit")) {
+		Extera::Demo::SetAutoExit(true);
+	}
 
 	const auto scaleKey = parseResult.value("-scale", {});
 	if (scaleKey.size() > 0) {

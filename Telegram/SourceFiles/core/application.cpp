@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "core/application.h"
+#include "extera/extera_demo.h"
 #include "extera/extera_update.h"
 #include "extera/extera_changelog.h"
 #include "extera/extera_ws_proxy.h"
@@ -522,7 +523,9 @@ void Application::run() {
 	DEBUG_LOG(("Application Info: showing."));
 	_lastActivePrimaryWindow->finishFirstShow();
 
-	if (!_lastActivePrimaryWindow->locked() && cStartToSettings()) {
+	if (Extera::Demo::IsActive()) {
+		Extera::Demo::Start(_lastActivePrimaryWindow);
+	} else if (!_lastActivePrimaryWindow->locked() && cStartToSettings()) {
 		_lastActivePrimaryWindow->showSettings();
 	}
 
