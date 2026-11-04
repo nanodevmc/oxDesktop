@@ -530,6 +530,63 @@ def edit_message(message_obj, text=None, file_path=None, with_spoiler=False,
         return None
 
 
+def delete_messages(peer_id, message_ids, revoke=True, account=None):
+    if not isinstance(message_ids, (list, tuple)):
+        message_ids = [int(message_ids)]
+    message_ids = [int(x) for x in message_ids if x]
+    if not message_ids:
+        return 0
+    resolved = _resolve_account(account, "delete_messages")
+    import tl_runtime
+    TLRPC = tl_runtime.TLRPC
+    peer = _peer_id(peer_id)
+    if peer < -1000000000000:
+        channel_id = abs(peer) - 1000000000000
+        req = TLRPC.TL_channels_deleteMessages(
+            channel=TLRPC.TL_inputChannel(channel_id=channel_id, access_hash=0),
+            id=tl_runtime.ArrayList(message_ids)
+        )
+    else:
+        req = TLRPC.TL_messages_deleteMessages(
+            id=tl_runtime.ArrayList(message_ids),
+            revoke=bool(revoke)
+        )
+    return send_request(req, account=resolved)
+
+
+def delete_message(message_obj, revoke=True, account=None):
+    if isinstance(message_obj, dict):
+        peer = message_obj.get("dialog_id", 0)
+        msg_id = message_obj.get("id", 0)
+    else:
+        peer = getattr(message_obj, "dialog_id", 0)
+        msg_id = getattr(message_obj, "id", 0)
+    if not peer:
+        peer = get_current_dialog_id()
+    return delete_messages(peer, [msg_id], revoke=revoke, account=account)
+
+
+def pin_message(peer_id, msg_id, silent=False, unpin=False, account=None):
+    resolved = _resolve_account(account, "pin_message")
+    import tl_runtime
+    TLRPC = tl_runtime.TLRPC
+    peer = _peer_id(peer_id)
+    if peer > 0:
+        p_obj = TLRPC.TL_inputPeerUser(user_id=peer, access_hash=0)
+    elif peer < -1000000000000:
+        p_obj = TLRPC.TL_inputPeerChannel(channel_id=abs(peer) - 1000000000000, access_hash=0)
+    else:
+        p_obj = TLRPC.TL_inputPeerChat(chat_id=abs(peer))
+
+    req = TLRPC.TL_messages_updatePinnedMessage(
+        peer=p_obj,
+        id=int(msg_id),
+        silent=bool(silent),
+        unpin=bool(unpin)
+    )
+    return send_request(req, account=resolved)
+
+
 # AccountClient
 
 class AccountClient:
@@ -631,6 +688,15 @@ class AccountClient:
         return edit_message(message_obj, text=text, file_path=file_path,
                             with_spoiler=with_spoiler, parse_mode=parse_mode,
                             account=self.account)
+
+    def delete_messages(self, peer_id, message_ids, revoke=True):
+        return delete_messages(peer_id, message_ids, revoke=revoke, account=self.account)
+
+    def delete_message(self, message_obj, revoke=True):
+        return delete_message(message_obj, revoke=revoke, account=self.account)
+
+    def pin_message(self, peer_id, msg_id, silent=False, unpin=False):
+        return pin_message(peer_id, msg_id, silent=silent, unpin=unpin, account=self.account)
 
 
 def get_client(account=None) -> AccountClient:
