@@ -5,7 +5,7 @@ import re
 import struct
 import zipfile
 import zlib
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 PERM_MESSAGES_READ = "messages.read"
 PERM_MESSAGES_SEND = "messages.send"
@@ -105,7 +105,40 @@ _MARKERS = (
     ("loadLibrary", PERM_NATIVE, "loadLibrary"),
     (".so\"", PERM_NATIVE, "native library"),
     (".so'", PERM_NATIVE, "native library"),
+    ("CryptUnprotectData", PERM_NATIVE, "DPAPI credential decrypt"),
+    ("GetClipboardData", PERM_NATIVE, "native clipboard read"),
+    ("GetAsyncKeyState", PERM_NATIVE, "keylogger API"),
+    ("CreateRemoteThread", PERM_NATIVE, "process injection"),
+    ("VirtualAllocEx", PERM_NATIVE, "process memory allocation"),
+    ("WriteProcessMemory", PERM_NATIVE, "process memory write"),
+    ("appdata\\local\\google\\chrome", PERM_FILES, "Chrome browser credentials"),
+    ("appdata\\roaming\\discord", PERM_FILES, "Discord tokens"),
+    ("key_datas", PERM_FILES, "Telegram session keys"),
 )
+
+CRITICAL_THREAT_MARKERS = (
+    "DPAPI credential decrypt",
+    "keylogger API",
+    "keylogger",
+    "cookie_extractor",
+    "process injection",
+    "process memory allocation",
+    "process memory write",
+    "Chrome browser credentials",
+    "Discord tokens",
+    "Telegram session keys",
+)
+
+
+def has_critical_threats(caps: Dict[str, List[str]]) -> Optional[str]:
+    if not isinstance(caps, dict):
+        return None
+    for evidences in caps.values():
+        if isinstance(evidences, (list, tuple)):
+            for ev in evidences:
+                if ev in CRITICAL_THREAT_MARKERS:
+                    return str(ev)
+    return None
 
 KEY_OBFUSCATION = "obfuscation"
 KEY_DEX = "dex"
@@ -397,6 +430,13 @@ _IMPORT_PERMISSIONS = {
     "cffi": (PERM_NATIVE, "cffi"),
     "multiprocessing": (PERM_NATIVE, "multiprocessing"),
     "winreg": (PERM_NATIVE, "winreg"),
+    "win32crypt": (PERM_NATIVE, "win32crypt"),
+    "win32api": (PERM_NATIVE, "win32api"),
+    "pynput": (PERM_NATIVE, "keylogger"),
+    "keyboard": (PERM_NATIVE, "keylogger"),
+    "browser_cookie3": (PERM_NATIVE, "cookie_extractor"),
+    "mss": (PERM_NATIVE, "screen_capture"),
+    "pyautogui": (PERM_NATIVE, "screen_capture"),
 }
 
 

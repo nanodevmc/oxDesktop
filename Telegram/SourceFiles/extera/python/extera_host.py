@@ -475,6 +475,10 @@ def _is_obfuscated(record):
 def _blocked_reason(record):
     if _is_obfuscated(record):
         return "OBFUSCATED"
+    import capability_scan
+    threat = capability_scan.has_critical_threats(record.capabilities)
+    if threat:
+        return f"CRITICAL_SECURITY_THREAT ({threat})"
     if not _unknown_allowed and not is_trusted_file(record.path):
         return "UNKNOWN_SOURCE"
     return None

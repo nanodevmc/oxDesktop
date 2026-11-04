@@ -12,6 +12,7 @@ import types
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PYTHON_DIR = os.path.join(REPO_ROOT, "Telegram", "SourceFiles", "extera", "python")
 sys.path.insert(0, PYTHON_DIR)
+import metadata_parser
 
 # Mock _extera native module
 mock_extera = types.ModuleType("_extera")
@@ -50,7 +51,7 @@ import file_utils
 
 
 def test_markdown():
-    print("[1/19] Testing Markdown & Entity Parsing...")
+    print("[1/20] Testing Markdown & Entity Parsing...")
     cases = [
         ("Hello **bold** [link](https://test.com) ~~strike~~", [
             ("bold", "bold"),
@@ -71,7 +72,7 @@ def test_markdown():
 
 
 def test_arraylist():
-    print("[2/19] Testing ArrayList & Java Bridge Types...")
+    print("[2/20] Testing ArrayList & Java Bridge Types...")
     al1 = _compat.ArrayList([10, 20, 30])
     al2 = _compat.ArrayList([10, 20, 30])
     assert al1 == al2
@@ -84,7 +85,7 @@ def test_arraylist():
 
 
 def test_settings_descriptors():
-    print("[3/19] Testing Settings Components & Dynamic Descriptors...")
+    print("[3/20] Testing Settings Components & Dynamic Descriptors...")
     switch = s.Switch(title="Enable Mod", subtitle="Toggle on/off", default=True)
     assert switch.text == "Enable Mod"
     assert switch.subtext == "Toggle on/off"
@@ -122,7 +123,7 @@ def test_settings_descriptors():
 
 
 def test_alert_builder():
-    print("[4/19] Testing AlertDialogBuilder & CamelCase Aliases...")
+    print("[4/20] Testing AlertDialogBuilder & CamelCase Aliases...")
     builder = alert.AlertDialogBuilder()
     builder.setTitle("Notice").setMessage("Operation complete").setPositiveButton("OK", lambda b, w: None)
     payload = builder._payload()
@@ -140,7 +141,7 @@ def test_alert_builder():
 
 
 def test_plugin_lifecycle():
-    print("[5/19] Testing Plugin Lifecycle (Load, Unload, Settings, Deletion)...")
+    print("[5/20] Testing Plugin Lifecycle (Load, Unload, Settings, Deletion)...")
     with tempfile.TemporaryDirectory() as tmpdir:
         p_dir = os.path.join(tmpdir, "plugins")
         s_dir = os.path.join(tmpdir, "settings")
@@ -179,7 +180,7 @@ class Plugin(BasePlugin):
 
 
 def test_outgoing_message_hooks():
-    print("[6/19] Testing Outgoing Message Interception & Modification...")
+    print("[6/20] Testing Outgoing Message Interception & Modification...")
     class MessageModifierPlugin(BasePlugin):
         def on_send_message_hook(self, account, params):
             if params.message == "/spoiler":
@@ -210,7 +211,7 @@ def test_outgoing_message_hooks():
 
 
 def test_incoming_update_wrapping():
-    print("[7/19] Testing Incoming Update TL Wrapping...")
+    print("[7/20] Testing Incoming Update TL Wrapping...")
     class UpdateListenerPlugin(BasePlugin):
         def on_update_hook(self, name, account, update):
             self.received_msg = getattr(update, "message", None)
@@ -245,7 +246,7 @@ def test_incoming_update_wrapping():
 
 
 def test_pre_request_hook_cancel():
-    print("[8/19] Testing Pre-Request Hook Cancellation (Ghost Mode)...")
+    print("[8/20] Testing Pre-Request Hook Cancellation (Ghost Mode)...")
     raw_requests.clear()
 
     class StealthPlugin(BasePlugin):
@@ -270,7 +271,7 @@ def test_pre_request_hook_cancel():
 
 
 def test_post_request_hook():
-    print("[9/19] Testing Post-Request Hook Dispatch...")
+    print("[9/20] Testing Post-Request Hook Dispatch...")
     class AuditPlugin(BasePlugin):
         def on_plugin_load(self):
             self.add_hook("TL_help_getConfig")
@@ -293,7 +294,7 @@ def test_post_request_hook():
 
 
 def test_cactuslib():
-    print("[10/19] Testing CactusLib (@command, Command context, DB)...")
+    print("[10/20] Testing CactusLib (@command, Command context, DB)...")
     sent_messages.clear()
 
     class MathPlugin(CactusUtils.Plugin):
@@ -326,7 +327,7 @@ def test_cactuslib():
 
 
 def test_controllers_bridge():
-    print("[11/19] Testing Controllers Bridge (Messages, Contacts, Media, SendHelper)...")
+    print("[11/20] Testing Controllers Bridge (Messages, Contacts, Media, SendHelper)...")
     from org.telegram.messenger import (
         MessagesController,
         ContactsController,
@@ -349,7 +350,7 @@ def test_controllers_bridge():
 
 
 def test_session_file_protection():
-    print("[12/19] Testing Security: Session & Credential File Protection...")
+    print("[12/20] Testing Security: Session & Credential File Protection...")
     assert file_utils.read_file("tdata/key_datas") is None
     assert file_utils.read_file_bytes("tdata/D877F783D5D3EF8C0") is None
     assert file_utils.write_file("tdata/settings0", "hack") is False
@@ -359,7 +360,7 @@ def test_session_file_protection():
 
 
 def test_token_and_env_shield():
-    print("[13/19] Testing Security: Environment & Token Shielding...")
+    print("[13/20] Testing Security: Environment & Token Shielding...")
     os.environ["GH_TOKEN"] = "ghp_secret_access_token_123"
     os.environ["GITHUB_TOKEN"] = "ghs_token_xyz"
     os.environ["TDESKTOP_API_HASH"] = "hash_344583"
@@ -384,7 +385,7 @@ def test_token_and_env_shield():
 
 
 def test_hybrid_send_message_params():
-    print("[14/19] Testing Hybrid SendMessageParams & _ReplyStub...")
+    print("[14/20] Testing Hybrid SendMessageParams & _ReplyStub...")
     p = _compat.SendMessageParams(peer=123456, message="initial text", reply_to=789)
     assert p.text == "initial text"
     assert p["message"] == "initial text"
@@ -414,7 +415,7 @@ def test_hybrid_send_message_params():
 
 
 def test_sandboxed_open_and_subprocess():
-    print("[15/19] Testing Sandboxed builtins.open, os.remove, subprocess inside Plugin Context...")
+    print("[15/20] Testing Sandboxed builtins.open, os.remove, subprocess inside Plugin Context...")
     import subprocess
     # Outside plugin context, operations work normally
     with tempfile.NamedTemporaryFile("w+", delete=False) as tf:
@@ -468,7 +469,7 @@ def test_sandboxed_open_and_subprocess():
 
 
 def test_tl_name_and_extended_updates():
-    print("[16/19] Testing TLName Single-Dispatch & Extended Update Wrapping...")
+    print("[16/20] Testing TLName Single-Dispatch & Extended Update Wrapping...")
     tl_name = extera_host.TLName("TL_updateNewMessage")
     assert tl_name == "TL_updateNewMessage"
     assert tl_name == "updateNewMessage"
@@ -500,7 +501,7 @@ def test_tl_name_and_extended_updates():
 
 
 def test_plugin_lifecycle_fallbacks():
-    print("[17/19] Testing BasePlugin Lifecycle Fallbacks (on_load, on_unload)...")
+    print("[17/20] Testing BasePlugin Lifecycle Fallbacks (on_load, on_unload)...")
     load_events = []
 
     class OnLoadPlugin(BasePlugin):
@@ -519,7 +520,7 @@ def test_plugin_lifecycle_fallbacks():
 
 
 def test_run_on_queue_context_propagation():
-    print("[18/19] Testing run_on_queue Context Propagation...")
+    print("[18/20] Testing run_on_queue Context Propagation...")
     import time
     events = []
 
@@ -537,7 +538,7 @@ def test_run_on_queue_context_propagation():
 
 
 def test_elyx_archive_plugin():
-    print("[19/19] Testing Elyx/EAF Multi-File Archive Plugin Loading...")
+    print("[19/20] Testing Elyx/EAF Multi-File Archive Plugin Loading...")
     import zipfile
     import metadata_parser
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -577,6 +578,39 @@ class ArchivePlugin(BasePlugin):
     print("  -> PASSED")
 
 
+def test_critical_threat_scanner():
+    print("[20/20] Testing Critical Threat Detection & Automatic Blocking...")
+    import capability_scan
+    with tempfile.TemporaryDirectory() as tmpdir:
+        p_path = os.path.join(tmpdir, "stealer_plug.plugin")
+        code = """__id__ = "stealer_test"
+__name__ = "Stealer Test"
+import ctypes
+from base_plugin import BasePlugin
+
+class Stealer(BasePlugin):
+    def on_load(self):
+        # Stealer targeting session keys and DPAPI
+        with open("tdata/key_datas", "rb") as f:
+            pass
+        ctypes.windll.crypt32.CryptUnprotectData(None)
+"""
+        with open(p_path, "w", encoding="utf-8") as f:
+            f.write(code)
+
+        caps = capability_scan.scan(p_path)
+        threat = capability_scan.has_critical_threats(caps)
+        assert threat in ("Telegram session keys", "DPAPI credential decrypt")
+
+        meta = metadata_parser.read_metadata(p_path)
+        record = extera_host.Record(p_path, meta)
+        record.capabilities = caps
+        reason = extera_host._blocked_reason(record)
+        assert reason is not None
+        assert "CRITICAL_SECURITY_THREAT" in reason
+    print("  -> PASSED")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print(" oxDesktop Master Python Plugin & Security Test Harness")
@@ -600,6 +634,7 @@ if __name__ == "__main__":
     test_plugin_lifecycle_fallbacks()
     test_run_on_queue_context_propagation()
     test_elyx_archive_plugin()
+    test_critical_threat_scanner()
     print("=" * 60)
-    print(">>> ALL 19/19 TESTS PASSED WITH 100% SUCCESS! <<<")
+    print(">>> ALL 20/20 TESTS PASSED WITH 100% SUCCESS! <<<")
     print("=" * 60)
