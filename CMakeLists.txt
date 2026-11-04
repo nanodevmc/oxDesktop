@@ -87,3 +87,19 @@ set(desktop_app_skip_libs
 
 add_subdirectory(cmake)
 add_subdirectory(Telegram)
+
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/version.txt")
+
+file(STRINGS "${CMAKE_SOURCE_DIR}/version.txt" _ver_line LIMIT_COUNT 1)
+string(REGEX MATCH "^[^/]+" APP_VERSION "${_ver_line}")
+
+configure_file(
+    "${CMAKE_SOURCE_DIR}/version.h.in"
+    "${CMAKE_BINARY_DIR}/version_generated.h"
+    @ONLY
+)
+
+target_include_directories(Telegram PRIVATE "${CMAKE_BINARY_DIR}")
+
+#чтоб на душе был кайф
