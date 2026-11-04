@@ -14,8 +14,10 @@
 - **Стандарт User-Agent**: все HTTP-запросы клиента приведены к стандарту `"oxDesktop/" APP_VERSION` (`extera_badges.cpp`, `extera_changelog.cpp`, `extera_lyrics.cpp`, `extera_update.cpp`, `requirements_installer.py`).
 
 ### 2. GitHub Actions CI
-- **Linux Docker Cache**: Устранена ошибка `CCACHE_DISABLE=0` (ccache 4.x). Кэш компилятора восстанавливается и сохраняется (`if: always()`). Авто-скриншоты на виртуальном Xvfb сохраняются в артефакты `oxdesktop-screenshots-linux`.
-- **Windows MSVC**: Устранены ошибки C3850 (замена суррогата `\uD83D\uDCCE` на универсальный символ `\U0001F4CE`) и C2039 (`current.tags` вместо `current.entities`) в `history_widget.cpp`. Кэш `sccache` сохраняется (`if: always()`).
+- **Защита кэша компилятора (ccache / sccache)**: добавлена дельта-проверка размера (порог 100 МБ) — если при отмене или сбое текущий кэш меньше восстановленного более чем на 100 МБ, сохранение блокируется (`should_save=false`), предотвращая затирание рабочего кэша.
+- **Авто-отмена старых запусков (`concurrency: cancel-in-progress: true`)**: при новом пуше в `main` устаревшие раннеры отменяются без риска потери кэша.
+- **Windows MSVC sccache**: переведён на быстрый локальный дисковый кэш `.sccache` через `actions/cache@v4` вместо медленного GHA HTTP backend. Устранены ошибки компиляции C3850 и C2039 в `history_widget.cpp`.
+- **Linux Docker Cache**: Устранена ошибка `CCACHE_DISABLE=0` (ccache 4.x). Кэш компилятора восстанавливается и валидируется. Авто-скриншоты на виртуальном Xvfb сохраняются в артефакты `oxdesktop-screenshots-linux`.
 - **macOS Build**: Отключен по решению пользователя.
 
 ### 3. 3D Анимированные бэйджи Extera & Support

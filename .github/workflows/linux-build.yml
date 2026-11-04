@@ -1,5 +1,9 @@
 name: Linux build
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main ]
@@ -77,6 +81,15 @@ jobs:
             ${{ runner.os }}-ccache-${{ github.sha }}-
             ${{ runner.os }}-ccache-
 
+      - name: Check restored ccache size
+        run: |
+          RESTORED_MB=0
+          if [ -d ".ccache" ]; then
+            RESTORED_MB=$(du -sm .ccache 2>/dev/null | cut -f1 || echo 0)
+          fi
+          echo "RESTORED_CCACHE_MB=$RESTORED_MB" >> "$GITHUB_ENV"
+          echo "Restored ccache size: ${RESTORED_MB} MB" 
+
       - name: Synchronize version from version.txt
         run: python3 tools/sync_version.py
 
@@ -107,15 +120,34 @@ jobs:
               && ccache -s'
           test -f out/Release/Telegram
 
-      - name: Save Compiler cache (ccache)
+      - name: Validate ccache size before save
+        id: check_ccache
         if: always()
+        run: |
+          CURRENT_MB=0
+          if [ -d ".ccache" ]; then
+            CURRENT_MB=$(du -sm .ccache 2>/dev/null | cut -f1 || echo 0)
+          fi
+          RESTORED_MB="${RESTORED_CCACHE_MB:-0}"
+          echo "Current ccache: ${CURRENT_MB} MB | Restored ccache: ${RESTORED_MB} MB"
+          MIN_ALLOWED=$(( RESTORED_MB - 100 ))
+          if [ "$RESTORED_MB" -gt 100 ] && [ "$CURRENT_MB" -lt "$MIN_ALLOWED" ]; then
+            echo "WARN: Current ccache (${CURRENT_MB} MB) is smaller than restored (${RESTORED_MB} MB) by more than 100 MB. Skipping save to preserve existing cache!"
+            echo "should_save=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Ccache size check passed. Saving cache."
+            echo "should_save=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save Compiler cache (ccache)
+        if: always() && steps.check_ccache.outputs.should_save == 'true'
         uses: actions/cache/save@v4
         with:
           path: .ccache
           key: ${{ runner.os }}-ccache-${{ github.sha }}-${{ github.run_id }}
 
       - name: Save Build cache
-        if: always()
+        if: success()
         uses: actions/cache/save@v4
         with:
           path: out
