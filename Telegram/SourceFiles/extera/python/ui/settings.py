@@ -114,7 +114,7 @@ class EditText(Input):
                  on_save: Optional[Callable] = None, get_value: Optional[Callable] = None, **kwargs):
         super().__init__(
             key=key,
-            text=text or hint,
+            text=text or title or hint,
             default=default,
             subtext=subtext,
             hint=hint,
