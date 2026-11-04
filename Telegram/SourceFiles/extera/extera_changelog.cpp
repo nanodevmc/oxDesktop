@@ -1,5 +1,7 @@
 #include "extera/extera_changelog.h"
 
+#include "version_generated.h"
+
 #include "base/call_delayed.h"
 #include "boxes/translate_box.h"
 #include "core/application.h"
@@ -146,7 +148,7 @@ void Load(Fn<void()> done) {
 		u"https://api.github.com/repos/nanodevmc/oxDesktop/releases?per_page=%1"_q
 			.arg(kMaxReleases)));
 	request.setRawHeader("Accept", "application/vnd.github+json");
-	request.setRawHeader("User-Agent", "oxDesktop");
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 	const auto reply = state.manager->get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {
 		reply->deleteLater();

@@ -1,4 +1,6 @@
 #include "extera/extera_update.h"
+
+#include "version_generated.h"
 #include "core/application.h"
 #include "extera/extera_config.h"
 #include <QtCore/QCoreApplication>
@@ -107,7 +109,7 @@ void Download(bool install) {
 		state.manager = new QNetworkAccessManager(qApp);
 	}
 	auto request = QNetworkRequest(QUrl(state.assetUrl));
-	request.setRawHeader("User-Agent", "oxDesktop");
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 	request.setAttribute(
 		QNetworkRequest::RedirectPolicyAttribute,
 		QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -147,7 +149,7 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 	auto request = QNetworkRequest(QUrl(
 		u"https://api.github.com/repos/nanodevmc/oxDesktop/releases/latest"_q));
 	request.setRawHeader("Accept", "application/vnd.github+json");
-	request.setRawHeader("User-Agent", "oxDesktop");
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 	const auto reply = state.manager->get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {
 		reply->deleteLater();

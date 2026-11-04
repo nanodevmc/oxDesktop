@@ -1,5 +1,7 @@
 #include "extera/extera_lyrics.h"
 
+#include "version_generated.h"
+
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/labels.h"
 #include "ui/text/text_utilities.h"
@@ -70,7 +72,7 @@ void Fetch(
 	url.setQuery(query);
 
 	auto request = QNetworkRequest(url);
-	request.setRawHeader("User-Agent", "oxDesktop-Lyrics/1.0");
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 
 	const auto reply = manager->get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {

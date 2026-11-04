@@ -11,6 +11,16 @@ _lock = threading.RLock()
 _target = None
 _failed = {}
 
+_VERSION = "7.3.3"
+try:
+    _v_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "version.txt")
+    if os.path.exists(_v_path):
+        with open(_v_path, "r", encoding="utf-8") as _vf:
+            _VERSION = _vf.read().strip()
+except Exception:
+    pass
+_USER_AGENT = f"oxDesktop/{_VERSION}"
+
 _NAME_RE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
 
@@ -81,7 +91,7 @@ def _install_one(spec: str, depth: int = 0):
     if name in _failed:
         raise RuntimeError(_failed[name])
     url = f"https://pypi.org/pypi/{name}/json"
-    request = urllib.request.Request(url, headers={"User-Agent": "oxDesktop"})
+    request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     with urllib.request.urlopen(request, timeout=20) as response:
         info = json.load(response)
     files = sorted(
@@ -94,7 +104,7 @@ def _install_one(spec: str, depth: int = 0):
         raise RuntimeError(_failed[name])
     wheel = files[0]
     request = urllib.request.Request(
-        wheel["url"], headers={"User-Agent": "oxDesktop"})
+        wheel["url"], headers={"User-Agent": _USER_AGENT})
     with urllib.request.urlopen(request, timeout=60) as response:
         data = response.read()
     with zipfile.ZipFile(io.BytesIO(data)) as archive:

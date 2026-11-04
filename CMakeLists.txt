@@ -8,6 +8,48 @@ cmake_minimum_required(VERSION 3.25...3.31)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/version.txt")
+
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt")
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" _ver_line LIMIT_COUNT 1)
+    string(STRIP "${_ver_line}" APP_VERSION)
+    if (APP_VERSION MATCHES "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?")
+        set(_ver_major "${CMAKE_MATCH_1}")
+        set(_ver_minor "${CMAKE_MATCH_2}")
+        if (CMAKE_MATCH_4)
+            set(_ver_patch "${CMAKE_MATCH_4}")
+        else()
+            set(_ver_patch "0")
+        endif()
+        math(EXPR _ver_full "(${_ver_major} * 1000000) + (${_ver_minor} * 1000) + ${_ver_patch}")
+        set(_ver_str_major "${_ver_major}.${_ver_minor}")
+        set(_ver_str "${_ver_major}.${_ver_minor}.${_ver_patch}")
+        file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/Telegram/build/version"
+"AppVersion         ${_ver_full}
+AppVersionStrMajor ${_ver_str_major}
+AppVersionStrSmall ${_ver_str}
+AppVersionStr      ${_ver_str}
+BetaChannel        0
+AlphaVersion       0
+AppVersionOriginal ${_ver_str}
+")
+    endif()
+
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in")
+        configure_file(
+            "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
+            "${CMAKE_BINARY_DIR}/version_generated.h"
+            @ONLY
+        )
+        configure_file(
+            "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Telegram/SourceFiles/version_generated.h"
+            @ONLY
+        )
+    endif()
+endif()
+
 include(cmake/validate_special_target.cmake)
 include(cmake/version.cmake)
 desktop_app_parse_version(Telegram/build/version)
@@ -100,6 +142,6 @@ configure_file(
     @ONLY
 )
 
-target_include_directories(Telegram PRIVATE "${CMAKE_BINARY_DIR}")
+target_include_directories(Telegram PRIVATE "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/Telegram/SourceFiles")
 
 #чтоб на душе был кайф
