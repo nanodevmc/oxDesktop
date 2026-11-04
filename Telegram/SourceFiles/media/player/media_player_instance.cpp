@@ -617,7 +617,9 @@ void Instance::prebufferNextTrack(not_null<Data*> data) {
 
 	if (const auto inItem = trackInItem(data, 1)) {
 		if (const auto doc = inItem.audio()) {
-			doc->checkLoaded();
+			if (!doc->loadedInMediaCache() && !doc->loading() && doc->filepath(true).isEmpty()) {
+				doc->save(inItem.contextId(), QString(), LoadFromCloudOrLocal, true);
+			}
 			return;
 		}
 	}
@@ -627,7 +629,9 @@ void Instance::prebufferNextTrack(not_null<Data*> data) {
 			if (const auto media = item->media()) {
 				if (const auto doc = media->document()) {
 					if (doc->isAudioFile()) {
-						doc->checkLoaded();
+						if (!doc->loadedInMediaCache() && !doc->loading() && doc->filepath(true).isEmpty()) {
+							doc->save(item->fullId(), QString(), LoadFromCloudOrLocal, true);
+						}
 					}
 				}
 			}

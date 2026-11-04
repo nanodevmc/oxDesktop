@@ -117,6 +117,7 @@ jobs:
               -D TDESKTOP_API_HASH="$API_HASH" \
               -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON \
               -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON \
+              -D CMAKE_BUILD_WITH_INSTALL_RPATH=ON \
               && ccache -s'
           test -f out/Release/Telegram
 
