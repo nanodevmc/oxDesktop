@@ -260,6 +260,13 @@ private:
 		base::flat_set<MsgId>> _pendingDeliveryReport;
 	base::flat_set<not_null<PeerData*>> _deliveryReportSent;
 
+	base::flat_map<
+		FullMsgId,
+		std::vector<DelayedByTopicMessage>> _pendingSendingReplies;
+	rpl::lifetime _lifetime;
+	void checkSendingReplyResolved(PeerId peer, MsgId oldId, MsgId newId);
+	void checkSendingReplyFailed(FullMsgId id);
+
 };
 
 } // namespace Data

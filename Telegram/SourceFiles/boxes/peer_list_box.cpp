@@ -2081,12 +2081,11 @@ crl::time PeerListContent::paintRow(
 			[&](QImage &image) {
 				auto q = Painter(&image);
 				paintRowContent(q, now, index, false, 0);
-				for (const auto &rect : {
-						row->emojiIconRect(),
-						row->exteraIconRect() }) {
-					if (!rect.isEmpty()) {
-						q.fillRect(rect, st.button.textBg);
-					}
+				if (const auto r = row->emojiIconRect(); !r.isEmpty()) {
+					q.fillRect(r, st.button.textBg);
+				}
+				if (const auto r = row->exteraIconRect(); !r.isEmpty()) {
+					q.fillRect(r, st.button.textBg);
 				}
 			});
 		if (!row->statusIconRect().isEmpty()) {

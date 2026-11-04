@@ -279,6 +279,8 @@ private:
 		int delta) const;
 	bool moveInItem(not_null<Data*> data, int delta, bool autonext);
 	bool moveInPlaylist(not_null<Data*> data, int delta, bool autonext);
+	void prebufferNextTrack(not_null<Data*> data);
+	FullMsgId _lastPrebufferedContext;
 	void updatePowerSaveBlocker(
 		not_null<Data*> data,
 		const TrackState &state);

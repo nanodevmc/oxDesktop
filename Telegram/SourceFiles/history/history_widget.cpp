@@ -11,6 +11,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extera/extera_utils.h"
 
 #include "extera/extera_config.h"
+#include "core/version.h"
+#include <QtCore/QSysInfo>
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
@@ -2376,9 +2378,102 @@ void HistoryWidget::updateExdMathGhost() {
 	_exdMathGhost->show(anim::type::normal);
 }
 
+void HistoryWidget::updateExdBugHelper() {
+	if (!Extera::Bool(u"smart_bug_report_helper"_q) || !_field) {
+		if (_exdBugHelperPill) {
+			_exdBugHelperPill->hide(anim::type::normal);
+		}
+		return;
+	}
+	const auto text = _field->getLastText();
+	static const auto kMarkers = {
+		u"\u0431\u0430\u0433"_q, u"bug"_q, u"\u043E\u0448\u0438\u0431\u043A\u0430"_q,
+		u"\u0432\u044B\u043B\u0435\u0442\u0430\u0435\u0442"_q, u"\u043A\u0440\u0430\u0448"_q,
+		u"crash"_q, u"\u043D\u0435 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442"_q
+	};
+	const auto lower = text.toLower();
+	auto matches = false;
+	if (!lower.contains(u"\u0442\u0435\u0445\u043D"_q) && !lower.contains(u"oxdesktop"_q)) {
+		for (const auto &marker : kMarkers) {
+			if (lower.contains(marker)) {
+				matches = true;
+				break;
+			}
+		}
+	}
+	if (!matches) {
+		if (_exdBugHelperPill) {
+			_exdBugHelperPill->hide(anim::type::normal);
+		}
+		return;
+	}
+	if (!_exdBugHelperPill) {
+		_exdBugHelperPill = base::make_unique_q<Ui::FadeWrap<Ui::RpWidget>>(
+			this,
+			object_ptr<Ui::RpWidget>(this));
+		const auto inner = _exdBugHelperPill->entity();
+		inner->setCursor(style::cur_pointer);
+		inner->paintRequest() | rpl::on_next([=] {
+			auto p = QPainter(inner);
+			auto hq = PainterHighQualityEnabler(p);
+			const auto rect = QRectF(inner->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+			p.setPen(QPen(QColor(0, 210, 255, 120), 1.0));
+			p.setBrush(QColor(0, 160, 255, 36));
+			p.drawRoundedRect(rect, 4.0, 4.0);
+
+			p.setFont(st::semiboldFont);
+			p.setPen(QColor(56, 189, 248));
+			p.drawText(inner->rect(), Qt::AlignCenter, u"[ \uD83D\uDCCE \u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E ]"_q);
+		}, inner->lifetime());
+
+		inner->events() | rpl::on_next([=](not_null<QEvent*> e) {
+			if (e->type() == QEvent::MouseButtonRelease) {
+				insertDiagnosticInfo();
+			}
+		}, inner->lifetime());
+	}
+	const auto inner = _exdBugHelperPill->entity();
+	const auto width = st::semiboldFont->width(u"[ \uD83D\uDCCE \u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E ]"_q) + style::ConvertScale(24);
+	const auto height = style::ConvertScale(26);
+	inner->resize(width, height);
+	_exdBugHelperPill->resize(width, height);
+
+	const auto fieldTopLeft = _field->mapTo(this, QPoint(0, 0));
+	const auto pillX = fieldTopLeft.x() + style::ConvertScale(8);
+	const auto pillY = fieldTopLeft.y() - height - style::ConvertScale(4);
+	_exdBugHelperPill->move(pillX, pillY);
+	_exdBugHelperPill->raise();
+	_exdBugHelperPill->show(anim::type::normal);
+}
+
+void HistoryWidget::insertDiagnosticInfo() {
+	if (!_field) {
+		return;
+	}
+	const auto diag = QString(
+		u"\n\n--- \u0422\u0435\u0445\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044F ---\n"
+		"\u041A\u043B\u0438\u0435\u043D\u0442: oxDesktop %1\n"
+		"\u041E\u0421: %2 (%3)\n"
+		"\u042F\u0434\u0440\u043E: Qt %4\n"
+		"\u0412\u0435\u0442\u043A\u0430: main\n"
+		"--------------------------------"_q
+	).arg(
+		AppVersionStr,
+		QSysInfo::prettyProductName(),
+		QSysInfo::currentCpuArchitecture(),
+		qVersion());
+	const auto current = _field->getTextWithTags();
+	_field->setTextWithTags({ current.text + diag, current.entities });
+	_field->setCursorPosition(_field->getLastText().size());
+	if (_exdBugHelperPill) {
+		_exdBugHelperPill->hide(anim::type::instant);
+	}
+}
+
 void HistoryWidget::fieldChanged() {
 	const auto original = _field->getLastText();
 	updateExdMathGhost();
+	updateExdBugHelper();
 	if (const auto math = Extera::InlineMathResult(original)) {
 		const auto result = *math;
 		InvokeQueued(_field, [=] {

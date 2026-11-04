@@ -1,4 +1,5 @@
 #include "settings/sections/settings_extera.h"
+#include "ui/new_badges.h"
 
 #include <QtCore/QRegularExpression>
 
@@ -103,6 +104,7 @@ void AddToggle(
 		bool longSubtitle = false) {
 	const auto withSubtitle = bool(subtitle);
 	const auto &subtitleSt = st::exteraButtonWithSubtitle;
+	auto titleCopy = rpl::duplicate(title);
 	const auto button = builder.addButton({
 		.id = u"extera/"_q + key,
 		.title = std::move(title),
@@ -112,6 +114,16 @@ void AddToggle(
 		.toggled = rpl::single(Extera::Bool(key)),
 		.keywords = std::move(keywords),
 	});
+	if (button) {
+		const auto tag = Ui::NewBadge::FeatureTag(key);
+		if (tag != Ui::NewBadge::Tag::None) {
+			Ui::NewBadge::AddTagBadgeAfterButtonText(
+				button,
+				tag,
+				std::move(titleCopy),
+				withSubtitle ? subtitleSt : st::settingsButtonNoIcon);
+		}
+	}
 	if (button && withSubtitle) {
 		const auto label = Ui::CreateChild<Ui::FlatLabel>(
 			button,
@@ -157,7 +169,7 @@ void AddChoice(
 			? (*options[index])(tr::now)
 			: QString();
 	};
-	builder.addButton({
+	const auto button = builder.addButton({
 		.id = u"extera/"_q + key,
 		.title = title(),
 		.st = &st::settingsButtonNoIcon,
@@ -180,6 +192,16 @@ void AddChoice(
 		},
 		.keywords = std::move(keywords),
 	});
+	if (button) {
+		const auto tag = Ui::NewBadge::FeatureTag(key);
+		if (tag != Ui::NewBadge::Tag::None) {
+			Ui::NewBadge::AddTagBadgeAfterButtonText(
+				button,
+				tag,
+				title(),
+				st::settingsButtonNoIcon);
+		}
+	}
 }
 
 void AddValueChoice(
@@ -1857,6 +1879,20 @@ void PartChats4(SectionBuilder &builder) {
 			tr::lng_extera_comma_mention());
 		AddToggle(
 			builder,
+			u"queue_reply"_q,
+			tr::lng_exd_queue_reply(),
+			{ u"queue"_q, u"reply"_q, u"sending"_q },
+			tr::lng_exd_queue_reply_about(),
+			true);
+		AddToggle(
+			builder,
+			u"smart_bug_report_helper"_q,
+			tr::lng_exd_bug_helper(),
+			{ u"bug"_q, u"report"_q, u"diagnostic"_q },
+			tr::lng_exd_bug_helper_about(),
+			true);
+		AddToggle(
+			builder,
 			u"quote_reply"_q,
 			tr::lng_exd_quote_reply(),
 			{ u"quote"_q, u"reply"_q },
@@ -1948,6 +1984,30 @@ void PartChats5(SectionBuilder &builder) {
 			tr::lng_extera_hide_share());
 		AddToggle(
 			builder,
+			u"static_reactions_enabled"_q,
+			tr::lng_exd_static_reactions(),
+			{ u"reactions"_q, u"static"_q },
+			tr::lng_exd_static_reactions_about(),
+			true);
+		AddToggle(
+			builder,
+			u"polls_in_pm"_q,
+			tr::lng_exd_polls_in_pm(),
+			{ u"poll"_q, u"pm"_q },
+			tr::lng_exd_polls_in_pm_about(),
+			true);
+		AddChoice(
+			builder,
+			u"default_forward_mode"_q,
+			tr::lng_exd_default_forward,
+			{
+				&tr::lng_exd_default_forward_standard,
+				&tr::lng_exd_default_forward_no_author,
+				&tr::lng_exd_default_forward_no_author_caption,
+			},
+			{ u"forward"_q });
+		AddToggle(
+			builder,
 			u"poll_results_before_voting"_q,
 			tr::lng_extera_poll_results(),
 			{ u"poll"_q },
@@ -1999,6 +2059,13 @@ void PartChats6(SectionBuilder &builder) {
 	builder.addSubsectionTitle(tr::lng_extera_photos());
 	builder.card([&] {
 		AddToggle(builder, u"always_send_hd"_q, tr::lng_extera_send_hd());
+		AddToggle(
+			builder,
+			u"media_deduplication"_q,
+			tr::lng_exd_media_dedup(),
+			{ u"dedup"_q, u"cache"_q, u"media"_q },
+			tr::lng_exd_media_dedup_about(),
+			true);
 	});
 	builder.addDivider();
 }
@@ -2037,6 +2104,21 @@ void PartChats7(SectionBuilder &builder) {
 				{ u"pause_on_minimize_voice"_q, &tr::lng_extera_pause_voice },
 				{ u"pause_on_minimize_round"_q, &tr::lng_extera_pause_round },
 			});
+		AddToggle(
+			builder,
+			u"mini_player_always_on_top"_q,
+			tr::lng_exd_mini_player_pin());
+		AddToggle(
+			builder,
+			u"mini_player_compact"_q,
+			tr::lng_exd_mini_player_compact());
+		AddToggle(
+			builder,
+			u"gapless_playback"_q,
+			tr::lng_exd_gapless_playback(),
+			{ u"gapless"_q, u"audio"_q, u"music"_q },
+			tr::lng_exd_gapless_playback_about(),
+			true);
 	});
 	AddAbout(builder, tr::lng_extera_auto_pause_about());
 }

@@ -127,6 +127,7 @@ void Launch() {
 	process->setArguments({
 		u"-I"_q,
 		Script(),
+		u"--parent-pid"_q,
 		QString::number(QCoreApplication::applicationPid()),
 		u"--port"_q,
 		QString::number(port),

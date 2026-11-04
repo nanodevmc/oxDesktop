@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_reply.h"
 
+#include "extera/extera_config.h"
+
 #include "core/click_handler_types.h"
 #include "core/ui_integration.h"
 #include "data/stickers/data_custom_emoji.h"
@@ -1165,6 +1167,9 @@ TextWithEntities Reply::ComposePreviewName(
 	if (groupNameAdded) {
 		nameFull.append(' ').append(Reply::PeerEmoji(toPeer));
 		nameFull.append(toPeer->name());
+	}
+	if (to->isSending() && Extera::Bool(u"queue_reply"_q)) {
+		nameFull.append(u" «Очередь отправки»"_q);
 	}
 	return (quote
 		? tr::lng_preview_reply_to_quote

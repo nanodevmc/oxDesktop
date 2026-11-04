@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_histories.h"
+#include "extera/extera_config.h"
 
 #include "api/api_text_entities.h"
 #include "data/business/data_shortcut_messages.h"
@@ -145,6 +146,15 @@ MTPInputMedia WebPageForMTP(
 Histories::Histories(not_null<Session*> owner)
 : _owner(owner)
 , _readRequestsTimer([=] { sendReadRequests(); }) {
+	_owner->itemIdChanged(
+	) | rpl::start_with_next([=](const Session::IdChange &event) {
+		checkSendingReplyResolved(event.newId.peer, event.oldId, event.newId.msg);
+	}, _lifetime);
+
+	_owner->itemRemoved(
+	) | rpl::start_with_next([=](not_null<const HistoryItem*> item) {
+		checkSendingReplyFailed(item->fullId());
+	}, _lifetime);
 }
 
 Session &Histories::owner() const {
@@ -1152,6 +1162,26 @@ int Histories::sendPreparedMessage(
 		Fn<PreparedMessage(not_null<History*>, FullReplyTo)> message,
 		Fn<void(const MTPUpdates&, const MTP::Response&)> done,
 		Fn<void(const MTP::Error&, const MTP::Response&)> fail) {
+	if (Extera::Bool(u"queue_reply"_q) && replyTo.messageId) {
+		if (const auto replyItem = history->owner().message(history->peer->id, replyTo.messageId)) {
+			if (replyItem->isSending()) {
+				const auto parentId = FullMsgId(history->peer->id, replyTo.messageId);
+				auto &list = _pendingSendingReplies[parentId];
+				if (list.size() < 50) {
+					const auto id = ++_requestAutoincrement;
+					list.push_back({
+						.randomId = randomId,
+						.replyTo = std::move(replyTo),
+						.message = std::move(message),
+						.done = std::move(done),
+						.fail = std::move(fail),
+						.requestId = id,
+					});
+					return id;
+				}
+			}
+		}
+	}
 	if (isCreatingTopic(history, replyTo.topicRootId)) {
 		const auto id = ++_requestAutoincrement;
 		const auto creatingId = FullMsgId(
@@ -1336,6 +1366,58 @@ void Histories::finishSentRequest(
 Histories::State *Histories::lookup(not_null<History*> history) {
 	const auto i = _states.find(history);
 	return (i != end(_states)) ? &i->second : nullptr;
+}
+
+void Histories::checkSendingReplyResolved(PeerId peer, MsgId oldId, MsgId newId) {
+	const auto clientFullId = FullMsgId(peer, oldId);
+	const auto it = _pendingSendingReplies.find(clientFullId);
+	if (it == end(_pendingSendingReplies)) {
+		return;
+	}
+	auto scheduled = std::move(it->second);
+	_pendingSendingReplies.erase(it);
+
+	const auto history = _owner->history(peer);
+	for (auto &entry : scheduled) {
+		auto replyTo = std::move(entry.replyTo);
+		if (replyTo.messageId == oldId) {
+			replyTo.messageId = newId;
+		}
+		if (replyTo.topicRootId == oldId) {
+			replyTo.topicRootId = newId;
+		}
+		sendPreparedMessage(
+			history,
+			std::move(replyTo),
+			entry.randomId,
+			std::move(entry.message),
+			std::move(entry.done),
+			std::move(entry.fail));
+	}
+}
+
+void Histories::checkSendingReplyFailed(FullMsgId id) {
+	const auto it = _pendingSendingReplies.find(id);
+	if (it == end(_pendingSendingReplies)) {
+		return;
+	}
+	auto scheduled = std::move(it->second);
+	_pendingSendingReplies.erase(it);
+
+	const auto history = _owner->history(id.peer);
+	for (auto &entry : scheduled) {
+		auto replyTo = std::move(entry.replyTo);
+		if (replyTo.messageId == id.msg) {
+			replyTo.messageId = MsgId(0);
+		}
+		sendPreparedMessage(
+			history,
+			std::move(replyTo),
+			entry.randomId,
+			std::move(entry.message),
+			std::move(entry.done),
+			std::move(entry.fail));
+	}
 }
 
 } // namespace Data

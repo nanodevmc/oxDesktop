@@ -9899,4 +9899,29 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_auto_pause" = "Auto-Pause";
 "lng_extera_auto_pause_about" = "Pauses media playback when oxDesktop is minimized.";
 
+"lng_exd_queue_reply" = "Reply to Sending Messages";
+"lng_exd_queue_reply_about" = "Allows replying to uploading and pending messages, chaining replies before the upload finishes.";
+"lng_exd_queue_reply_badge" = "Sending Queue";
+"lng_exd_static_reactions" = "Static Reactions Bar";
+"lng_exd_static_reactions_about" = "Displays a fixed, customizable list of reactions instead of dynamic recent emojis.";
+"lng_exd_static_reactions_list" = "Reactions List";
+"lng_exd_bug_helper" = "Bug Report Helper";
+"lng_exd_bug_helper_about" = "Shows a floating hint while typing error messages for quick diagnostic info insertion.";
+"lng_exd_bug_helper_badge" = "Insert Tech Info";
+"lng_exd_mini_player_pin" = "Pin Mini-Player on Top";
+"lng_exd_mini_player_compact" = "Compact Mini-Player Mode";
+"lng_exd_polls_in_pm" = "Polls in Direct Messages";
+"lng_exd_polls_in_pm_about" = "Enables poll creation in 1-on-1 private chats and Saved Messages (BETA).";
+"lng_exd_default_forward" = "Default Forward Mode";
+"lng_exd_default_forward_standard" = "Standard (with author)";
+"lng_exd_default_forward_no_author" = "No author";
+"lng_exd_default_forward_no_author_caption" = "No author and no caption";
+"lng_exd_media_dedup" = "Media Deduplication Cache";
+"lng_exd_media_dedup_about" = "Instantly sends identical previously uploaded files without re-uploading bytes (virtual cache).";
+"lng_exd_lyrics_quote" = "Create Lyric Quote";
+"lng_exd_lyrics_quote_copied" = "Lyric quote copied.";
+"lng_exd_gapless_playback" = "Gapless Audio Playback";
+"lng_exd_gapless_playback_about" = "Preloads the next track 3 seconds before the end for smooth continuous playback without gaps (BETA).";
+"lng_exd_pinned_all" = "All Pinned Messages";
+
 // Keys finished

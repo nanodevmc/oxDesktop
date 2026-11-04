@@ -150,6 +150,18 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"plugins_compact_view"_q, false },
 		{ u"plugins_unknown_sources"_q, false },
 		{ u"plugins_safe_mode"_q, false },
+
+		{ u"queue_reply"_q, true },
+		{ u"static_reactions_enabled"_q, false },
+		{ u"static_reactions_list"_q, u"❤️,👍,🔥,🎉,👏,⚡,🥰,😂,🤩,🙏"_q },
+		{ u"smart_bug_report_helper"_q, true },
+		{ u"mini_player_always_on_top"_q, false },
+		{ u"mini_player_compact"_q, false },
+		{ u"media_deduplication"_q, true },
+		{ u"polls_in_pm"_q, true },
+		{ u"default_forward_mode"_q, 0 },
+		{ u"gapless_playback"_q, true },
+		{ u"lyrics_quote_card"_q, true },
 	};
 	return result;
 }

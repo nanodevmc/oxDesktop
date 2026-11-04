@@ -35,6 +35,21 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "boxes/peer_list_controllers.h"
 #include "data/data_changes.h"
+#include "extera/extera_config.h"
+
+namespace Data {
+
+ForwardOptions DefaultForwardOptions() {
+	const auto mode = Extera::Int(u"default_forward_mode"_q);
+	if (mode == 1) {
+		return ForwardOptions::NoSenderNames;
+	} else if (mode == 2) {
+		return ForwardOptions::NoNamesAndCaptions;
+	}
+	return ForwardOptions::PreserveInfo;
+}
+
+} // namespace Data
 
 namespace HistoryView::Controls {
 namespace {
@@ -52,6 +67,12 @@ ForwardPanel::ForwardPanel(Fn<void()> repaint)
 void ForwardPanel::update(
 		Data::Thread *to,
 		Data::ResolvedForwardDraft draft) {
+	if (draft.options == Data::ForwardOptions::PreserveInfo) {
+		const auto def = Data::DefaultForwardOptions();
+		if (def != Data::ForwardOptions::PreserveInfo) {
+			draft.options = def;
+		}
+	}
 	if (_to == to
 		&& _data.items == draft.items
 		&& _data.options == draft.options) {

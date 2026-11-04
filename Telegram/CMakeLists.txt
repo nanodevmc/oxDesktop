@@ -1972,6 +1972,8 @@ PRIVATE
     extera/extera_platform.h
     extera/extera_search_filter.cpp
     extera/extera_search_filter.h
+    extera/extera_media_cache.cpp
+    extera/extera_media_cache.h
     settings/sections/settings_extera.cpp
     settings/sections/settings_extera.h
     settings/sections/settings_advanced.cpp

@@ -1433,8 +1433,11 @@ void Filler::addCreatePoll() {
 			source,
 			sendMenuDetails);
 	};
+	const auto isBetaPoll = (_peer->isUser() && !_peer->isSelf());
 	_addAction(
-		tr::lng_polls_create(tr::now),
+		isBetaPoll
+			? (tr::lng_polls_create(tr::now) + u" (BETA)"_q)
+			: tr::lng_polls_create(tr::now),
 		std::move(callback),
 		&st::menuIconCreatePoll);
 }
