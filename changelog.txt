@@ -1,3 +1,13 @@
+7.3.3.8 (04.11.26)
+- Complete Python plugin ecosystem compatibility: CactusLib, exteraGram and AyuGram extensions.
+- Multi-file plugin archive support (.elyx, .eaf) with automatic background extraction.
+- Automatic malicious threat scanner detecting DPAPI theft, process memory injection, keyloggers, and cookie grabbers.
+- Sandboxed file system and execution: access to session tdata, key_datas, Chrome, and Discord credentials blocked.
+- Added FileLoader, DownloadController, NotificationCenter observer pub-sub, and MessagesStorage stubs.
+- Direct message management helpers: delete_messages, delete_message, pin_message, save_draft, clear_draft, forward_messages.
+- Advanced settings UI components: Button, Category, ColorPicker, MultiChoice mapped to native client controls.
+- Updated settings menu icon and branding to Aero Delta glyph.
+
 7.3.3.7 (01.11.26)
 - Updated plugin engine: significantly improved compatibility, ready for full use.
 - Improved verification of trusted plugin sources.
