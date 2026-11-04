@@ -65,6 +65,8 @@ project(Telegram
     HOMEPAGE_URL "https://desktop.telegram.org"
 )
 
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+
 if (APPLE)
     enable_language(OBJC OBJCXX)
 endif()

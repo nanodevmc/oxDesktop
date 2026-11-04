@@ -16,8 +16,8 @@
 ### 2. GitHub Actions CI
 - **Защита кэша компилятора (ccache / sccache)**: добавлена дельта-проверка размера (порог 100 МБ) — если при отмене или сбое текущий кэш меньше восстановленного более чем на 100 МБ, сохранение блокируется (`should_save=false`), предотвращая затирание рабочего кэша.
 - **Авто-отмена старых запусков (`concurrency: cancel-in-progress: true`)**: при новом пуше в `main` устаревшие раннеры отменяются без риска потери кэша.
-- **Windows MSVC sccache**: переведён на быстрый локальный дисковый кэш `.sccache` через `actions/cache@v4` вместо медленного GHA HTTP backend. Устранены ошибки компиляции C3850 и C2039 в `history_widget.cpp`.
-- **Linux Docker Cache**: Устранена ошибка `CCACHE_DISABLE=0` (ccache 4.x). Кэш компилятора восстанавливается и валидируется. Авто-скриншоты на виртуальном Xvfb сохраняются в артефакты `oxdesktop-screenshots-linux`.
+- **Windows MSVC sccache**: переведён на быстрый локальный дисковый кэш `.sccache` через `actions/cache@v4` вместо медленного GHA HTTP backend. Устранены ошибки C3850, C2039 в `history_widget.cpp` и `checkLoaded` в `media_player_instance.cpp`.
+- **Linux Docker Cache**: Устранена ошибка `CCACHE_DISABLE=0` (ccache 4.x), включен `CMAKE_BUILD_WITH_INSTALL_RPATH=ON` для генератора Ninja. Кэш компилятора восстанавливается и валидируется. Авто-скриншоты на виртуальном Xvfb сохраняются в артефакты `oxdesktop-screenshots-linux`.
 - **macOS Build**: Отключен по решению пользователя.
 
 ### 3. 3D Анимированные бэйджи Extera & Support
