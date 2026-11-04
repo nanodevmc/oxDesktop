@@ -809,7 +809,7 @@ void View::contextMenuEvent(QContextMenuEvent *e) {
 	auto line = -1;
 	if (buttonAt(e->pos(), &line) == Button::Line && line >= 0 && line < int(_lines.size())) {
 		const auto lineText = _lines[line].text;
-		const auto menu = Ui::CreateChild<Ui::PopupMenu>(this, st::popupMenuExpandedSeparator);
+		const auto menu = Ui::CreateChild<Ui::PopupMenu>(this, st::defaultPopupMenu);
 		menu->addAction(tr::lng_context_copy_text(tr::now), [=] {
 			QGuiApplication::clipboard()->setText(lineText);
 			_controller->showToast(tr::lng_exd_player_lyrics_copied(tr::now));

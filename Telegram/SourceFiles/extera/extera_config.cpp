@@ -162,6 +162,13 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"default_forward_mode"_q, 0 },
 		{ u"gapless_playback"_q, true },
 		{ u"lyrics_quote_card"_q, true },
+		{ u"shadow_drafts_enabled"_q, true },
+		{ u"hud_quick_switcher"_q, true },
+		{ u"audio_looper_enabled"_q, true },
+		{ u"pitch_preserved_speed"_q, true },
+		{ u"ghost_hide_read_channels"_q, true },
+		{ u"ghost_hide_read_groups"_q, true },
+		{ u"ghost_hide_read_pms"_q, false },
 	};
 	return result;
 }

@@ -189,6 +189,16 @@ public:
 	}
 	void stopAndClose();
 
+	struct AudioLoopRegion {
+		crl::time start = 0;
+		crl::time end = 0;
+		bool active = false;
+	};
+	void setLoopPointA(crl::time point);
+	void setLoopPointB(crl::time point);
+	void clearLoopRegion();
+	[[nodiscard]] AudioLoopRegion loopRegion() const;
+
 private:
 	using SharedMediaType = Storage::SharedMediaType;
 	using SliceKey = SparseIdsMergedSlice::Key;
@@ -349,6 +359,7 @@ private:
 	Data _voiceData;
 	std::unique_ptr<MusicListenTracker> _listenTracker;
 	bool _roundPlaying = false;
+	AudioLoopRegion _loopRegion;
 
 	rpl::event_stream<Switch> _switchToNext;
 	rpl::event_stream<AudioMsgId::Type> _tracksFinished;

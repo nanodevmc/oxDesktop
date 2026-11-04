@@ -9924,4 +9924,19 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_exd_gapless_playback_about" = "Preloads the next track 3 seconds before the end for smooth continuous playback without gaps (BETA).";
 "lng_exd_pinned_all" = "All Pinned Messages";
 
+"lng_exd_shadow_drafts" = "Shadow Drafts History";
+"lng_exd_shadow_drafts_about" = "Automatically saves draft revisions while typing with Ctrl+Shift+Z undo support.";
+"lng_exd_audio_looper" = "Audio Looper and Clip Export";
+"lng_exd_audio_looper_about" = "Loop audio segments [A ⇄ B], save them as separate audio files, or share them to chats.";
+"lng_exd_smart_ghost_channels" = "Hide Read in Channels";
+"lng_exd_smart_ghost_channels_about" = "Do not send read receipts when viewing posts in channels.";
+"lng_exd_smart_ghost_groups" = "Hide Read in Groups";
+"lng_exd_smart_ghost_groups_about" = "Do not mark group and supergroup messages as read.";
+"lng_exd_smart_ghost_pms" = "Hide Read in Direct Messages";
+"lng_exd_smart_ghost_pms_about" = "Do not send read receipts in 1-on-1 private chats.";
+"lng_exd_hud_switcher" = "HUD Quick Switcher (Ctrl+K)";
+"lng_exd_hud_switcher_about" = "Instant keyboard spotlight search to navigate chats and contacts by pressing Ctrl+K.";
+"lng_exd_pitch_preserved" = "High-Quality Time-Stretch";
+"lng_exd_pitch_preserved_about" = "Preserves natural voice pitch when speeding up audio and voice messages without chipmunk distortions.";
+
 // Keys finished

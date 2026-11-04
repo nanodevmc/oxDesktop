@@ -126,7 +126,15 @@ jobs:
 
       # Plugin engine links against an embedded Python 3.11, expected at
       # Libraries/win64/python311 with include/, libs/python311.lib and embed/.
+      - name: Restore embedded Python 3.11 cache
+        id: cache-python311
+        uses: actions/cache@v4
+        with:
+          path: Libraries/win64/python311
+          key: win64-python-3.11.9-embed-headers-v1
+
       - name: Fetch embedded Python 3.11
+        if: steps.cache-python311.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $dest = Join-Path $env:GITHUB_WORKSPACE "Libraries\win64\python311"
@@ -140,7 +148,12 @@ jobs:
 
       - name: Install Inno Setup
         shell: pwsh
-        run: choco install innosetup --yes --no-progress
+        run: |
+          if (!(Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --yes --no-progress
+          } else {
+            Write-Host "Inno Setup already present on runner."
+          }
 
       - name: Restore Compiler cache (sccache)
         uses: actions/cache/restore@v4
@@ -205,7 +218,8 @@ jobs:
             -D CMAKE_C_COMPILER_LAUNCHER=sccache ^
             -D CMAKE_CXX_COMPILER_LAUNCHER=sccache ^
             -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
-            -D CMAKE_POLICY_CMP0141=NEW
+            -D CMAKE_POLICY_CMP0141=NEW ^
+            -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON
           cd ..\out
           cmake --build . --config Release --target Telegram --parallel
 
