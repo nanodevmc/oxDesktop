@@ -1701,11 +1701,9 @@ void Updater::start(bool forceWait) {
 				_ready.fire({});
 				handleReady();
 			} else if (result == Result::Latest) {
-				_action = Action::Latest;
 				_isLatest.fire({});
 				handleLatest();
 			} else {
-				_action = Action::Failed;
 				_failed.fire({});
 				handleFailed();
 			}
