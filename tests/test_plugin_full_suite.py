@@ -107,19 +107,31 @@ def test_settings_descriptors():
     assert btn.accent == True
     desc_btn = s.describe(btn, 3)
     assert desc_btn["clickable"] == True
+    assert desc_btn["kind"] == "text"  # mapped for C++ UI
 
-    cat = s.Category(title="Category Header")
+    cat = s.Category(title="Category Header", items=[
+        s.Switch(title="SubSwitch", default=False),
+        s.Button(title="SubButton", on_click=lambda: None),
+    ])
     assert cat.text == "Category Header"
+    s.register_items("cat_test", [cat])
+    # Flattening should produce 3 items: Header + SubSwitch + SubButton
+    assert len(s._registered["cat_test"]) == 3
+    assert s.find_item("cat_test", 0).text == "Category Header"
+    assert s.find_item("cat_test", 1).text == "SubSwitch"
+    assert s.find_item("cat_test", 2).text == "SubButton"
 
     cp = s.ColorPicker(key="col", title="Color", default="#FF0000")
     assert cp.default == "#FF0000"
     desc_cp = s.describe(cp, 4)
     assert desc_cp["default"] == "#FF0000"
+    assert desc_cp["kind"] == "input"  # mapped for C++ UI
 
     mc = s.MultiChoice(key="mc", title="Multi", items=["Opt1", "Opt2"], default=[0])
     assert mc.items == ["Opt1", "Opt2"]
     desc_mc = s.describe(mc, 5)
     assert desc_mc["items"] == ["Opt1", "Opt2"]
+    assert desc_mc["kind"] == "selector"  # mapped for C++ UI
     print("  -> PASSED")
 
 

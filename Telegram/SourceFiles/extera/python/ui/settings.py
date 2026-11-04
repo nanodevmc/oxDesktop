@@ -149,8 +149,9 @@ class Text:
 
 
 class Category(Header):
-    def __init__(self, text: str = "", title: Optional[str] = None, **kwargs):
+    def __init__(self, text: str = "", title: Optional[str] = None, items: Optional[List[Any]] = None, **kwargs):
         super().__init__(text=text, title=title, **kwargs)
+        self.items = list(items or kwargs.get("sub_items") or [])
 
 
 class Button(Text):
@@ -273,8 +274,20 @@ class SimpleSettingFactory:
 PluginItemFactory = SimpleSettingFactory
 
 
+def _flatten_items(items: List[Any]) -> List[Any]:
+    flat = []
+    for it in items:
+        if type(it).__name__.lower() == "category":
+            flat.append(Header(it.text))
+            if hasattr(it, "items") and isinstance(it.items, (list, tuple)):
+                flat.extend(_flatten_items(it.items))
+        else:
+            flat.append(it)
+    return flat
+
+
 def register_items(plugin_id: str, items: List[Any]):
-    _registered[plugin_id] = list(items)
+    _registered[plugin_id] = _flatten_items(items)
 
 
 def unregister_items(plugin_id: str):
@@ -289,9 +302,19 @@ def find_item(plugin_id: str, index: int) -> Optional[Any]:
 
 
 def describe(item: Any, index: int) -> Optional[Dict[str, Any]]:
-    kind = type(item).__name__.lower()
-    if kind == "custom":
+    raw_kind = type(item).__name__.lower()
+    if raw_kind == "custom":
         return None
+
+    # Wire-format mapping for C++ Settings UI
+    kind = raw_kind
+    if raw_kind == "button":
+        kind = "text"
+    elif raw_kind == "colorpicker":
+        kind = "input"
+    elif raw_kind == "multichoice":
+        kind = "selector"
+
     data = {"index": index, "kind": kind}
     for key in ("text", "subtext", "key", "default", "items", "hint",
                 "multiline", "max_length", "mask", "accent", "red", "icon",
@@ -301,6 +324,9 @@ def describe(item: Any, index: int) -> Optional[Dict[str, Any]]:
         value = getattr(item, key)
         if value is not None and not callable(value):
             data[key] = value
+
+    if raw_kind == "multichoice" and hasattr(item, "options"):
+        data["items"] = list(item.options)
 
     # Dynamic value evaluation via get_value
     get_val = getattr(item, "get_value", None)
@@ -316,12 +342,12 @@ def describe(item: Any, index: int) -> Optional[Dict[str, Any]]:
     # Normalize Selector default/value to integer index for UI
     if kind == "selector":
         cur_val = data.get("value", data.get("default", 0))
-        keys = getattr(item, "options_keys", [])
+        keys = getattr(item, "options_keys", getattr(item, "options", []))
         if keys and isinstance(cur_val, str) and cur_val in keys:
             data["default"] = keys.index(cur_val)
         elif isinstance(cur_val, int):
             data["default"] = cur_val
 
-    data["clickable"] = bool(getattr(item, "on_click", None))
+    data["clickable"] = bool(getattr(item, "on_click", None) or raw_kind == "button")
     data["long_clickable"] = bool(getattr(item, "on_long_click", None))
     return data
