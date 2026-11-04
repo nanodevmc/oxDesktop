@@ -290,15 +290,21 @@ def _stub_controller(name):
 def get_messages_controller(account=None):
     import tgnet_bridge
     return tgnet_bridge.MessagesController.getInstance(account or 0)
-get_contacts_controller = _stub_controller("ContactsController")
-get_media_data_controller = _stub_controller("MediaDataController")
+def get_contacts_controller(account=None):
+    import tgnet_bridge
+    return tgnet_bridge.ContactsController.getInstance(account or 0)
+def get_media_data_controller(account=None):
+    import tgnet_bridge
+    return tgnet_bridge.MediaDataController.getInstance(account or 0)
 def get_connections_manager(account=None):
     import tgnet_bridge
     return tgnet_bridge.ConnectionsManager.getInstance(account or 0)
 get_location_controller = _stub_controller("LocationController")
 get_notifications_controller = _stub_controller("NotificationsController")
 get_messages_storage = _stub_controller("MessagesStorage")
-get_send_messages_helper = _stub_controller("SendMessagesHelper")
+def get_send_messages_helper(account=None):
+    import tgnet_bridge
+    return tgnet_bridge.SendMessagesHelper.getInstance(account or 0)
 get_file_loader = _stub_controller("FileLoader")
 get_secret_chat_helper = _stub_controller("SecretChatHelper")
 get_download_controller = _stub_controller("DownloadController")

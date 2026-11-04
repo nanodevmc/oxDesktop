@@ -250,6 +250,81 @@ class UserConfig(_Instance):
         return 0
 
 
+
+class ContactsController(_Instance):
+    _instances = {}
+
+    @classmethod
+    def getInstance(cls, account=0):
+        account = int(account or 0)
+        if account not in cls._instances:
+            cls._instances[account] = cls(account)
+        return cls._instances[account]
+
+    @property
+    def contacts(self):
+        return tl_runtime.ArrayList()
+
+    @property
+    def users(self):
+        return tl_runtime.ArrayList()
+
+    @property
+    def usersDict(self):
+        return {}
+
+    def isLoadingContacts(self):
+        return False
+
+    def loadContacts(self, fromCache=False, delay=0):
+        return None
+
+    def deleteContact(self, user):
+        return None
+
+
+class MediaDataController(_Instance):
+    _instances = {}
+
+    @classmethod
+    def getInstance(cls, account=0):
+        account = int(account or 0)
+        if account not in cls._instances:
+            cls._instances[account] = cls(account)
+        return cls._instances[account]
+
+    def getStickerSets(self, type_id=0):
+        return tl_runtime.ArrayList()
+
+    def getRecentStickers(self, type_id=0):
+        return tl_runtime.ArrayList()
+
+    def getRecentReactions(self):
+        return tl_runtime.ArrayList()
+
+
+class SendMessagesHelper(_Instance):
+    _instances = {}
+
+    @classmethod
+    def getInstance(cls, account=0):
+        account = int(account or 0)
+        if account not in cls._instances:
+            cls._instances[account] = cls(account)
+        return cls._instances[account]
+
+    def sendMessage(self, *args, **kwargs):
+        import client_utils
+        if len(args) == 1 and isinstance(args[0], dict):
+            return client_utils.send_message(args[0], account=self.currentAccount)
+        elif len(args) >= 2:
+            return client_utils.send_text(args[0], args[1], account=self.currentAccount)
+        return client_utils.send_message(kwargs, account=self.currentAccount)
+
+    def prepareSending(self, *args, **kwargs):
+        return None
+
+
 class ChatActivity(_Instance):
     def __init__(self, dialog_id=0):
         super().__init__(0)
@@ -338,4 +413,7 @@ def install(shims):
     messenger = shims.setdefault("org.telegram.messenger", {})
     messenger["MessagesController"] = MessagesController
     messenger["UserConfig"] = UserConfig
+    messenger["ContactsController"] = ContactsController
+    messenger["MediaDataController"] = MediaDataController
+    messenger["SendMessagesHelper"] = SendMessagesHelper
     shims.setdefault("org.telegram.ui", {})["ChatActivity"] = ChatActivity
