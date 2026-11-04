@@ -30,6 +30,19 @@ class HookResult:
         self.params = params
         self.result = result
 
+    @classmethod
+    def cancel(cls):
+        return cls(strategy=HookStrategy.CANCEL)
+
+    @classmethod
+    def default(cls):
+        return cls(strategy=HookStrategy.DEFAULT)
+
+    @classmethod
+    def modify(cls, params=None, request=None, response=None, update=None, result=None):
+        return cls(strategy=HookStrategy.MODIFY, params=params, request=request,
+                   response=response, update=update, result=result)
+
     def __repr__(self):
         return f"HookResult(strategy={self.strategy!r})"
 
@@ -533,6 +546,54 @@ class BasePlugin:
     @client.deleter
     def client(self):
         self.__dict__.pop("_extera_client_override", None)
+
+    def send_text(self, peer_id, text, reply_to=None, parse_mode=None, account=None):
+        import client_utils
+        return client_utils.send_text(peer_id, text, replyToMsg=reply_to,
+                                      parse_mode=parse_mode, account=account)
+
+    def edit_message(self, message_obj, text=None, file_path=None, parse_mode=None, account=None):
+        import client_utils
+        return client_utils.edit_message(message_obj, text=text, file_path=file_path,
+                                         parse_mode=parse_mode, account=account)
+
+    def delete_message(self, message_obj, revoke=True, account=None):
+        import client_utils
+        return client_utils.delete_message(message_obj, revoke=revoke, account=account)
+
+    def delete_messages(self, peer_id, message_ids, revoke=True, account=None):
+        import client_utils
+        return client_utils.delete_messages(peer_id, message_ids, revoke=revoke, account=account)
+
+    def pin_message(self, peer_id, msg_id, silent=False, unpin=False, account=None):
+        import client_utils
+        return client_utils.pin_message(peer_id, msg_id, silent=silent, unpin=unpin, account=account)
+
+    def save_draft(self, peer_id, text, reply_to_msg_id=0, parse_mode=None, account=None):
+        import client_utils
+        return client_utils.save_draft(peer_id, text, reply_to_msg_id=reply_to_msg_id,
+                                      parse_mode=parse_mode, account=account)
+
+    def clear_draft(self, peer_id, account=None):
+        import client_utils
+        return client_utils.clear_draft(peer_id, account=account)
+
+    def forward_messages(self, peer_id, from_peer_id, message_ids, silent=False, drop_author=False, account=None):
+        import client_utils
+        return client_utils.forward_messages(peer_id, from_peer_id, message_ids,
+                                             silent=silent, drop_author=drop_author,
+                                             account=account)
+
+    def run_on_queue(self, fn, delay=0):
+        import client_utils
+        return client_utils.run_on_queue(fn, delay=delay)
+
+    def toast(self, message: str):
+        try:
+            import client_utils
+            client_utils.show_info_bulletin(str(message))
+        except Exception:
+            pass
 
     def _extera_build_method_handler(self, handler, before=None, after=None):
         if isinstance(handler, (MethodHook, MethodReplacement)):

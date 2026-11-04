@@ -69,6 +69,11 @@ def message_uri(peer_id: int, message_id: int) -> str:
 class CactusUtils:
     """Unified CactusLib helper utilities for oxDesktop."""
 
+    class Uri:
+        @staticmethod
+        def create(plugin: Union[str, BasePlugin], command_name: str, **kwargs) -> str:
+            return uri(plugin, command_name, **kwargs)
+
     class Command:
         """Represents an intercepted command execution context."""
 
@@ -76,14 +81,19 @@ class CactusUtils:
             self.name = name
             self.args = args
             self.text = text
+            self.raw_args = text
             self.params = params
             self.account = account
             self.plugin = plugin
             
             # Extract peer and message details
             self.peer_id = int(getattr(params, "peer", 0) or getattr(params, "peer_id", 0) or client_utils.get_current_dialog_id())
+            self.peer = self.peer_id
+            self.dialog_id = self.peer_id
             self.reply_to_id = int(getattr(params, "reply_to_id", 0) or getattr(params, "replyToMsg", 0) or 0)
+            self.reply_to = self.reply_to_id
             self.raw_message = getattr(params, "message", "") or ""
+            self.message = self.raw_message
 
         def answer(self, text: str, parse_mode: Optional[str] = "markdown", reply_to_sender: bool = False):
             """Send a reply to the current dialog."""
@@ -121,8 +131,18 @@ class CactusUtils:
     class Telegram:
         """Synchronous and asynchronous Telegram MTProto request helpers."""
 
-        @staticmethod
-        def send(req: Any, *, wait_response: bool = True, timeout: int = 7, raise_errors: bool = True) -> Any:
+        class TLRPCException(Exception):
+            def __init__(self, error):
+                self.error = error
+                super().__init__(str(error))
+
+        class Result:
+            def __init__(self, response=None, error=None):
+                self.response = response
+                self.error = error
+
+        @classmethod
+        def send(cls, req: Any, *, wait_response: bool = True, timeout: int = 7, raise_errors: bool = True) -> Any:
             """Send TLRPC request with optional synchronous waiting."""
             if not wait_response:
                 return client_utils.send_request(req)
@@ -139,20 +159,24 @@ class CactusUtils:
             if not req_id:
                 if raise_errors:
                     raise RuntimeError("Failed to send TLRPC request via client_utils")
-                return None
+                return cls.Result(None, "Failed to send request")
 
             finished = event.wait(timeout=max(1, int(timeout)))
             if not finished:
                 if raise_errors:
                     raise TimeoutError(f"TLRPC request {type(req).__name__} timed out after {timeout}s")
-                return None
+                return cls.Result(None, f"Request timed out after {timeout}s")
 
             response, error = result_box
             if error is not None:
                 if raise_errors:
-                    raise RuntimeError(f"TLRPC error: {error}")
-                return None
+                    raise cls.TLRPCException(error)
+                return cls.Result(None, error)
+            if not raise_errors:
+                return cls.Result(response, None)
             return response
+
+        send_request = send
 
         @staticmethod
         def tlrpc_object(cls_or_name: Any, **kwargs) -> Any:

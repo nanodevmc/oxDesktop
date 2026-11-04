@@ -826,6 +826,66 @@ def test_sqlite_and_pipe_sandboxing():
     print("  -> PASSED")
 
 
+def test_hook_result_helpers_and_plugin_shortcuts():
+    print("[27/27] Testing HookResult static helpers, CactusUtils.Uri, and BasePlugin shortcuts...")
+    import base_plugin
+    import cactuslib
+    from base_plugin import HookResult, HookStrategy, BasePlugin
+    from cactuslib import CactusUtils
+
+    # 1. HookResult static helpers
+    r_cancel = HookResult.cancel()
+    assert r_cancel.strategy == HookStrategy.CANCEL
+    r_default = HookResult.default()
+    assert r_default.strategy == HookStrategy.DEFAULT
+    r_mod = HookResult.modify(result="custom")
+    assert r_mod.strategy == HookStrategy.MODIFY
+    assert r_mod.result == "custom"
+
+    # 2. CactusUtils.Uri.create
+    u = CactusUtils.Uri.create("my_plugin", "start", foo="bar", num=1)
+    assert u == "extera://plugin/my_plugin/start?foo=bar&num=1"
+
+    # 3. BasePlugin shortcuts
+    class ShortcutTestPlugin(BasePlugin):
+        pass
+
+    p = ShortcutTestPlugin()
+    p._extera_attach("shortcut_plug")
+
+    # Draft shortcuts
+    req_d = p.save_draft(12345, "hello shortcut draft")
+    assert req_d > 0
+    req_c = p.clear_draft(12345)
+    assert req_c > 0
+
+    # Pin & Delete shortcuts
+    req_pin = p.pin_message(12345, 999)
+    assert req_pin > 0
+    req_del = p.delete_message({"dialog_id": 12345, "id": 999})
+    assert req_del > 0
+
+    # Forward shortcut
+    req_fwd = p.forward_messages(12345, 54321, [1, 2])
+    assert req_fwd > 0
+
+    # Toast shortcut
+    p.toast("Quick notification")
+
+    # 4. CactusUtils.Telegram send_request alias and Result
+    import tl_runtime
+    TLRPC = tl_runtime.TLRPC
+    req_dummy = TLRPC.TL_help_getConfig()
+    # Synchronous wait=False returns request_id
+    req_id_tl = CactusUtils.Telegram.send_request(req_dummy, wait_response=False)
+    assert req_id_tl > 0
+
+    res_obj = CactusUtils.Telegram.Result(response="ok", error=None)
+    assert res_obj.response == "ok"
+    assert res_obj.error is None
+    print("  -> PASSED")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print(" oxDesktop Master Python Plugin & Security Test Harness")
@@ -856,6 +916,7 @@ if __name__ == "__main__":
     test_notification_center_pubsub()
     test_draft_and_forward_helpers()
     test_sqlite_and_pipe_sandboxing()
+    test_hook_result_helpers_and_plugin_shortcuts()
     print("=" * 60)
-    print(">>> ALL 26/26 TESTS PASSED WITH 100% SUCCESS! <<<")
+    print(">>> ALL 27/27 TESTS PASSED WITH 100% SUCCESS! <<<")
     print("=" * 60)
