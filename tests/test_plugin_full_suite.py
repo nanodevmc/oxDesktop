@@ -898,6 +898,37 @@ def test_hook_result_helpers_and_plugin_shortcuts():
     print("  -> PASSED")
 
 
+def test_intents_with_placeholder_matching():
+    print("[28/28] Testing IntentsManager with parameterized path templates and dispatch...")
+    import intents
+    from intents import IntentsManager
+    import extera_host
+
+    captured = []
+
+    with extera_host._plugin_context("intent_plug"):
+        handle = IntentsManager.new_global_before_handler(
+            lambda name, debug=None: captured.append((name, debug)) or True,
+            schemes=["extera"],
+            hosts=["plugin"],
+            path_template="/{name}/open"
+        )
+        assert handle is not None
+
+        parsed = IntentsManager.parse("extera://plugin/delta_app/open?debug=true")
+        dispatched = IntentsManager.dispatch(before=True, context=parsed)
+        assert dispatched is True
+        assert len(captured) == 1
+        assert captured[0] == ("delta_app", "true")
+
+        # Unhandle and verify it is not called again
+        handle.unhandle()
+        dispatched2 = IntentsManager.dispatch(before=True, context=parsed)
+        assert dispatched2 is False
+        assert len(captured) == 1
+    print("  -> PASSED")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print(" oxDesktop Master Python Plugin & Security Test Harness")
@@ -929,6 +960,7 @@ if __name__ == "__main__":
     test_draft_and_forward_helpers()
     test_sqlite_and_pipe_sandboxing()
     test_hook_result_helpers_and_plugin_shortcuts()
+    test_intents_with_placeholder_matching()
     print("=" * 60)
-    print(">>> ALL 27/27 TESTS PASSED WITH 100% SUCCESS! <<<")
+    print(">>> ALL 28/28 TESTS PASSED WITH 100% SUCCESS! <<<")
     print("=" * 60)

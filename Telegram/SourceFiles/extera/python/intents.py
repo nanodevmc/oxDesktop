@@ -1,5 +1,6 @@
 import inspect
 import json
+import re
 import threading
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -100,8 +101,17 @@ def _matches(filters: Dict[str, Any], context: Dict[str, Any]) -> bool:
             str(h).lower() for h in hosts]:
         return False
     path = filters.get("path_template")
-    if path and str(context.get("path") or "") != str(path):
-        return False
+    if path:
+        ctx_path = str(context.get("path") or "")
+        if "{" in path and "}" in path:
+            regex_pattern = "^" + re.sub(r"\{([a-zA-Z0-9_]+)\}", r"(?P<\1>[^/]+)", path) + "$"
+            match = re.match(regex_pattern, ctx_path)
+            if not match:
+                return False
+            path_args = context.setdefault("path_args", {})
+            path_args.update(match.groupdict())
+        elif ctx_path != str(path):
+            return False
     required = filters.get("query_args")
     if required:
         args = _context_to_dict(context.get("query_args")) or {}
