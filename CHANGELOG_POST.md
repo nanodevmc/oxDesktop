@@ -23,6 +23,6 @@ oxDesktop Changelog
 • Отображение и позиционирование бейджей в диалоговых списках
 • и другое
 
-@oxDesktop — @oxDesktopCl — @radoqi — установить!
+@oxDesktop — @oxDesktop_Cl — @radoqi — установить!
 
 📎 oxDesktop-setup-x64.7.3.3.exe

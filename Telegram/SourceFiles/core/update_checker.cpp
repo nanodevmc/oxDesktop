@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "core/update_checker.h"
+#include "extera/extera_update.h"
 
 #include "platform/platform_specific.h"
 #include "base/platform/base_platform_info.h"
@@ -732,21 +733,7 @@ HttpChecker::HttpChecker(bool testing) : Checker(testing) {
 }
 
 void HttpChecker::start() {
-	const auto updaterVersion = Platform::AutoUpdateVersion();
-	const auto path = Local::readAutoupdatePrefix()
-		+ qstr("/current")
-		+ (updaterVersion > 1 ? QString::number(updaterVersion) : QString());
-	auto url = QUrl(path);
-	DEBUG_LOG(("Update Info: requesting update state"));
-	const auto request = QNetworkRequest(url);
-	_manager = std::make_unique<QNetworkAccessManager>();
-	_reply = _manager->get(request);
-	_reply->connect(_reply, &QNetworkReply::finished, [=] {
-		gotResponse();
-	});
-	_reply->connect(_reply, &QNetworkReply::errorOccurred, [=](auto e) {
-		gotFailure(e);
-	});
+	fail();
 }
 
 void HttpChecker::gotResponse() {
@@ -1008,35 +995,7 @@ MtpChecker::MtpChecker(
 }
 
 void MtpChecker::start() {
-	if (!_mtp.valid()) {
-		LOG(("Update Info: MTP is unavailable."));
-		crl::on_main(this, [=] { fail(); });
-		return;
-	}
-	if (BuildIsCanary) {
-		startCanary();
-		return;
-	}
-	const auto updaterVersion = Platform::AutoUpdateVersion();
-	const auto feed = "tdhbcfeed"
-		+ (updaterVersion > 1 ? QString::number(updaterVersion) : QString());
-	MTP::ResolveChannel(&_mtp, feed, [=](
-			const MTPInputChannel &channel) {
-		_mtp.send(
-			MTPmessages_GetHistory(
-				MTP_inputPeerChannel(
-					channel.c_inputChannel().vchannel_id(),
-					channel.c_inputChannel().vaccess_hash()),
-				MTP_int(0),  // offset_id
-				MTP_int(0),  // offset_date
-				MTP_int(0),  // add_offset
-				MTP_int(1),  // limit
-				MTP_int(0),  // max_id
-				MTP_int(0),  // min_id
-				MTP_long(0)), // hash
-			[=](const MTPmessages_Messages &result) { gotMessage(result); },
-			failHandler());
-	}, [=] { fail(); });
+	crl::on_main(this, [=] { fail(); });
 }
 
 void MtpChecker::gotMessage(const MTPmessages_Messages &result) {
@@ -1733,22 +1692,24 @@ void Updater::start(bool forceWait) {
 		}
 #endif // !Q_OS_WIN && !Q_OS_MAC
 	} else if (sendRequest) {
-		if (BuildIsCanary) {
-			// Canary builds discover updates only through their own MTP
-			// channels, the v1 HTTP feed serves other channels.
-			startImplementation(&_httpImplementation, nullptr);
-		} else {
-			startImplementation(
-				&_httpImplementation,
-				std::make_unique<HttpChecker>(_testing));
-		}
-		startImplementation(
-			&_mtpImplementation,
-			std::make_unique<MtpChecker>(
-				LookupCanaryPrivateSession(_session),
-				_testing));
-
 		_checking.fire({});
+		_action = Action::Checking;
+		Extera::Update::CheckNow([=](Extera::Update::CheckResult result) {
+			using Result = Extera::Update::CheckResult;
+			if (result == Result::Available) {
+				_action = Action::Ready;
+				_ready.fire({});
+				handleReady();
+			} else if (result == Result::Latest) {
+				_action = Action::Latest;
+				_isLatest.fire({});
+				handleLatest();
+			} else {
+				_action = Action::Failed;
+				_failed.fire({});
+				handleFailed();
+			}
+		});
 	} else {
 		_timer.callOnce((updateInSecs + 5) * crl::time(1000));
 	}

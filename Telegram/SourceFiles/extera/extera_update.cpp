@@ -174,13 +174,31 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 		for (const auto &asset : object.value(u"assets"_q).toArray()) {
 			const auto info = asset.toObject();
 			const auto name = info.value(u"name"_q).toString();
-			if (name.startsWith(u"oxDesktop-setup-x64"_q)
+#if defined Q_OS_WIN
+			if (name.contains(u"setup"_q, Qt::CaseInsensitive)
 				&& name.endsWith(u".exe"_q)) {
 				state.assetName = name;
 				state.assetUrl = info.value(
 					u"browser_download_url"_q).toString();
 				break;
 			}
+#elif defined Q_OS_LINUX
+			if (name.contains(u"linux"_q, Qt::CaseInsensitive)
+				&& (name.endsWith(u".tar.gz"_q) || name.endsWith(u".tar.xz"_q))) {
+				state.assetName = name;
+				state.assetUrl = info.value(
+					u"browser_download_url"_q).toString();
+				break;
+			}
+#elif defined Q_OS_MAC
+			if (name.contains(u"mac"_q, Qt::CaseInsensitive)
+				&& name.endsWith(u".dmg"_q)) {
+				state.assetName = name;
+				state.assetUrl = info.value(
+					u"browser_download_url"_q).toString();
+				break;
+			}
+#endif
 		}
 		state.available = (Parse(tag) > Current());
 		if (state.available.current()) {

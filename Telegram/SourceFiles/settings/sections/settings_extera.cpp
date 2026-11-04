@@ -870,7 +870,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 		}, preview->lifetime());
 
 		box->addButton(tr::lng_exd_badge_contact(), [=] {
-			UrlClickHandler::Open(u"https://t.me/metawka"_q);
+			UrlClickHandler::Open(u"https://t.me/radoqi"_q);
 			box->closeBox();
 		});
 	}));
@@ -2398,15 +2398,22 @@ void PartMain2(SectionBuilder &builder) {
 			builder,
 			u"changelog"_q,
 			u"Changelog"_q,
-			u"@oxDesktopCl"_q,
-			u"https://t.me/oxDesktopCl"_q,
+			u"@oxDesktop_Cl"_q,
+			u"https://t.me/oxDesktop_Cl"_q,
 			{ &st::exteraIconForum });
 		AddLink(
 			builder,
-			u"website"_q,
-			tr::lng_extera_website(),
-			u"В разработке..."_q,
-			u"https://t.me/oxDesktop"_q,
+			u"tiktok"_q,
+			u"TikTok"_q,
+			u"@oxDesktop"_q,
+			u"https://tiktok.com/@oxDesktop"_q,
+			{ &st::exteraIconWebsite });
+		AddLink(
+			builder,
+			u"github"_q,
+			u"GitHub"_q,
+			u"nanodevmc/oxDesktop"_q,
+			u"https://github.com/nanodevmc/oxDesktop"_q,
 			{ &st::exteraIconWebsite });
 	});
 }
