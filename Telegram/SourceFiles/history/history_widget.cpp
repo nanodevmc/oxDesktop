@@ -2423,7 +2423,7 @@ void HistoryWidget::updateExdBugHelper() {
 
 			p.setFont(st::semiboldFont);
 			p.setPen(QColor(56, 189, 248));
-			p.drawText(inner->rect(), Qt::AlignCenter, u"[ \uD83D\uDCCE \u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E ]"_q);
+			p.drawText(inner->rect(), Qt::AlignCenter, u"[ \U0001F4CE \u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E ]"_q);
 		}, inner->lifetime());
 
 		inner->events() | rpl::on_next([=](not_null<QEvent*> e) {
@@ -2433,7 +2433,7 @@ void HistoryWidget::updateExdBugHelper() {
 		}, inner->lifetime());
 	}
 	const auto inner = _exdBugHelperPill->entity();
-	const auto width = st::semiboldFont->width(u"[ \uD83D\uDCCE \u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E ]"_q) + style::ConvertScale(24);
+	const auto width = st::semiboldFont->width(u"[ \U0001F4CE \u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E ]"_q) + style::ConvertScale(24);
 	const auto height = style::ConvertScale(26);
 	inner->resize(width, height);
 	_exdBugHelperPill->resize(width, height);
@@ -2463,7 +2463,7 @@ void HistoryWidget::insertDiagnosticInfo() {
 		QSysInfo::currentCpuArchitecture(),
 		qVersion());
 	const auto current = _field->getTextWithTags();
-	_field->setTextWithTags({ current.text + diag, current.entities });
+	_field->setTextWithTags({ current.text + diag, current.tags });
 	_field->setCursorPosition(_field->getLastText().size());
 	if (_exdBugHelperPill) {
 		_exdBugHelperPill->hide(anim::type::instant);

@@ -156,6 +156,10 @@ jobs:
           Set-Content -LiteralPath $file -Value $text -NoNewline
           Select-String -LiteralPath $file -Pattern 'kExteraBuild ='
 
+      - name: Synchronize version from version.txt
+        shell: cmd
+        run: cd /d %GITHUB_WORKSPACE%\tdesktop && python tools\sync_version.py
+
       - name: Configure and build
         shell: cmd
         env:

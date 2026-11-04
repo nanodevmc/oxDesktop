@@ -7,26 +7,31 @@
 
 ## Выполненные задачи и статус
 
-### 1. GitHub Actions CI
-- **Windows MSVC**: Устранён каскад ошибок `C2440`/`C3535` в `peer_list_box.cpp:2084` через явные проверки `emojiIconRect()` и `exteraIconRect()`.
-- **Linux Docker Cache**: Нативный GitHub Actions Buildx кэш (`type=gha,scope=docker-centos`), устранена инвалидация кэша динамической папкой poetry `.venv`.
-- **Авто-скриншоты на Linux**: В `.github/workflows/linux-build.yml` добавлен виртуальный Xvfb фреймбуфер для генерации скриншотов через `--demo-mode`. Скриншоты сохраняются строго в артефакты `oxdesktop-screenshots-linux` (без загрязнения git репозитория).
+### 1. Версионирование и синхронизация
+- **Единый источник версии (`version.txt`)**: версия задаётся в корневом `version.txt` (`7.3.3`).
+- **Синхронизатор (`tools/sync_version.py`)**: автоматически обновляет `Telegram/build/version`, `Telegram/SourceFiles/core/version.h` (`AppVersion`, `AppVersionStr`) и генерирует `version_generated.h` (`APP_VERSION`).
+- **Интеграция в CMake и CI**: `CMakeLists.txt` и GitHub Actions (`linux-build.yml`, `windows-build.yml`) автоматически вызывают синхронизацию перед сборкой.
+- **Стандарт User-Agent**: все HTTP-запросы клиента приведены к стандарту `"oxDesktop/" APP_VERSION` (`extera_badges.cpp`, `extera_changelog.cpp`, `extera_lyrics.cpp`, `extera_update.cpp`, `requirements_installer.py`).
+
+### 2. GitHub Actions CI
+- **Linux Docker Cache**: Устранена ошибка `CCACHE_DISABLE=0` (ccache 4.x). Кэш компилятора восстанавливается и сохраняется (`if: always()`). Авто-скриншоты на виртуальном Xvfb сохраняются в артефакты `oxdesktop-screenshots-linux`.
+- **Windows MSVC**: Устранены ошибки C3850 (замена суррогата `\uD83D\uDCCE` на универсальный символ `\U0001F4CE`) и C2039 (`current.tags` вместо `current.entities`) в `history_widget.cpp`. Кэш `sccache` сохраняется (`if: always()`).
 - **macOS Build**: Отключен по решению пользователя.
 
-### 2. 3D Анимированные бэйджи Extera & Support
+### 3. 3D Анимированные бэйджи Extera & Support
 - Интегрированы Document ID 3D-эмодзи: Developer (`5395339798430919126`), Bughunter (`5416037430513936515`), Helper (`5415603784845926997`), Donor/Supporter (`5413871448441793380`), Trusted (`5420443203671208138`).
 - Добавлена поддержка купленных значков (Boosty/донат) и локальный `badges.json`.
 - Зарегистрированы ссылки `tg://support` и `tg://settings/support`.
 
-### 3. Стиль и жизненный цикл плашек BETA / NEW
+### 4. Стиль и жизненный цикл плашек BETA / NEW
 - Оформление: мини-прямоугольник, яркий голубой/неоновый текст (`#38BDF8`), тонкая рамка (`#00D2FF`, 1px), радиус 3.5px, стеклянная подложка.
 - Централизованный реестр `Ui::NewBadge::FeatureTag`:
   - `NEW` снимается централизованно при смене версии по команде пользователя.
   - `BETA` снимается после успешного завершения циклов тестирования и проверок.
 - Автоматическое позиционирование плашек в `settings_extera.cpp` рядом с кнопками опций.
 
-### 4. Внедрённые функции
-- **CLI Demo Engine (`extera_demo.cpp`)**: параметры `--demo-mode`, `--demo-view`, `--demo-screenshot`, `--demo-delay`, `--demo-exit` для автоматического рендеринга и снимков экранов.
+### 5. Внедрённые функции
+- **CLI Demo Engine (`extera_demo.cpp`)**: параметры `--demo-mode`, `--demo-view`, `--demo-screenshot`, `--demo-delay`, `--demo-exit`.
 - **Queue Reply (`queue_reply`)**: ответ на отправляемые сообщения с плашкой «Очередь отправки», авто-резолв в `data_histories.cpp` через `itemIdChanged`.
 - **Custom Reaction Strip (`static_reactions_enabled`, `static_reactions_list`)**: фиксированная раскладка реакций.
 - **Smart Bug Report Helper (`smart_bug_report_helper`)**: анимированная плашка `[ 📎 Вставить тех. информацию ]` над полем ввода при ключевых словах ошибок.
@@ -41,5 +46,5 @@
 ## Тестирование
 - Тест-сьют плагинов `tests/test_plugin_full_suite.py`: 28/28 тестов пройдено (100% успех).
 
-### 5. Видео и промо
+### 6. Видео и промо
 - Видеоэффекты для промо/TikTok: при тыках накладывать наведение камеры на прицел (crosshair / target zoom punch-in), увеличение зоны клика и появление плашек функций.

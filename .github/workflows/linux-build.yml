@@ -77,6 +77,9 @@ jobs:
             ${{ runner.os }}-ccache-${{ github.sha }}-
             ${{ runner.os }}-ccache-
 
+      - name: Synchronize version from version.txt
+        run: python3 tools/sync_version.py
+
       - name: Build
         env:
           API_ID: ${{ secrets.TDESKTOP_API_ID }}
@@ -92,7 +95,6 @@ jobs:
             -e CONFIG=Release \
             -e API_ID -e API_HASH \
             -e CCACHE_DIR=/var/cache/ccache \
-            -e CCACHE_DISABLE=0 \
             -e CCACHE_MAXSIZE=2G \
             -e CCACHE_COMPRESS=1 \
             "$IMAGE_TAG" \
