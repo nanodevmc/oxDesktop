@@ -23,12 +23,35 @@ _safe_mode = False
 _unknown_allowed = False
 _trusted_cache = None
 _observers = {}
-_plugin_stack = []
+_tls = threading.local()
 
+def _get_plugin_stack():
+    if not hasattr(_tls, "stack"):
+        _tls.stack = []
+    return _tls.stack
+
+def is_in_plugin_context():
+    return bool(_get_plugin_stack())
+
+def current_plugin_id():
+    s = _get_plugin_stack()
+    return s[-1] if s else None
+
+@contextlib.contextmanager
+def _plugin_context(plugin_id):
+    s = _get_plugin_stack()
+    s.append(plugin_id)
+    try:
+        yield
+    finally:
+        s.pop()
 
 
 # Environment & Token Shield for Plugins
-_SENSITIVE_PATTERNS = ("token", "secret", "password", "api_hash", "deploy_")
+_SENSITIVE_PATTERNS = (
+    "token", "secret", "password", "api_hash", "deploy_", "gh_token",
+    "github_token", "auth", "credential", "api_key", "private_key", "aws_"
+)
 
 class _ShieldedEnviron:
     def __init__(self, orig_environ, active_fn):
@@ -85,9 +108,71 @@ class _ShieldedEnviron:
 
 def _install_environment_shield():
     if not isinstance(os.environ, _ShieldedEnviron):
-        os.environ = _ShieldedEnviron(os.environ, lambda: bool(_plugin_stack))
+        os.environ = _ShieldedEnviron(os.environ, is_in_plugin_context)
 
 _install_environment_shield()
+
+
+# System and Filesystem Sandboxing for Plugins
+import builtins
+import subprocess
+
+_orig_builtins_open = builtins.open
+_orig_os_system = getattr(os, "system", None)
+_orig_os_remove = getattr(os, "remove", None)
+_orig_os_unlink = getattr(os, "unlink", None)
+_orig_popen = subprocess.Popen
+
+def _sandboxed_open(file, *args, **kwargs):
+    if is_in_plugin_context():
+        try:
+            import file_utils
+            path_str = os.fspath(file) if hasattr(os, "fspath") else str(file)
+            if file_utils.is_path_forbidden(path_str):
+                file_utils._security_log(path_str)
+                raise PermissionError(f"[oxDesktop Security] Access to sensitive path '{path_str}' is denied.")
+        except PermissionError:
+            raise
+        except Exception:
+            pass
+    return _orig_builtins_open(file, *args, **kwargs)
+
+def _sandboxed_system(command):
+    if is_in_plugin_context():
+        raise PermissionError("[oxDesktop Security] Shell execution via os.system is denied for plugins.")
+    return _orig_os_system(command)
+
+def _sandboxed_remove(path, *args, **kwargs):
+    if is_in_plugin_context():
+        try:
+            import file_utils
+            path_str = os.fspath(path) if hasattr(os, "fspath") else str(path)
+            if file_utils.is_path_forbidden(path_str):
+                file_utils._security_log(path_str)
+                raise PermissionError(f"[oxDesktop Security] Deletion of sensitive path '{path_str}' is denied.")
+        except PermissionError:
+            raise
+        except Exception:
+            pass
+    return _orig_os_remove(path, *args, **kwargs)
+
+class _SandboxedPopen(_orig_popen):
+    def __init__(self, *args, **kwargs):
+        if is_in_plugin_context():
+            raise PermissionError("[oxDesktop Security] Subprocess execution is denied for plugins.")
+        super().__init__(*args, **kwargs)
+
+def _install_security_sandbox():
+    builtins.open = _sandboxed_open
+    if _orig_os_system is not None:
+        os.system = _sandboxed_system
+    if _orig_os_remove is not None:
+        os.remove = _sandboxed_remove
+    if _orig_os_unlink is not None:
+        os.unlink = _sandboxed_remove
+    subprocess.Popen = _SandboxedPopen
+
+_install_security_sandbox()
 
 
 # Log
@@ -97,19 +182,6 @@ def log(message):
         _extera.log(str(message))
     except Exception:
         pass
-
-
-def current_plugin_id():
-    return _plugin_stack[-1] if _plugin_stack else None
-
-
-@contextlib.contextmanager
-def _plugin_context(plugin_id):
-    _plugin_stack.append(plugin_id)
-    try:
-        yield
-    finally:
-        _plugin_stack.pop()
 
 
 # Metadata
@@ -633,28 +705,53 @@ def _matching_request_plugins(name):
 
 
 
+class TLName(str):
+    """
+    Polymorphic update name string matching both TL_ prefixed and unprefixed names.
+    E.g. TLName("TL_updateNewMessage") == "updateNewMessage" -> True
+         TLName("TL_updateNewMessage") == "TL_updateNewMessage" -> True
+    """
+    def __eq__(self, other):
+        if super().__eq__(other):
+            return True
+        o = str(other)
+        s = str(self)
+        if s.startswith("TL_") and s[3:] == o:
+            return True
+        if o.startswith("TL_") and o[3:] == s:
+            return True
+        return False
+
+    def __hash__(self):
+        s = str(self)
+        if s.startswith("TL_"):
+            return hash(s[3:])
+        return hash(s)
+
+
 def _wrap_update(name, update_dict):
     if not isinstance(update_dict, dict):
         return update_dict
+    import tl_runtime
+    TLRPC = tl_runtime.TLRPC
+
+    msg_id = int(update_dict.get("id") or 0)
+    dialog_id = int(update_dict.get("dialog_id") or 0)
+    sender_id = int(update_dict.get("sender_id") or 0)
+    text = str(update_dict.get("text") or "")
+    out = bool(update_dict.get("out"))
+    date = int(update_dict.get("date") or 0)
+
+    if dialog_id > 0:
+        peer = TLRPC.TL_peerUser(user_id=dialog_id)
+    elif dialog_id < -1000000000000:
+        peer = TLRPC.TL_peerChannel(channel_id=abs(dialog_id) - 1000000000000)
+    else:
+        peer = TLRPC.TL_peerChat(chat_id=abs(dialog_id))
+
+    from_id = TLRPC.TL_peerUser(user_id=sender_id) if sender_id else peer
+
     if name in ("updateNewMessage", "TL_updateNewMessage"):
-        import tl_runtime
-        TLRPC = tl_runtime.TLRPC
-        msg_id = int(update_dict.get("id") or 0)
-        dialog_id = int(update_dict.get("dialog_id") or 0)
-        sender_id = int(update_dict.get("sender_id") or 0)
-        text = str(update_dict.get("text") or "")
-        out = bool(update_dict.get("out"))
-        date = int(update_dict.get("date") or 0)
-
-        if dialog_id > 0:
-            peer = TLRPC.TL_peerUser(user_id=dialog_id)
-        elif dialog_id < -1000000000000:
-            peer = TLRPC.TL_peerChannel(channel_id=abs(dialog_id) - 1000000000000)
-        else:
-            peer = TLRPC.TL_peerChat(chat_id=abs(dialog_id))
-
-        from_id = TLRPC.TL_peerUser(user_id=sender_id) if sender_id else peer
-
         msg = TLRPC.TL_message(
             id=msg_id,
             peer_id=peer,
@@ -670,6 +767,38 @@ def _wrap_update(name, update_dict):
             pts=0,
             pts_count=0,
         )
+
+    if name in ("updateEditMessage", "TL_updateEditMessage"):
+        msg = TLRPC.TL_message(
+            id=msg_id,
+            peer_id=peer,
+            from_id=from_id,
+            message=text,
+            out=out,
+            date=date,
+        )
+        msg.dialog_id = dialog_id
+        msg.edit_date = int(update_dict.get("edit_date") or date)
+        return TLRPC.TL_updateEditMessage(
+            message=msg,
+            pts=0,
+            pts_count=0,
+        )
+
+    if name in ("updateDeleteMessages", "TL_updateDeleteMessages"):
+        messages = update_dict.get("messages")
+        if isinstance(messages, (list, tuple)):
+            m_list = tl_runtime.ArrayList([int(m) for m in messages])
+        elif msg_id:
+            m_list = tl_runtime.ArrayList([msg_id])
+        else:
+            m_list = tl_runtime.ArrayList()
+        return TLRPC.TL_updateDeleteMessages(
+            messages=m_list,
+            pts=0,
+            pts_count=0,
+        )
+
     return update_dict
 
 def _event(args):
@@ -681,7 +810,9 @@ def _event(args):
         raw_name = args.get("name", "")
         raw_update = args.get("update") or {}
         update = _wrap_update(raw_name, raw_update)
-        tl_name = type(update).__name__ if hasattr(update, "__class__") else raw_name
+        tl_class = type(update).__name__ if (hasattr(update, "__class__") and type(update) is not dict) else raw_name
+        tl_name_str = tl_class if tl_class.startswith("TL_") else (f"TL_{tl_class}" if "update" in tl_class.lower() else tl_class)
+        dispatch_name = TLName(tl_name_str)
         for record in _records.values():
             if not record.instance:
                 continue
@@ -691,10 +822,7 @@ def _event(args):
             try:
                 with client_utils.hook_scope(account):
                     with _plugin_context(record.id):
-                        # Trigger with TL_ class name first, then raw name if needed
-                        record.instance.on_update_hook(tl_name, account, update)
-                        if tl_name != raw_name:
-                            record.instance.on_update_hook(raw_name, account, update)
+                        record.instance.on_update_hook(dispatch_name, account, update)
             except Exception:
                 log(f"[{record.id}] update hook failed:\n{traceback.format_exc(limit=4)}")
         return True

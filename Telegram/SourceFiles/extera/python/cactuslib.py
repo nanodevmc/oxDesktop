@@ -103,6 +103,16 @@ class CactusUtils:
         def edit(self, new_text: str):
             """Modify outgoing message text in-place before it is sent."""
             self.params.message = str(new_text)
+            try:
+                self.params.text = str(new_text)
+            except Exception:
+                pass
+            if hasattr(self.params, "__setitem__"):
+                try:
+                    self.params["message"] = str(new_text)
+                    self.params["text"] = str(new_text)
+                except Exception:
+                    pass
 
         def cancel(self) -> HookResult:
             """Cancel sending the command message."""
@@ -244,8 +254,7 @@ class CactusUtils:
             self.utils = CactusUtils
             self.Telegram = CactusUtils.Telegram
 
-        def on_plugin_load(self):
-            # Discover and register all methods decorated with @command
+        def _register_cactus_commands(self):
             for attr_name in dir(self):
                 try:
                     attr = getattr(self, attr_name)
@@ -255,10 +264,16 @@ class CactusUtils:
                         self._cactus_commands[cmd_name] = attr
                 except Exception:
                     continue
-
-            # Enable outgoing message hook if commands exist
             if self._cactus_commands:
                 self.add_on_send_message_hook(priority=100)
+
+        def _extera_attach(self, plugin_id: str):
+            super()._extera_attach(plugin_id)
+            self._register_cactus_commands()
+
+        def on_plugin_load(self):
+            self._register_cactus_commands()
+            super().on_plugin_load()
 
         @property
         def db(self) -> CactusUtils.Database:
@@ -302,10 +317,12 @@ class CactusUtils:
                         )
 
                         try:
-                            res = handler(cmd_ctx)
+                            try:
+                                res = handler(cmd_ctx)
+                            except TypeError:
+                                res = handler(self, cmd_ctx)
                             if isinstance(res, HookResult):
                                 return res
-                            # If no HookResult was returned, assume cancellation if answered or modified
                             return HookResult(strategy=HookStrategy.CANCEL)
                         except Exception as e:
                             self.logger.error(f"Command '{cmd_name}' execution error: {e}")
