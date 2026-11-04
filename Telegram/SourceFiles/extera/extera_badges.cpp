@@ -2,6 +2,7 @@
 
 #include "data/data_peer.h"
 #include "settings.h"
+#include "version_generated.h"
 
 #include <QtCore/QDir>
 #include <QtCore/QFile>
@@ -181,7 +182,7 @@ void SaveToCache() {
 void RefreshProfiles(QNetworkAccessManager *manager) {
 	auto request = QNetworkRequest(QUrl(
 		u"https://api.exteragram.app/api/v1/profiles"_q));
-	request.setRawHeader("User-Agent", "exteraGram/13.1.1");
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 	request.setRawHeader("Accept", "application/json");
 
 	const auto reply = manager->get(request);
