@@ -837,8 +837,9 @@ bool AddReplyToMessageAction(
 		: request.item;
 	const auto topic = item ? item->topic() : nullptr;
 	const auto peer = item ? item->history()->peer.get() : nullptr;
+	const auto allowQueueReply = Extera::Bool(u"queue_reply"_q) && item && item->isSending();
 	if (!item
-		|| (!item->isRegular() && !CanReplyToEphemeral(item))
+		|| (!item->isRegular() && !CanReplyToEphemeral(item) && !allowQueueReply)
 		|| IsAnchoredEphemeral(item)
 		|| (context != Context::History
 			&& context != Context::Replies

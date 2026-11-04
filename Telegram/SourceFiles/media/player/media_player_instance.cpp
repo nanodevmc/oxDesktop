@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "media/player/media_player_instance.h"
+#include "extera/extera_config.h"
 
 #include "data/data_document.h"
 #include "data/data_session.h"
@@ -606,6 +607,32 @@ bool Instance::moveInItem(not_null<Data*> data, int delta, bool autonext) {
 		data->monoforumPeerId,
 	});
 	return true;
+}
+
+void Instance::prebufferNextTrack(not_null<Data*> data) {
+	if (_lastPrebufferedContext == data->current.contextId()) {
+		return;
+	}
+	_lastPrebufferedContext = data->current.contextId();
+
+	if (const auto inItem = trackInItem(data, 1)) {
+		if (const auto doc = inItem.audio()) {
+			doc->checkLoaded();
+			return;
+		}
+	}
+	if (data->playlistIndex && data->history) {
+		const auto nextIndex = *data->playlistIndex + ((order(data) == OrderMode::Reverse) ? -1 : 1);
+		if (const auto item = itemByIndex(data, nextIndex)) {
+			if (const auto media = item->media()) {
+				if (const auto doc = media->document()) {
+					if (doc->isAudioFile()) {
+						doc->checkLoaded();
+					}
+				}
+			}
+		}
+	}
 }
 
 bool Instance::moveInPlaylist(
@@ -1463,6 +1490,12 @@ void Instance::emitUpdate(AudioMsgId::Type type, CheckCallback check) {
 		}
 		if (type == AudioMsgId::Type::Song) {
 			_listenTracker->update(state);
+			if (Extera::Bool(u"gapless_playback"_q) && state.length > 0 && state.position > 0) {
+				const auto leftMs = (state.length - state.position) / 1000;
+				if (leftMs <= 3000 && leftMs > 0) {
+					prebufferNextTrack(data);
+				}
+			}
 		}
 
 		auto finished = false;

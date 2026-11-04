@@ -1762,6 +1762,27 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 
+	router.add(u"support"_q, {
+		.action = CodeBlock{ [](const Context &ctx) {
+			if (!ctx.controller) {
+				return Result::NeedsAuth;
+			}
+			::Settings::OpenAskQuestionConfirm(ctx.controller);
+			return Result::Handled;
+		}},
+	});
+
+	router.add(u"settings"_q, {
+		.path = u"support"_q,
+		.action = CodeBlock{ [](const Context &ctx) {
+			if (!ctx.controller) {
+				return Result::NeedsAuth;
+			}
+			::Settings::OpenAskQuestionConfirm(ctx.controller);
+			return Result::Handled;
+		}},
+	});
+
 	router.add(u"settings"_q, {
 		.path = u"features"_q,
 		.action = CodeBlock{ [](const Context &ctx) {

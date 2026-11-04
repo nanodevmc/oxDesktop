@@ -395,6 +395,8 @@ enum class ForwardOptions {
 	NoNamesAndCaptions,
 };
 
+[[nodiscard]] ForwardOptions DefaultForwardOptions();
+
 enum class ViewRemovalReason : uchar {
 	Removed,
 	Detached,
@@ -402,7 +404,7 @@ enum class ViewRemovalReason : uchar {
 
 struct ForwardDraft {
 	MessageIdsList ids;
-	ForwardOptions options = ForwardOptions::PreserveInfo;
+	ForwardOptions options = DefaultForwardOptions();
 
 	friend inline auto operator<=>(
 		const ForwardDraft&,
@@ -411,7 +413,7 @@ struct ForwardDraft {
 
 struct ResolvedForwardDraft {
 	HistoryItemsList items;
-	ForwardOptions options = ForwardOptions::PreserveInfo;
+	ForwardOptions options = DefaultForwardOptions();
 };
 
 } // namespace Data

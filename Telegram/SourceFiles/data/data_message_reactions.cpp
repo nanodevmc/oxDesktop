@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_message_reactions.h"
 
+#include "extera/extera_config.h"
+
 #include "api/api_global_privacy.h"
 #include "calls/group/calls_group_call.h"
 #include "calls/group/calls_group_messages.h"
@@ -317,6 +319,35 @@ PossibleItemReactionsRef LookupPossibleReactions(
 		toFront(reactions->favoriteId());
 		if (paidInFront) {
 			toFront(ReactionId::Paid());
+		}
+	}
+	if (Extera::Bool(u"static_reactions_enabled"_q) && !item->reactionsAreTags()) {
+		const auto customList = Extera::String(u"static_reactions_list"_q);
+		const auto parts = customList.split(',', Qt::SkipEmptyParts);
+		if (!parts.isEmpty()) {
+			auto ordered = std::vector<not_null<const Reaction*>>();
+			ordered.reserve(parts.size());
+			auto seen = base::flat_set<ReactionId>();
+			for (const auto &raw : parts) {
+				const auto trimmed = raw.trimmed();
+				if (trimmed.isEmpty()) continue;
+				const auto id = ReactionId{ trimmed };
+				if (!seen.emplace(id).second) continue;
+				const auto i = ranges::find(result.recent, id, &Reaction::id);
+				if (i != end(result.recent)) {
+					ordered.push_back(*i);
+				} else if (const auto temp = reactions->lookupTemporary(id)) {
+					ordered.push_back(temp);
+				}
+			}
+			if (!ordered.empty()) {
+				for (const auto r : result.recent) {
+					if (!seen.contains(r->id)) {
+						ordered.push_back(r);
+					}
+				}
+				result.recent = std::move(ordered);
+			}
 		}
 	}
 	return result;

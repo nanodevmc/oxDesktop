@@ -699,6 +699,11 @@ bool PeerData::canPinMessages() const {
 
 bool PeerData::canCreatePolls(bool forbidInForums) const {
 	if (const auto user = asUser()) {
+		if (Extera::Bool(u"polls_in_pm"_q)) {
+			return !user->isSupport()
+				&& !user->isRepliesChat()
+				&& !user->isVerifyCodes();
+		}
 		return user->isSelf()
 			|| (user->isBot()
 				&& !user->isSupport()

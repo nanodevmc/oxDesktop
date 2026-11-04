@@ -1,4 +1,6 @@
 #include "extera/extera_full_player.h"
+#include "extera/extera_config.h"
+#include "ui/widgets/popup_menu.h"
 
 #include "data/data_document.h"
 #include "data/data_document_media.h"
@@ -147,6 +149,7 @@ protected:
 	void mouseReleaseEvent(QMouseEvent *e) override;
 	void wheelEvent(QWheelEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
+	void contextMenuEvent(QContextMenuEvent *e) override;
 
 private:
 	void loadTrack();
@@ -802,6 +805,31 @@ void View::mouseReleaseEvent(QMouseEvent *e) {
 	}
 }
 
+void View::contextMenuEvent(QContextMenuEvent *e) {
+	auto line = -1;
+	if (buttonAt(e->pos(), &line) == Button::Line && line >= 0 && line < int(_lines.size())) {
+		const auto lineText = _lines[line].text;
+		const auto menu = Ui::CreateChild<Ui::PopupMenu>(this, st::popupMenuExpandedSeparator);
+		menu->addAction(tr::lng_context_copy_text(tr::now), [=] {
+			QGuiApplication::clipboard()->setText(lineText);
+			_controller->showToast(tr::lng_exd_player_lyrics_copied(tr::now));
+		}, &st::menuIconCopy);
+
+		menu->addAction(tr::lng_exd_lyrics_quote(tr::now) + u" (BETA)"_q, [=] {
+			const auto title = _title;
+			const auto performer = _performer;
+			const auto quoteCard = QString(u"\u00AB %1 \u00BB\n\u2014 %2 \u2022 %3"_q).arg(lineText, performer, title);
+			QGuiApplication::clipboard()->setText(quoteCard);
+			_controller->showToast(tr::lng_exd_lyrics_quote_copied(tr::now));
+		}, &st::menuIconShare);
+
+		menu->popup(e->globalPos());
+		e->accept();
+		return;
+	}
+	QWidget::contextMenuEvent(e);
+}
+
 void View::wheelEvent(QWheelEvent *e) {
 	if (_lyrics != Lyrics::Plain && _lyrics != Lyrics::Synced) {
 		return;
@@ -1057,13 +1085,20 @@ public:
 protected:
 	void prepare() override {
 		if (const auto controller = _controller.get()) {
+			const auto compact = Extera::Bool(u"mini_player_compact"_q);
+			const auto width = compact ? S(380) : S(760);
 			const auto view = Ui::CreateChild<View>(this, controller);
-			view->resizeToWidth(S(760));
+			view->resizeToWidth(width);
 			view->moveToLeft(0, 0);
 			view->show();
 			setStyle(st::exteraPlayerBox);
 			setNoContentMargin(true);
-			setDimensions(S(760), view->height());
+			setDimensions(width, view->height());
+			if (Extera::Bool(u"mini_player_always_on_top"_q)) {
+				if (const auto window = topLevelWidget()) {
+					window->setWindowFlag(Qt::WindowStaysOnTopHint, true);
+				}
+			}
 		}
 	}
 

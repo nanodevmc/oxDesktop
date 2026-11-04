@@ -51,36 +51,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Libraries cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/.buildx-cache
-          key: ${{ runner.os }}-libs-${{ hashFiles('Telegram/build/docker/centos_env/**') }}
-          restore-keys: ${{ runner.os }}-libs-
-
       - name: Libraries
         uses: docker/build-push-action@v6
         with:
           context: Telegram/build/docker/centos_env
           load: true
           tags: ${{ env.IMAGE_TAG }}
-          cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
-          cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache-new,mode=max
-
-      - name: Move cache
-        run: |
-          if [ -d "${{ runner.temp }}/.buildx-cache-new" ]; then
-            rm -rf ${{ runner.temp }}/.buildx-cache
-            mv ${{ runner.temp }}/.buildx-cache-new ${{ runner.temp }}/.buildx-cache
-          fi
+          cache-from: type=gha,scope=docker-centos
+          cache-to: type=gha,mode=max,scope=docker-centos
 
       - name: Build cache
         uses: actions/cache@v4
         with:
           path: out
-          key: ${{ runner.os }}-out-${{ github.sha }}
+          key: ${{ runner.os }}-build-out-${{ hashFiles('Telegram/SourceFiles/**', 'Telegram/CMakeLists.txt') }}
           restore-keys: |
-            ${{ runner.os }}-out-
+            ${{ runner.os }}-build-out-
 
       - name: Build
         env:
