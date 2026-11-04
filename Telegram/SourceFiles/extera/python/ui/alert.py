@@ -154,6 +154,20 @@ class AlertDialogBuilder:
     def get_button(self, which):
         return None
 
+
+    # CamelCase aliases for Android / Java convention compatibility
+    setTitle = set_title
+    setMessage = set_message
+    setPositiveButton = set_positive_button
+    setNegativeButton = set_negative_button
+    setNeutralButton = set_neutral_button
+    setItems = set_items
+    setCancelable = set_cancelable
+    setOnDismissListener = set_on_dismiss_listener
+    setOnCancelListener = set_on_cancel_listener
+    setView = set_view
+    getContext = get_context
+
     def __getattr__(self, item):
         if item.startswith("__"):
             raise AttributeError(item)
