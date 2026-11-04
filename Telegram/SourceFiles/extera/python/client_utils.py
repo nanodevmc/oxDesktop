@@ -178,13 +178,20 @@ def _request_to_json(request) -> str:
     return json.dumps({"request": str(request)}, ensure_ascii=False)
 
 
-def _send_raw(request, delegate) -> int:
+def _send_raw(request, delegate, account=0) -> int:
     import base64
     import tl_runtime
     native = _native("send_raw_request")
     if native is None:
         _not_available("send_raw_request")
         return 0
+    pre_res = _dispatch_pre_hook(request, account)
+    strat = (pre_res or {}).get("strategy", "continue")
+    if strat == "cancel":
+        _log(f"request {type(request).__name__} cancelled by pre_request_hook")
+        return 0
+    if strat == "modify" and pre_res.get("request") is not None:
+        request = pre_res["request"]
     try:
         data = tl_runtime.serialize(request)
     except Exception as e:
@@ -193,6 +200,7 @@ def _send_raw(request, delegate) -> int:
     callback_id = extera_host_register_callback(delegate)
     _raw_types[callback_id] = tl_runtime.result_type(request)
     _raw_names[callback_id] = type(request).__name__
+    _raw_accounts[callback_id] = account
     request_id = int(native(base64.b64encode(data).decode("ascii"), callback_id))
     _log(f"request {type(request).__name__} sent ({len(data)} bytes, id {request_id})")
     return request_id
@@ -200,6 +208,36 @@ def _send_raw(request, delegate) -> int:
 
 _raw_types = {}
 _raw_names = {}
+_raw_accounts = {}
+
+
+def _dispatch_pre_hook(request, account):
+    try:
+        import extera_host
+        req_name = type(request).__name__
+        payload = getattr(request, "to_dict", lambda: {})()
+        return extera_host._request_hook_dispatch({
+            "stage": "pre",
+            "name": req_name,
+            "account": account,
+            "payload": payload,
+        })
+    except Exception:
+        return {"strategy": "continue"}
+
+
+def _dispatch_post_hook(name, account, response, error):
+    try:
+        import extera_host
+        extera_host._request_hook_dispatch({
+            "stage": "post",
+            "name": name,
+            "account": account,
+            "response": getattr(response, "to_dict", lambda: response)(),
+            "error": str(error) if error else None,
+        })
+    except Exception:
+        pass
 
 
 def send_request(request, fn=None, account=None) -> int:
@@ -212,7 +250,7 @@ def send_request(request, fn=None, account=None) -> int:
             delegate = fn
         else:
             delegate = RequestCallback(fn, account=resolved)
-        return _send_raw(request, delegate)
+        return _send_raw(request, delegate, resolved)
     native = _native("send_request")
     if native is None:
         _not_available("send_request")
@@ -244,6 +282,7 @@ def extera_host_dispatch_callback(callback_id, response, error, raw=None, code=0
     delegate = _callbacks.pop(callback_id, None)
     result_type = _raw_types.pop(callback_id, None)
     name = _raw_names.pop(callback_id, "request")
+    account = _raw_accounts.pop(callback_id, 0)
     if delegate is None:
         return False
     if raw is not None or (result_type and error):
@@ -260,8 +299,10 @@ def extera_host_dispatch_callback(callback_id, response, error, raw=None, code=0
             delegate.run(None, tl_runtime.TL_error(-1, f"PARSE_FAILED: {e}"))
             return True
         _log(f"request {name} done: {type(response).__name__}")
+        _dispatch_post_hook(name, account, response, None)
         delegate.run(response, None)
         return True
+    _dispatch_post_hook(name, account, response, error)
     delegate.run(response, error)
     return True
 
