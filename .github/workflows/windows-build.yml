@@ -2,7 +2,7 @@ name: Windows build
 
 on:
   push:
-    branches: [ fix/audit-critical-fixes-and-improvements, main ]
+    branches: [ main ]
     paths-ignore:
       - 'badges.json'
       - 'trusted_hashes.json'
