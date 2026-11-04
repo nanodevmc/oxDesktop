@@ -1032,7 +1032,10 @@ def _install(args):
     path = args["path"]
     meta = read_metadata(path)
     os.makedirs(PLUGINS_DIR, exist_ok=True)
-    target = os.path.join(PLUGINS_DIR, meta["id"] + ".plugin")
+    ext = os.path.splitext(path)[1].lower()
+    if ext not in (".plugin", ".elyx", ".eaf", ".py"):
+        ext = ".plugin"
+    target = os.path.join(PLUGINS_DIR, meta["id"] + ext)
     old = _records.get(meta["id"])
     if old:
         _deactivate(old)
@@ -1051,12 +1054,19 @@ def _install(args):
 
 
 def _delete(args):
+    import shutil
     record = _records.pop(args["id"], None)
     if not record:
         return False
     _deactivate(record)
     try:
         os.remove(record.path)
+    except Exception:
+        pass
+    try:
+        extracted = os.path.join(PLUGINS_DIR, ".extracted", record.id)
+        if os.path.isdir(extracted):
+            shutil.rmtree(extracted, ignore_errors=True)
     except Exception:
         pass
     return True

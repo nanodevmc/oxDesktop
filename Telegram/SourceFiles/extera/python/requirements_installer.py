@@ -50,9 +50,10 @@ def _wheel_score(filename: str) -> int:
     python, abi, platform = tags if len(tags) == 3 else ("", "", "")
     if platform == "any" and abi == "none":
         return 3 if "py3" in python else 1
-    if sys.platform == "win32" and "cp311" in python and "win_amd64" in platform:
+    cp_tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
+    if sys.platform == "win32" and (cp_tag in python or "cp311" in python) and ("win_amd64" in platform or "win32" in platform):
         return 4
-    if sys.platform.startswith("linux") and "cp311" in python \
+    if sys.platform.startswith("linux") and (cp_tag in python or "cp311" in python) \
             and "manylinux" in platform and "x86_64" in platform:
         return 4
     return -1
@@ -98,6 +99,8 @@ def _install_one(spec: str, depth: int = 0):
         data = response.read()
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         for member in archive.namelist():
+            if member.startswith(("/", "\\")) or ".." in member:
+                continue
             path = os.path.normpath(os.path.join(_target, member))
             if not path.startswith(os.path.normpath(_target)):
                 continue
