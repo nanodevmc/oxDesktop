@@ -42,8 +42,18 @@ def _file_key(path: str):
     return (st.st_size, st.st_mtime_ns)
 
 
+import zipfile
+
 def read_source(path: str) -> str:
-    with open(path, "r", encoding="utf-8") as handle:
+    if os.path.isfile(path) and zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path, "r") as zf:
+            for entry in ("plugin.py", "main.py", "__init__.py"):
+                if entry in zf.namelist():
+                    return zf.read(entry).decode("utf-8", errors="replace")
+            for name in zf.namelist():
+                if name.endswith("/plugin.py") or name.endswith("/main.py"):
+                    return zf.read(name).decode("utf-8", errors="replace")
+    with open(path, "r", encoding="utf-8", errors="replace") as handle:
         return handle.read()
 
 
@@ -125,6 +135,32 @@ def _validate_permissions(declared: Any) -> list:
 
 
 def _read_metadata_uncached(path: str) -> Dict[str, Any]:
+    is_zip = os.path.isfile(path) and zipfile.is_zipfile(path)
+    if is_zip:
+        try:
+            with zipfile.ZipFile(path, "r") as zf:
+                if "metadata.json" in zf.namelist():
+                    import json
+                    meta = json.loads(zf.read("metadata.json").decode("utf-8", errors="replace"))
+                    pid = _validate_plugin_id(meta.get("id"))
+                    decl_perms = meta.get("permissions") is not None
+                    return {
+                        "id": pid,
+                        "name": meta.get("name") or pid,
+                        "description": meta.get("description", ""),
+                        "author": meta.get("author", ""),
+                        "version": str(meta.get("version", "1.0")),
+                        "icon": meta.get("icon"),
+                        "app_version": meta.get("app_version"),
+                        "sdk_version": meta.get("sdk_version"),
+                        "beta": bool(meta.get("beta", False)),
+                        "requirements": [str(x) for x in meta.get("requirements", [])],
+                        "permissions": _validate_permissions(meta.get("permissions", [])),
+                        "permissions_declared": decl_perms,
+                        "is_archive": True,
+                    }
+        except Exception:
+            pass
     constants = _extract_constants(path)
     plugin_id = _validate_plugin_id(constants.get("__id__"))
     name = constants.get("__name__")
@@ -163,6 +199,7 @@ def _read_metadata_uncached(path: str) -> Dict[str, Any]:
         "requirements": list(requirements),
         "permissions": permissions,
         "permissions_declared": declared_permissions,
+        "is_archive": is_zip,
     }
 
 
