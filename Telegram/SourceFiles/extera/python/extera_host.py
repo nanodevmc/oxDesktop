@@ -568,14 +568,56 @@ def _matching_request_plugins(name):
     return [plugin_id for _, plugin_id in matches]
 
 
+
+def _wrap_update(name, update_dict):
+    if not isinstance(update_dict, dict):
+        return update_dict
+    if name in ("updateNewMessage", "TL_updateNewMessage"):
+        import tl_runtime
+        TLRPC = tl_runtime.TLRPC
+        msg_id = int(update_dict.get("id") or 0)
+        dialog_id = int(update_dict.get("dialog_id") or 0)
+        sender_id = int(update_dict.get("sender_id") or 0)
+        text = str(update_dict.get("text") or "")
+        out = bool(update_dict.get("out"))
+        date = int(update_dict.get("date") or 0)
+
+        if dialog_id > 0:
+            peer = TLRPC.TL_peerUser(user_id=dialog_id)
+        elif dialog_id < -1000000000000:
+            peer = TLRPC.TL_peerChannel(channel_id=abs(dialog_id) - 1000000000000)
+        else:
+            peer = TLRPC.TL_peerChat(chat_id=abs(dialog_id))
+
+        from_id = TLRPC.TL_peerUser(user_id=sender_id) if sender_id else peer
+
+        msg = TLRPC.TL_message(
+            id=msg_id,
+            peer_id=peer,
+            from_id=from_id,
+            message=text,
+            out=out,
+            date=date,
+        )
+        msg.dialog_id = dialog_id
+
+        return TLRPC.TL_updateNewMessage(
+            message=msg,
+            pts=0,
+            pts_count=0,
+        )
+    return update_dict
+
 def _event(args):
     import client_utils
     kind = args.get("type")
     account = args.get("account", 0)
     base = _base()
     if kind == "update":
-        name = args.get("name", "")
-        update = args.get("update") or {}
+        raw_name = args.get("name", "")
+        raw_update = args.get("update") or {}
+        update = _wrap_update(raw_name, raw_update)
+        tl_name = type(update).__name__ if hasattr(update, "__class__") else raw_name
         for record in _records.values():
             if not record.instance:
                 continue
@@ -585,7 +627,10 @@ def _event(args):
             try:
                 with client_utils.hook_scope(account):
                     with _plugin_context(record.id):
-                        record.instance.on_update_hook(name, account, update)
+                        # Trigger with TL_ class name first, then raw name if needed
+                        record.instance.on_update_hook(tl_name, account, update)
+                        if tl_name != raw_name:
+                            record.instance.on_update_hook(raw_name, account, update)
             except Exception:
                 log(f"[{record.id}] update hook failed:\n{traceback.format_exc(limit=4)}")
         return True
