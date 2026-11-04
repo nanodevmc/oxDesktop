@@ -45,7 +45,7 @@ stage
 /snap/gui/*.png
 /snap/gui/*.desktop
 /snap/plugins/__pycache__
-__pycache__/
+*__pycache__*
 *.pyc
 
 /Telegram/*.user.*
@@ -78,3 +78,7 @@ settings.local.json
 bin/
 
 /scripts/
+PROJECT_STATE.md
+CHANGELOG_POST.md
+docs/tiktok
+docs/tiktok/*

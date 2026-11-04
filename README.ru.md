@@ -9,9 +9,10 @@
 <h1 align="center">oxDesktop</h1>
 
 <p align="center">
-  Неофициальный клиент Telegram для Windows, Linux и macOS на основе исходного кода
+  Неофициальный клиент Telegram для Windows и Linux на основе исходного кода
   <a href="https://github.com/telegramdesktop/tdesktop">Telegram Desktop</a>.<br>
   Функции exteraGram и других клиентов сообщества, адаптированные под Desktop.
+  *MacOs временно не поддерживается!*
 </p>
 
 <p align="center">
