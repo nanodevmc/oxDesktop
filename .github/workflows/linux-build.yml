@@ -127,6 +127,36 @@ jobs:
             '
           ls -la "oxDesktop-linux-x64.$VERSION.tar.gz"
 
+      - name: Generate Demo Screenshots
+        run: |
+          mkdir -p screenshots
+          sudo apt-get update && sudo apt-get install -y xvfb
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1280x800x24 &
+          XVFB_PID=$!
+          sleep 2
+          PKG="./pkg/oxDesktop/oxDesktop"
+          chmod +x "$PKG" ./pkg/oxDesktop/oxDesktop-bin
+          echo "Capturing Settings view..."
+          $PKG --demo-mode --demo-view=settings --demo-screenshot="screenshots/settings.png" --demo-delay=1200 --demo-exit || true
+          echo "Capturing Appearance view..."
+          $PKG --demo-mode --demo-view=appearance --demo-screenshot="screenshots/appearance.png" --demo-delay=1200 --demo-exit || true
+          echo "Capturing Chats view..."
+          $PKG --demo-mode --demo-view=chats --demo-screenshot="screenshots/chats.png" --demo-delay=1200 --demo-exit || true
+          echo "Capturing Plugins view..."
+          $PKG --demo-mode --demo-view=plugins --demo-screenshot="screenshots/plugins.png" --demo-delay=1200 --demo-exit || true
+          echo "Capturing Main window..."
+          $PKG --demo-mode --demo-view=main --demo-screenshot="screenshots/oxdesktop.png" --demo-delay=1200 --demo-exit || true
+          kill $XVFB_PID || true
+          ls -la screenshots/
+
+      - name: Upload screenshots artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxdesktop-screenshots-linux
+          path: screenshots/*.png
+          retention-days: 7
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
