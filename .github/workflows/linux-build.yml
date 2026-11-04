@@ -68,6 +68,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-out-
 
+      - name: Compiler cache (ccache)
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
+
       - name: Build
         env:
           API_ID: ${{ secrets.TDESKTOP_API_ID }}
@@ -75,18 +83,25 @@ jobs:
         run: |
           API_ID="${API_ID:-17349}"
           API_HASH="${API_HASH:-344583e45741c457fe1862106095a5eb}"
+          mkdir -p .ccache
           docker run --rm \
             -u "$(id -u)" \
             -v "$PWD:/usr/src/tdesktop" \
+            -v "$PWD/.ccache:/var/cache/ccache" \
             -e CONFIG=Release \
             -e API_ID -e API_HASH \
+            -e CCACHE_DIR=/var/cache/ccache \
+            -e CCACHE_DISABLE=0 \
+            -e CCACHE_MAXSIZE=2G \
+            -e CCACHE_COMPRESS=1 \
             "$IMAGE_TAG" \
             bash -c '/usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
               -D CMAKE_CONFIGURATION_TYPES=Release \
               -D TDESKTOP_API_ID="$API_ID" \
               -D TDESKTOP_API_HASH="$API_HASH" \
               -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON \
-              -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON'
+              -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON \
+              && ccache -s'
           test -f out/Release/Telegram
 
       - name: Package

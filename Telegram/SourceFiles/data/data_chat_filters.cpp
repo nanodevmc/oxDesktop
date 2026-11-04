@@ -42,6 +42,74 @@ constexpr auto kLoadExceptionsPerRequest = 100;
 		* crl::time(1000);
 }
 
+base::flat_map<FilterId, ChatFilter::Flags> &FilterRoleFlags() {
+	static auto result = base::flat_map<FilterId, ChatFilter::Flags>();
+	return result;
+}
+
+void SaveRoleFlags() {
+	const auto &map = FilterRoleFlags();
+	auto obj = QJsonObject();
+	for (const auto &[id, flags] : map) {
+		obj.insert(QString::number(id), int(flags.value()));
+	}
+	auto file = QFile(cWorkingDir() + u"tdata/ox_filter_roles.json"_q);
+	if (file.open(QIODevice::WriteOnly)) {
+		file.write(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+	}
+}
+
+void LoadRoleFlagsOnce() {
+	static auto loaded = false;
+	if (loaded) {
+		return;
+	}
+	loaded = true;
+	auto file = QFile(cWorkingDir() + u"tdata/ox_filter_roles.json"_q);
+	if (!file.open(QIODevice::ReadOnly)) {
+		return;
+	}
+	const auto doc = QJsonDocument::fromJson(file.readAll());
+	if (!doc.isObject()) {
+		return;
+	}
+	auto &map = FilterRoleFlags();
+	const auto obj = doc.object();
+	for (auto i = obj.begin(); i != obj.end(); ++i) {
+		const auto id = i.key().toInt();
+		const auto val = i.value().toInt();
+		if (id > 0) {
+			map[id] = ChatFilter::Flag(val);
+		}
+	}
+}
+
+ChatFilter::Flags GetFilterRoleFlags(FilterId id) {
+	LoadRoleFlagsOnce();
+	const auto &map = FilterRoleFlags();
+	const auto it = map.find(id);
+	return (it != map.end()) ? it->second : ChatFilter::Flags();
+}
+
+void SetFilterRoleFlags(FilterId id, ChatFilter::Flags flags) {
+	LoadRoleFlagsOnce();
+	auto &map = FilterRoleFlags();
+	if (flags) {
+		map[id] = flags;
+	} else {
+		map.erase(id);
+	}
+	SaveRoleFlags();
+}
+
+void RemoveFilterRoleFlags(FilterId id) {
+	LoadRoleFlagsOnce();
+	auto &map = FilterRoleFlags();
+	if (map.erase(id) > 0) {
+		SaveRoleFlags();
+	}
+}
+
 } // namespace
 
 TextWithEntities ForceCustomEmojiStatic(TextWithEntities text) {
@@ -91,7 +159,7 @@ ChatFilter ChatFilter::FromTL(
 			| (data.is_exclude_read() ? Flag::NoRead : Flag(0))
 			| (data.is_exclude_archived() ? Flag::NoArchived : Flag(0))
 			| (data.is_title_noanimate() ? Flag::StaticTitle : Flag(0))
-			| ([&] { LoadRoleFlagsOnce(); return FilterRoleFlags().value_or(data.vid().v, Flag(0)); })();
+			| GetFilterRoleFlags(data.vid().v);
 		auto &&to_histories = ranges::views::transform([&](
 				const MTPInputPeer &input) {
 			const auto peer = Data::PeerFromInputMTP(owner, input);
@@ -341,52 +409,6 @@ const base::flat_set<not_null<History*>> &ChatFilter::never() const {
 	return _never;
 }
 
-namespace {
-
-base::flat_map<FilterId, ChatFilter::Flags> &FilterRoleFlags() {
-	static auto result = base::flat_map<FilterId, ChatFilter::Flags>();
-	return result;
-}
-
-void SaveRoleFlags() {
-	const auto &map = FilterRoleFlags();
-	auto obj = QJsonObject();
-	for (const auto &[id, flags] : map) {
-		obj.insert(QString::number(id), int(flags.value()));
-	}
-	auto file = QFile(cWorkingDir() + u"tdata/ox_filter_roles.json"_q);
-	if (file.open(QIODevice::WriteOnly)) {
-		file.write(QJsonDocument(obj).toJson(QJsonDocument::Compact));
-	}
-}
-
-void LoadRoleFlagsOnce() {
-	static auto loaded = false;
-	if (loaded) {
-		return;
-	}
-	loaded = true;
-	auto file = QFile(cWorkingDir() + u"tdata/ox_filter_roles.json"_q);
-	if (!file.open(QIODevice::ReadOnly)) {
-		return;
-	}
-	const auto doc = QJsonDocument::fromJson(file.readAll());
-	if (!doc.isObject()) {
-		return;
-	}
-	auto &map = FilterRoleFlags();
-	const auto obj = doc.object();
-	for (auto i = obj.begin(); i != obj.end(); ++i) {
-		const auto id = i.key().toInt();
-		const auto val = i.value().toInt();
-		if (id > 0) {
-			map[id] = ChatFilter::Flag(val);
-		}
-	}
-}
-
-} // namespace
-
 bool ChatFilter::contains(
 		not_null<History*> history,
 		bool ignoreFakeUnread) const {
@@ -434,11 +456,14 @@ bool ChatFilter::contains(
 		return _always.contains(history);
 	}
 	if (_flags & (Flag::RoleOwner | Flag::RoleAdmin)) {
+		const auto chat = history->peer->isChat()
+			? history->peer->asChat()
+			: nullptr;
 		const auto isOwner = (channel && channel->amCreator())
-			|| (history->peer->isChat() && history->peer->asChat()->amCreator());
+			|| (chat && chat->amCreator());
 		const auto isAdmin = isOwner
 			|| (channel && channel->hasAdminRights())
-			|| (history->peer->isChat() && history->peer->asChat()->amAdmin());
+			|| (chat && bool(chat->adminRights()));
 		if ((_flags & Flag::RoleOwner) && !(_flags & Flag::RoleAdmin)) {
 			if (!isOwner) {
 				return _always.contains(history);
@@ -731,10 +756,9 @@ void ChatFilters::set(ChatFilter filter) {
 	if (!filter.id()) {
 		return;
 	}
-	const auto roleFlags = filter.flags() & (Flag::RoleOwner | Flag::RoleAdmin);
-	if (roleFlags != FilterRoleFlags().value_or(filter.id(), Flag(0))) {
-		FilterRoleFlags()[filter.id()] = roleFlags;
-		SaveRoleFlags();
+	const auto roleFlags = filter.flags() & (ChatFilter::Flag::RoleOwner | ChatFilter::Flag::RoleAdmin);
+	if (roleFlags != GetFilterRoleFlags(filter.id())) {
+		SetFilterRoleFlags(filter.id(), roleFlags);
 	}
 	const auto i = ranges::find(_list, filter.id(), &ChatFilter::id);
 	if (i == end(_list)) {
@@ -755,8 +779,7 @@ void ChatFilters::applyInsert(ChatFilter filter, int position) {
 }
 
 void ChatFilters::remove(FilterId id) {
-	FilterRoleFlags().remove(id);
-	SaveRoleFlags();
+	RemoveFilterRoleFlags(id);
 	const auto i = ranges::find(_list, id, &ChatFilter::id);
 	if (i == end(_list)) {
 		return;
