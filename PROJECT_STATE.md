@@ -2,7 +2,7 @@
 
 ## Стек и окружение
 - Репозиторий: `nanodevmc/oxDesktop` (ветка `main`).
-- Брендинг: `@oxDesktop`, `@oxDesktopCl`, `@radoqi` (категорически без WineSquad).
+- Брендинг: `@oxDesktop`, `@oxDesktop_Cl`, `@radoqi`, TikTok: `tiktok.com/@oxDesktop` (категорически без WineSquad).
 - Стек: C++20 (Qt 6.5.3 / MSVC / GCC CentOS / Ubuntu), Python 3 (плагины и TgWsProxy Flowseal v1.11.4).
 
 ## Выполненные задачи и статус

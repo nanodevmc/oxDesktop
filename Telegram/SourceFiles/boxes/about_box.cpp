@@ -57,16 +57,16 @@ rpl::producer<TextWithEntities> Text2() {
 }
 
 rpl::producer<TextWithEntities> Text3() {
-	return tr::lng_exd_about_links(
-		lt_site_link,
-		rpl::single(tr::link(
-			"В разработке...",
-			"https://t.me/oxDesktop")),
-		lt_channel_link,
-		rpl::single(tr::link("@oxDesktop", "https://t.me/oxDesktop")),
-		lt_chat_link,
-		rpl::single(tr::link("@oxDesktopChat", "https://t.me/oxDesktopChat")),
-		tr::marked);
+	auto result = TextWithEntities();
+	result.append(u"Channel: "_q)
+		.append(tr::link(u"@oxDesktop"_q, u"https://t.me/oxDesktop"_q))
+		.append(u"  |  Changelog: "_q)
+		.append(tr::link(u"@oxDesktop_Cl"_q, u"https://t.me/oxDesktop_Cl"_q))
+		.append(u"\nTikTok: "_q)
+		.append(tr::link(u"tiktok.com/@oxDesktop"_q, u"https://tiktok.com/@oxDesktop"_q))
+		.append(u"  |  Dev: "_q)
+		.append(tr::link(u"@radoqi"_q, u"https://t.me/radoqi"_q));
+	return rpl::single(result);
 }
 
 } // namespace

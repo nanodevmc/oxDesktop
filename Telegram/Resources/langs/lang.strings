@@ -9643,7 +9643,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_exd_support_step1_title" = "Make a Donation";
 "lng_exd_support_step1_text" = "Transfer any amount to the project details in the **Other** section of oxDesktop settings.";
 "lng_exd_support_step2_title" = "Send Proof of Payment";
-"lng_exd_support_step2_text" = "Send a screenshot of the transfer to **@metawka**. The amount, date and time must be visible.";
+"lng_exd_support_step2_text" = "Send a screenshot of the transfer to **@radoqi**. The amount, date and time must be visible.";
 "lng_exd_support_step3_title" = "Receive Your Badge";
 "lng_exd_support_step3_text" = "After the payment is checked, the badge appears next to your name for all oxDesktop users.";
 "lng_exd_support_preview" = "This is how the badge looks.";
