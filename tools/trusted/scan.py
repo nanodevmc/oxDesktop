@@ -33,6 +33,7 @@ def call(method, **params):
         key: json.dumps(value) if isinstance(value, (list, dict, bool)) else value
         for key, value in params.items()
     }).encode()
+    failures = 0
     while True:
         try:
             with urllib.request.urlopen(API + method, data, timeout=60) as response:
@@ -42,14 +43,17 @@ def call(method, **params):
                 result = json.load(error)
             except Exception:
                 result = {}
-            retry = (result.get('parameters') or {}).get('retry_after')
-            if retry:
-                time.sleep(retry + 1)
-                continue
-            raise ApiError(result.get('description', 'HTTP error'))
-        except urllib.error.URLError:
-            time.sleep(3)
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            failures += 1
+            if failures > 5:
+                raise
+            time.sleep(10)
             continue
+        retry = (result.get('parameters') or {}).get('retry_after')
+        if retry:
+            time.sleep(retry + 1)
+            continue
+        raise ApiError(result.get('description', 'HTTP error'))
 
 
 def download(file_id):
@@ -207,6 +211,9 @@ def report():
 # Main
 
 def main():
+    if not TOKEN:
+        print('TG_BOT_TOKEN environment variable is not set. Skipping scan.')
+        return
     trusted = trusted_chats()
     state = load_state()
     known = {entry['sha256'] for entry in state['hashes']}

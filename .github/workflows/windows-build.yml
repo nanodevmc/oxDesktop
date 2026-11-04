@@ -3,6 +3,16 @@ name: Windows build
 on:
   push:
     branches: [ fix/audit-critical-fixes-and-improvements, main ]
+    paths-ignore:
+      - 'badges.json'
+      - 'trusted_hashes.json'
+      - 'README.md'
+      - 'README.ru.md'
+      - 'CHANGELOG*'
+      - 'changelog.txt'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
   release:
     types: [published]
   workflow_dispatch:
