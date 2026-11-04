@@ -360,16 +360,26 @@ def get_connections_manager(account=None):
     return tgnet_bridge.ConnectionsManager.getInstance(account or 0)
 get_location_controller = _stub_controller("LocationController")
 get_notifications_controller = _stub_controller("NotificationsController")
-get_messages_storage = _stub_controller("MessagesStorage")
+def get_messages_storage(account=None):
+    import tgnet_bridge
+    return tgnet_bridge.MessagesStorage.getInstance(_resolve_scoped_account(account))
 def get_send_messages_helper(account=None):
     import tgnet_bridge
     return tgnet_bridge.SendMessagesHelper.getInstance(account or 0)
-get_file_loader = _stub_controller("FileLoader")
+def get_file_loader(account=None):
+    import tgnet_bridge
+    return tgnet_bridge.FileLoader.getInstance(_resolve_scoped_account(account))
 get_secret_chat_helper = _stub_controller("SecretChatHelper")
-get_download_controller = _stub_controller("DownloadController")
+def get_download_controller(account=None):
+    import tgnet_bridge
+    return tgnet_bridge.DownloadController.getInstance(_resolve_scoped_account(account))
 get_notifications_settings = _stub_controller("SharedPrefs")
-get_notification_center = _stub_controller("NotificationCenter")
-get_media_controller = _stub_controller("MediaController")
+def get_notification_center(account=None):
+    import tgnet_bridge
+    return tgnet_bridge.NotificationCenter.getInstance(_resolve_scoped_account(account))
+def get_media_controller(account=None):
+    import tgnet_bridge
+    return tgnet_bridge.MediaController.getInstance()
 def get_user_config(account=None):
     import tgnet_bridge
     return tgnet_bridge.UserConfig.getInstance(account or 0)
@@ -587,6 +597,93 @@ def pin_message(peer_id, msg_id, silent=False, unpin=False, account=None):
     return send_request(req, account=resolved)
 
 
+def save_draft(peer_id, text, reply_to_msg_id=0, parse_mode=None, account=None):
+    resolved = _resolve_account(account, "save_draft")
+    import tl_runtime
+    TLRPC = tl_runtime.TLRPC
+    peer = _peer_id(peer_id)
+    if peer > 0:
+        p_obj = TLRPC.TL_inputPeerUser(user_id=peer, access_hash=0)
+    elif peer < -1000000000000:
+        p_obj = TLRPC.TL_inputPeerChannel(channel_id=abs(peer) - 1000000000000, access_hash=0)
+    elif peer < 0:
+        p_obj = TLRPC.TL_inputPeerChat(chat_id=abs(peer))
+    else:
+        p_obj = TLRPC.TL_inputPeerEmpty()
+
+    flags = 0
+    reply_to = None
+    if reply_to_msg_id:
+        flags |= (1 << 4)
+        reply_to = TLRPC.TL_inputReplyToMessage(flags=0, reply_to_msg_id=int(reply_to_msg_id))
+
+    plain_text, entities_list = _parse_entities(text, parse_mode)
+    entities = None
+    if entities_list:
+        flags |= (1 << 3)
+        entities = tl_runtime.ArrayList(entities_list)
+
+    req = TLRPC.TL_messages_saveDraft(
+        flags=flags,
+        reply_to=reply_to,
+        peer=p_obj,
+        message=str(plain_text or ""),
+        entities=entities
+    )
+    return send_request(req, account=resolved)
+
+
+def clear_draft(peer_id, account=None):
+    return save_draft(peer_id, "", reply_to_msg_id=0, account=account)
+
+
+def forward_messages(peer_id, from_peer_id, message_ids, silent=False, drop_author=False, account=None):
+    resolved = _resolve_account(account, "forward_messages")
+    import tl_runtime
+    TLRPC = tl_runtime.TLRPC
+    to_peer = _peer_id(peer_id)
+    if to_peer > 0:
+        to_p_obj = TLRPC.TL_inputPeerUser(user_id=to_peer, access_hash=0)
+    elif to_peer < -1000000000000:
+        to_p_obj = TLRPC.TL_inputPeerChannel(channel_id=abs(to_peer) - 1000000000000, access_hash=0)
+    elif to_peer < 0:
+        to_p_obj = TLRPC.TL_inputPeerChat(chat_id=abs(to_peer))
+    else:
+        to_p_obj = TLRPC.TL_inputPeerEmpty()
+
+    from_peer = _peer_id(from_peer_id)
+    if from_peer > 0:
+        from_p_obj = TLRPC.TL_inputPeerUser(user_id=from_peer, access_hash=0)
+    elif from_peer < -1000000000000:
+        from_p_obj = TLRPC.TL_inputPeerChannel(channel_id=abs(from_peer) - 1000000000000, access_hash=0)
+    elif from_peer < 0:
+        from_p_obj = TLRPC.TL_inputPeerChat(chat_id=abs(from_peer))
+    else:
+        from_p_obj = TLRPC.TL_inputPeerEmpty()
+
+    if isinstance(message_ids, (int, str)):
+        message_ids = [int(message_ids)]
+    ids = tl_runtime.ArrayList([int(m) for m in message_ids])
+    random_ids = tl_runtime.ArrayList([int(time.time() * 1000) + i for i in range(len(ids))])
+
+    flags = 0
+    if silent:
+        flags |= (1 << 5)
+    if drop_author:
+        flags |= (1 << 11)
+
+    req = TLRPC.TL_messages_forwardMessages(
+        flags=flags,
+        silent=bool(silent),
+        drop_author=bool(drop_author),
+        from_peer=from_p_obj,
+        id=ids,
+        random_id=random_ids,
+        to_peer=to_p_obj
+    )
+    return send_request(req, account=resolved)
+
+
 # AccountClient
 
 class AccountClient:
@@ -697,6 +794,18 @@ class AccountClient:
 
     def pin_message(self, peer_id, msg_id, silent=False, unpin=False):
         return pin_message(peer_id, msg_id, silent=silent, unpin=unpin, account=self.account)
+
+    def save_draft(self, peer_id, text, reply_to_msg_id=0, parse_mode=None):
+        return save_draft(peer_id, text, reply_to_msg_id=reply_to_msg_id,
+                          parse_mode=parse_mode, account=self.account)
+
+    def clear_draft(self, peer_id):
+        return clear_draft(peer_id, account=self.account)
+
+    def forward_messages(self, peer_id, from_peer_id, message_ids, silent=False, drop_author=False):
+        return forward_messages(peer_id, from_peer_id, message_ids,
+                                silent=silent, drop_author=drop_author,
+                                account=self.account)
 
 
 def get_client(account=None) -> AccountClient:

@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 import time
 
 import _compat
@@ -395,6 +397,220 @@ class RequestDelegate:
             self._fn(response, error)
 
 
+class FileLoader(_Instance):
+    _instances = {}
+
+    MEDIA_DIR_IMAGE = 0
+    MEDIA_DIR_AUDIO = 1
+    MEDIA_DIR_VIDEO = 2
+    MEDIA_DIR_DOCUMENT = 3
+    MEDIA_DIR_CACHE = 4
+
+    @classmethod
+    def getInstance(cls, account=0):
+        account = int(account or 0)
+        if account not in cls._instances:
+            cls._instances[account] = cls(account)
+        return cls._instances[account]
+
+    @staticmethod
+    def getDirectory(type_id=0):
+        try:
+            cache_dir = _extera.get_cache_dir()
+            if cache_dir and os.path.isdir(cache_dir):
+                return cache_dir
+        except Exception:
+            pass
+        return tempfile.gettempdir()
+
+    @staticmethod
+    def checkDirectory(type_id=0):
+        d = FileLoader.getDirectory(type_id)
+        try:
+            os.makedirs(d, exist_ok=True)
+        except Exception:
+            pass
+        return d
+
+    @staticmethod
+    def getInternalCacheDir():
+        return FileLoader.checkDirectory(FileLoader.MEDIA_DIR_CACHE)
+
+    def loadFile(self, obj, ext=None, priority=1, *args, **kwargs):
+        if isinstance(obj, str) and os.path.exists(obj):
+            return obj
+        return ""
+
+    def cancelLoadFile(self, obj):
+        pass
+
+    def isLoadingFile(self, fileName):
+        return False
+
+    @classmethod
+    def getPathToMessage(cls, message):
+        if not message:
+            return ""
+        media = getattr(message, "media", None)
+        if not media and isinstance(message, dict):
+            media = message.get("media")
+        if not media:
+            return ""
+        doc = getattr(media, "document", None) or getattr(media, "photo", None)
+        if isinstance(doc, dict):
+            return str(doc.get("path") or "")
+        if hasattr(doc, "path"):
+            return str(doc.path or "")
+        return ""
+
+    @classmethod
+    def getPathToAttach(cls, attach, ext=None, *args, **kwargs):
+        if hasattr(attach, "path"):
+            return str(attach.path or "")
+        if isinstance(attach, dict):
+            return str(attach.get("path") or "")
+        return ""
+
+
+class NotificationCenter(_Instance):
+    _instances = {}
+    _global_instance = None
+
+    didLoadedReplyMessages = 1
+    messagesDidLoad = 2
+    didReceivedNewMessages = 3
+    updateInterfaces = 4
+    dialogsNeedReload = 5
+    fileDidLoad = 6
+    fileDidFailToLoad = 7
+    fileLoadProgressChanged = 8
+    mediaDidLoad = 9
+    currentUserShowStatus = 10
+    themeNeedReload = 11
+    emojiLoaded = 12
+    closeChats = 13
+    botKeyboardDidLoad = 14
+    chatInfoDidLoad = 15
+    userInfoDidLoad = 16
+    pinnedInfoDidLoad = 17
+    suggestedFiltersLoaded = 18
+
+    def __init__(self, account=0):
+        super().__init__(account)
+        self._observers = {}
+
+    @classmethod
+    def getInstance(cls, account=0):
+        account = int(account or 0)
+        if account not in cls._instances:
+            cls._instances[account] = cls(account)
+        return cls._instances[account]
+
+    @classmethod
+    def getGlobalInstance(cls):
+        if cls._global_instance is None:
+            cls._global_instance = cls(0)
+        return cls._global_instance
+
+    def addObserver(self, observer, notification_id: int):
+        if observer is None:
+            return
+        notification_id = int(notification_id)
+        observers = self._observers.setdefault(notification_id, [])
+        if observer not in observers:
+            observers.append(observer)
+
+    def removeObserver(self, observer, notification_id: int):
+        notification_id = int(notification_id)
+        if notification_id in self._observers:
+            self._observers[notification_id] = [
+                obs for obs in self._observers[notification_id] if obs != observer
+            ]
+
+    def postNotificationName(self, notification_id: int, *args):
+        notification_id = int(notification_id)
+        observers = list(self._observers.get(notification_id, []))
+        for obs in observers:
+            try:
+                if hasattr(obs, "didReceivedNotification"):
+                    obs.didReceivedNotification(notification_id, self.currentAccount, args)
+                elif callable(obs):
+                    try:
+                        obs(notification_id, self.currentAccount, *args)
+                    except TypeError:
+                        obs(*args)
+            except Exception:
+                pass
+
+
+class DownloadController(_Instance):
+    _instances = {}
+
+    AUTODOWNLOAD_TYPE_PHOTO = 1
+    AUTODOWNLOAD_TYPE_AUDIO = 2
+    AUTODOWNLOAD_TYPE_VIDEO = 4
+    AUTODOWNLOAD_TYPE_DOCUMENT = 8
+
+    @classmethod
+    def getInstance(cls, account=0):
+        account = int(account or 0)
+        if account not in cls._instances:
+            cls._instances[account] = cls(account)
+        return cls._instances[account]
+
+    def canDownloadMedia(self, type_flag, size=0):
+        return True
+
+    def checkAutodownloadSettings(self):
+        return True
+
+    def getCurrentDownloadArchive(self):
+        return None
+
+
+class MessagesStorage(_Instance):
+    _instances = {}
+
+    @classmethod
+    def getInstance(cls, account=0):
+        account = int(account or 0)
+        if account not in cls._instances:
+            cls._instances[account] = cls(account)
+        return cls._instances[account]
+
+    def getDatabase(self):
+        return _compat.Stub("SQLiteDatabase")
+
+    def getStorageQueue(self):
+        import client_utils
+        return client_utils.get_queue_by_name("storage_queue")
+
+
+class MediaController(_Instance):
+    _instance = None
+
+    @classmethod
+    def getInstance(cls):
+        if cls._instance is None:
+            cls._instance = cls(0)
+        return cls._instance
+
+    def playMessage(self, message):
+        return True
+
+    def pauseMessage(self, message):
+        return True
+
+    def stopAudio(self):
+        return True
+
+    def isPlayingMessage(self, message):
+        return False
+
+    def getPlayingMessageObject(self):
+        return None
+
+
 def install(shims):
     tgnet = shims.setdefault("org.telegram.tgnet", {})
     tgnet.update({
@@ -416,4 +632,9 @@ def install(shims):
     messenger["ContactsController"] = ContactsController
     messenger["MediaDataController"] = MediaDataController
     messenger["SendMessagesHelper"] = SendMessagesHelper
+    messenger["FileLoader"] = FileLoader
+    messenger["DownloadController"] = DownloadController
+    messenger["NotificationCenter"] = NotificationCenter
+    messenger["MessagesStorage"] = MessagesStorage
+    messenger["MediaController"] = MediaController
     shims.setdefault("org.telegram.ui", {})["ChatActivity"] = ChatActivity
