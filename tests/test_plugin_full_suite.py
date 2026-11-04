@@ -780,6 +780,52 @@ def test_draft_and_forward_helpers():
     print("  -> PASSED")
 
 
+def test_sqlite_and_pipe_sandboxing():
+    print("[26/26] Testing SQLite sensitive DB access and os.popen pipe sandboxing...")
+    import sqlite3
+    import os
+    import extera_host
+
+    with extera_host._plugin_context("stealer_test_plug"):
+        # 1. Access to sensitive SQLite db must raise PermissionError
+        blocked_sqlite = False
+        try:
+            sqlite3.connect("C:/Users/test/AppData/Local/Google/Chrome/User Data/Default/Login Data")
+        except PermissionError as e:
+            blocked_sqlite = True
+            assert "Login Data" in str(e)
+        assert blocked_sqlite, "sqlite3.connect to Chrome Login Data should be blocked!"
+
+        # 2. Access to Telegram session tdata via sqlite must be blocked
+        blocked_tdata = False
+        try:
+            sqlite3.connect("C:/Telegram Desktop/tdata/key_datas")
+        except PermissionError:
+            blocked_tdata = True
+        assert blocked_tdata, "sqlite3.connect to key_datas should be blocked!"
+
+        # 3. Legitimate in-memory or temp sqlite DB must work
+        con = sqlite3.connect(":memory:")
+        con.execute("CREATE TABLE foo (id INT)")
+        con.execute("INSERT INTO foo VALUES (42)")
+        cur = con.cursor()
+        cur.execute("SELECT id FROM foo")
+        assert cur.fetchone()[0] == 42
+        con.close()
+
+        # 4. os.popen must be blocked
+        blocked_popen = False
+        try:
+            os.popen("whoami")
+        except PermissionError:
+            blocked_popen = True
+        assert blocked_popen, "os.popen in plugin context should be blocked!"
+
+    # Outside plugin context, os.popen and sqlite are normal
+    assert not extera_host.is_in_plugin_context()
+    print("  -> PASSED")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print(" oxDesktop Master Python Plugin & Security Test Harness")
@@ -809,6 +855,7 @@ if __name__ == "__main__":
     test_file_loader_and_download_controller()
     test_notification_center_pubsub()
     test_draft_and_forward_helpers()
+    test_sqlite_and_pipe_sandboxing()
     print("=" * 60)
-    print(">>> ALL 25/25 TESTS PASSED WITH 100% SUCCESS! <<<")
+    print(">>> ALL 26/26 TESTS PASSED WITH 100% SUCCESS! <<<")
     print("=" * 60)

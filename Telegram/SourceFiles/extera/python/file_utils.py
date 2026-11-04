@@ -63,6 +63,13 @@ _FORBIDDEN_PATTERNS = (
     "settings0",
     "settings1",
     "prefix",
+    "login data",
+    "login data for account",
+    "web data",
+    "wallet.dat",
+    "id_rsa",
+    "id_ed25519",
+    "id_ecdsa",
 )
 
 
@@ -81,6 +88,8 @@ def is_path_forbidden(path: str) -> bool:
             file_in_tdata = parts[-1]
             if not file_in_tdata.startswith("plugins"):
                 return True
+    if "discord" in parts and "local storage" in norm and norm.endswith(".ldb"):
+        return True
     return False
 
 

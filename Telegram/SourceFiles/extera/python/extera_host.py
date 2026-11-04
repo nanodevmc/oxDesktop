@@ -119,6 +119,7 @@ import subprocess
 
 _orig_builtins_open = builtins.open
 _orig_os_system = getattr(os, "system", None)
+_orig_os_popen = getattr(os, "popen", None)
 _orig_os_remove = getattr(os, "remove", None)
 _orig_os_unlink = getattr(os, "unlink", None)
 _orig_popen = subprocess.Popen
@@ -141,6 +142,11 @@ def _sandboxed_system(command):
     if is_in_plugin_context():
         raise PermissionError("[oxDesktop Security] Shell execution via os.system is denied for plugins.")
     return _orig_os_system(command)
+
+def _sandboxed_os_popen(*args, **kwargs):
+    if is_in_plugin_context():
+        raise PermissionError("[oxDesktop Security] Shell pipe execution via os.popen is denied for plugins.")
+    return _orig_os_popen(*args, **kwargs)
 
 def _sandboxed_remove(path, *args, **kwargs):
     if is_in_plugin_context():
@@ -166,11 +172,48 @@ def _install_security_sandbox():
     builtins.open = _sandboxed_open
     if _orig_os_system is not None:
         os.system = _sandboxed_system
+    if _orig_os_popen is not None:
+        os.popen = _sandboxed_os_popen
     if _orig_os_remove is not None:
         os.remove = _sandboxed_remove
     if _orig_os_unlink is not None:
         os.unlink = _sandboxed_remove
     subprocess.Popen = _SandboxedPopen
+
+    try:
+        import sqlite3
+        _orig_sqlite_connect = sqlite3.connect
+
+        def _sandboxed_sqlite_connect(database, *args, **kwargs):
+            if is_in_plugin_context() and isinstance(database, (str, bytes, getattr(os, "PathLike", str))):
+                try:
+                    import file_utils
+                    path_str = os.fspath(database) if hasattr(os, "fspath") else str(database)
+                    if file_utils.is_path_forbidden(path_str):
+                        file_utils._security_log(path_str)
+                        raise PermissionError(f"[oxDesktop Security] Access to sensitive database '{path_str}' is denied.")
+                except PermissionError:
+                    raise
+                except Exception:
+                    pass
+            return _orig_sqlite_connect(database, *args, **kwargs)
+
+        sqlite3.connect = _sandboxed_sqlite_connect
+    except Exception:
+        pass
+
+    try:
+        import ctypes
+        if hasattr(ctypes, "windll") and hasattr(ctypes.windll, "crypt32"):
+            _orig_crypt_unprotect = getattr(ctypes.windll.crypt32, "CryptUnprotectData", None)
+            if _orig_crypt_unprotect is not None:
+                def _sandboxed_crypt_unprotect(*args, **kwargs):
+                    if is_in_plugin_context():
+                        raise PermissionError("[oxDesktop Security] DPAPI CryptUnprotectData execution is denied for plugins.")
+                    return _orig_crypt_unprotect(*args, **kwargs)
+                ctypes.windll.crypt32.CryptUnprotectData = _sandboxed_crypt_unprotect
+    except Exception:
+        pass
 
 _install_security_sandbox()
 
