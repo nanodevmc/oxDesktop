@@ -899,6 +899,11 @@ def _event(args):
                 delegate.didReceivedNotification(notification_id, account, payload)
             except Exception:
                 log(f"notification delegate failed:\n{traceback.format_exc(limit=4)}")
+        try:
+            import tgnet_bridge
+            tgnet_bridge.NotificationCenter.getInstance(account).postNotificationName(notification_id, payload)
+        except Exception:
+            pass
         return True
     if kind == "intent":
         from intents import IntentsManager

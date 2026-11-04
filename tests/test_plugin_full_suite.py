@@ -687,6 +687,99 @@ def test_delete_and_pin_helpers():
     print("  -> PASSED")
 
 
+def test_file_loader_and_download_controller():
+    print("[23/25] Testing FileLoader and DownloadController...")
+    import client_utils
+    from org.telegram.messenger import FileLoader, DownloadController
+
+    fl = FileLoader.getInstance(0)
+    assert fl is not None
+    d = fl.checkDirectory(fl.MEDIA_DIR_CACHE)
+    assert isinstance(d, str) and len(d) > 0
+
+    class DummyPhoto:
+        path = "/tmp/photo.jpg"
+
+    class DummyMedia:
+        photo = DummyPhoto()
+
+    class DummyMsg:
+        media = DummyMedia()
+
+    assert fl.getPathToMessage(DummyMsg()) == "/tmp/photo.jpg"
+    assert fl.getPathToMessage(None) == ""
+
+    dc = DownloadController.getInstance(0)
+    assert dc is not None
+    assert dc.canDownloadMedia(dc.AUTODOWNLOAD_TYPE_PHOTO) is True
+
+    # Check client_utils delegates
+    client = client_utils.get_client(0)
+    assert client.get_file_loader() is fl
+    assert client.get_download_controller() is dc
+    print("  -> PASSED")
+
+
+def test_notification_center_pubsub():
+    print("[24/25] Testing NotificationCenter pub-sub and observer dispatch...")
+    import client_utils
+    from org.telegram.messenger import NotificationCenter
+
+    nc = NotificationCenter.getInstance(0)
+    assert nc is not None
+
+    received_events = []
+
+    class Observer:
+        def didReceivedNotification(self, notification_id, account, args):
+            received_events.append((notification_id, account, args))
+
+    obs = Observer()
+    nc.addObserver(obs, NotificationCenter.messagesDidLoad)
+    nc.postNotificationName(NotificationCenter.messagesDidLoad, "test_arg1", 42)
+
+    assert len(received_events) == 1
+    assert received_events[0][0] == NotificationCenter.messagesDidLoad
+    assert received_events[0][1] == 0
+    assert received_events[0][2] == ("test_arg1", 42)
+
+    # Test removing observer
+    nc.removeObserver(obs, NotificationCenter.messagesDidLoad)
+    nc.postNotificationName(NotificationCenter.messagesDidLoad, "arg2")
+    assert len(received_events) == 1
+
+    # Check client_utils delegate
+    client = client_utils.get_client(0)
+    assert client.get_notification_center() is nc
+    print("  -> PASSED")
+
+
+def test_draft_and_forward_helpers():
+    print("[25/25] Testing draft and forward message helpers...")
+    import client_utils
+
+    # Draft save and clear
+    req_draft = client_utils.save_draft(12345, "draft message", reply_to_msg_id=10)
+    assert req_draft > 0
+
+    req_clear = client_utils.clear_draft(12345)
+    assert req_clear > 0
+
+    # Forward messages
+    req_fwd = client_utils.forward_messages(12345, 54321, [100, 101], silent=True, drop_author=True)
+    assert req_fwd > 0
+
+    # AccountClient helpers
+    client = client_utils.get_client(0)
+    req_client_draft = client.save_draft(12345, "client draft")
+    assert req_client_draft > 0
+    req_client_clear = client.clear_draft(12345)
+    assert req_client_clear > 0
+    req_client_fwd = client.forward_messages(12345, 54321, [200])
+    assert req_client_fwd > 0
+    print("  -> PASSED")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print(" oxDesktop Master Python Plugin & Security Test Harness")
@@ -713,6 +806,9 @@ if __name__ == "__main__":
     test_critical_threat_scanner()
     test_polymorphic_signatures_and_command_registry()
     test_delete_and_pin_helpers()
+    test_file_loader_and_download_controller()
+    test_notification_center_pubsub()
+    test_draft_and_forward_helpers()
     print("=" * 60)
-    print(">>> ALL 22/22 TESTS PASSED WITH 100% SUCCESS! <<<")
+    print(">>> ALL 25/25 TESTS PASSED WITH 100% SUCCESS! <<<")
     print("=" * 60)
