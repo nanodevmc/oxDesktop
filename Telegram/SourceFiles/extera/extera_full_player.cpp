@@ -1,6 +1,10 @@
 #include "extera/extera_full_player.h"
 #include "extera/extera_config.h"
 #include "ui/widgets/popup_menu.h"
+#include "core/file_utilities.h"
+#include "base/unixtime.h"
+#include <QtCore/QFileInfo>
+#include <QtCore/QFile>
 
 #include "data/data_document.h"
 #include "data/data_document_media.h"
@@ -136,6 +140,8 @@ enum class Button {
 }
 
 class View final : public Ui::RpWidget {
+public:
+	void playLocalFile(const QString &filePath);
 public:
 	View(
 		QWidget *parent,
@@ -805,6 +811,38 @@ void View::mouseReleaseEvent(QMouseEvent *e) {
 	}
 }
 
+void View::playLocalFile(const QString &filePath) {
+	if (filePath.isEmpty() || !QFile::exists(filePath)) {
+		return;
+	}
+	const auto fileInfo = QFileInfo(filePath);
+	auto baseName = fileInfo.completeBaseName();
+	auto performer = QString();
+	auto title = baseName;
+	if (const auto split = baseName.indexOf(u" - "_q); split > 0) {
+		performer = baseName.left(split).trimmed();
+		title = baseName.mid(split + 3).trimmed();
+	}
+
+	auto attributes = QVector<MTPDocumentAttribute>();
+	attributes.push_back(MTP_documentAttributeAudio(
+		MTP_flags(0),
+		MTP_int(0),
+		MTP_string(title),
+		MTP_string(performer),
+		MTPstring()));
+	attributes.push_back(MTP_documentAttributeFilename(
+		MTP_string(fileInfo.fileName())));
+
+	const auto docId = DocumentId(0x7F00000000000000ULL | (uint64(qHash(filePath)) & 0xFFFFFFFFULL));
+	const auto doc = _controller->session().data().document(docId);
+	doc->setattributes(attributes);
+	doc->size = fileInfo.size();
+	doc->setLocation(Core::FileLocation(filePath));
+
+	Media::Player::instance()->play(AudioMsgId(doc, FullMsgId()));
+}
+
 void View::contextMenuEvent(QContextMenuEvent *e) {
 	auto line = -1;
 	if (buttonAt(e->pos(), &line) == Button::Line && line >= 0 && line < int(_lines.size())) {
@@ -823,11 +861,41 @@ void View::contextMenuEvent(QContextMenuEvent *e) {
 			_controller->showToast(tr::lng_exd_lyrics_quote_copied(tr::now));
 		}, &st::menuIconShare);
 
+		if (Extera::Bool(u"local_audio_player"_q)) {
+			menu->addSeparator();
+			menu->addAction(tr::lng_exd_open_local_audio(tr::now), [=] {
+				FileDialog::GetOpenPath(
+					this,
+					tr::lng_exd_open_local_audio(tr::now),
+					u"Audio files (*.mp3 *.flac *.ogg *.wav *.m4a *.aac *.opus);;All files (*.*)"_q,
+					[=](FileDialog::OpenResult &&result) {
+						if (!result.paths.isEmpty()) {
+							playLocalFile(result.paths.front());
+						}
+					});
+			}, &st::menuIconShowInChat);
+		}
+
 		menu->popup(e->globalPos());
 		e->accept();
 		return;
 	}
-	QWidget::contextMenuEvent(e);
+	const auto menu = Ui::CreateChild<Ui::PopupMenu>(this, st::defaultPopupMenu);
+	if (Extera::Bool(u"local_audio_player"_q)) {
+		menu->addAction(tr::lng_exd_open_local_audio(tr::now), [=] {
+			FileDialog::GetOpenPath(
+				this,
+				tr::lng_exd_open_local_audio(tr::now),
+				u"Audio files (*.mp3 *.flac *.ogg *.wav *.m4a *.aac *.opus);;All files (*.*)"_q,
+				[=](FileDialog::OpenResult &&result) {
+					if (!result.paths.isEmpty()) {
+						playLocalFile(result.paths.front());
+					}
+				});
+		}, &st::menuIconShowInChat);
+	}
+	menu->popup(e->globalPos());
+	e->accept();
 }
 
 void View::wheelEvent(QWheelEvent *e) {

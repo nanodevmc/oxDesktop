@@ -4790,7 +4790,6 @@ if (hook.text == message.textWithTags.text && hook.entities.empty()) {
 				}
 			}
 		}
-		}
 	}
 	const auto history = message.action.history;
 	const auto peer = history->peer;

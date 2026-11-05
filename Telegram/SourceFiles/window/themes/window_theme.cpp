@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/themes/window_theme.h"
+#include "extera/extera_config.h"
 
 #include "window/themes/window_theme_preview.h"
 #include "window/themes/window_themes_chat.h"
@@ -220,7 +221,7 @@ bool loadColorScheme(
 		const style::colorizer &colorizer,
 		Instance *out) {
 	auto unsupported = QMap<QLatin1String, QLatin1String>();
-	return ReadPaletteValues(content, [&](QLatin1String name, QLatin1String value) {
+	const auto ok = ReadPaletteValues(content, [&](QLatin1String name, QLatin1String value) {
 		// Find the named value in the already read unsupported list.
 		value = unsupported.value(value, value);
 
@@ -230,6 +231,24 @@ bool loadColorScheme(
 		}
 		return true;
 	});
+	if (ok && Extera::Bool(u"amoled_pure_black"_q)) {
+		const auto isDark = out ? Ui::IsDarkPalette(out->palette) : Window::Theme::IsNightMode();
+		if (isDark) {
+			const auto blackKeys = {
+				qstr("windowBg"),
+				qstr("windowBgOver"),
+				qstr("columnDividerBg"),
+			};
+			for (const auto &key : blackKeys) {
+				if (out) {
+					out->palette.setColor(key, 0, 0, 0, 255);
+				} else {
+					style::main_palette::setColor(key, 0, 0, 0, 255);
+				}
+			}
+		}
+	}
+	return ok;
 }
 
 void EnsureAccentReadable(

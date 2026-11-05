@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "core/application.h"
+#include <QtGui/QFontDatabase>
 #include "extera/extera_demo.h"
 #include "extera/extera_update.h"
 #include "extera/extera_changelog.h"
@@ -388,6 +389,13 @@ void Application::run() {
 	_notifications = std::make_unique<Window::Notifications::System>();
 
 	startLocalStorage();
+
+	if (Extera::Bool(u"custom_font_enabled"_q)) {
+		const auto fontPath = Extera::Get(u"custom_font_path"_q).toString();
+		if (!fontPath.isEmpty() && QFile::exists(fontPath)) {
+			QFontDatabase::addApplicationFont(fontPath);
+		}
+	}
 
 	style::SetCustomFont(settings().customFontFamily());
 	style::internal::StartFonts();

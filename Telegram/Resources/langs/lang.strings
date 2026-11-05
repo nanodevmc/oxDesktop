@@ -9939,4 +9939,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_exd_pitch_preserved" = "High-Quality Time-Stretch";
 "lng_exd_pitch_preserved_about" = "Preserves natural voice pitch when speeding up audio and voice messages without chipmunk distortions.";
 
+"lng_exd_open_local_audio" = "Open Local Track";
+"lng_exd_open_local_audio_about" = "Play audio files directly from your computer without uploading them to Telegram.";
+"lng_exd_custom_font" = "Custom UI Font";
+"lng_exd_custom_font_about" = "Use a custom font (.ttf, .otf) or system family for all user interface elements.";
+"lng_exd_custom_font_choose" = "Choose Font...";
+"lng_exd_amoled_pure_black" = "Pure AMOLED Black (#000000)";
+"lng_exd_amoled_pure_black_about" = "Use true pitch black background instead of dark gray for ultimate OLED contrast.";
+
 // Keys finished
