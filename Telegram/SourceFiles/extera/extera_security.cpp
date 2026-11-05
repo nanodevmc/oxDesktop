@@ -1,6 +1,6 @@
 #include "extera/extera_security.h"
 
-#include "rpl/single.h"
+#include "lang/lang_keys.h"
 #include "main/session/session_show.h"
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/labels.h"
@@ -114,7 +114,7 @@ void SetupConfirmActionBox(
 			st::boxLabel),
 		style::margins(st::boxRowPadding.left(), 4, st::boxRowPadding.right(), st::boxRowPadding.bottom()));
 
-	const auto allow = box->addButton(rpl::single(u"Allow"_q), [=] {
+	const auto allow = box->addButton(tr::lng_box_ok(), [=] {
 		if (!*handled) {
 			*handled = true;
 			box->closeBox();
