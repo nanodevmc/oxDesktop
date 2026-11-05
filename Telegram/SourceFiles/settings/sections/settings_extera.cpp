@@ -1697,9 +1697,9 @@ void PartAppearance4(SectionBuilder &builder) {
 								const auto families = QFontDatabase::applicationFontFamilies(fontId);
 								if (!families.isEmpty()) {
 									const auto family = families.front();
-									Extera::Set(u"custom_font_family"_q, family);
-									Extera::Set(u"custom_font_path"_q, path);
-									Extera::Set(u"custom_font_enabled"_q, true);
+									Config().setString(u"custom_font_family"_q, family);
+									Config().setString(u"custom_font_path"_q, path);
+									Config().setBool(u"custom_font_enabled"_q, true);
 									settings->setCustomFontFamily(family);
 									controller->show(Ui::MakeConfirmBox({
 										.text = tr::lng_extera_restart_required(),

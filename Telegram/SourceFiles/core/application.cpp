@@ -391,7 +391,7 @@ void Application::run() {
 	startLocalStorage();
 
 	if (Extera::Bool(u"custom_font_enabled"_q)) {
-		const auto fontPath = Extera::Get(u"custom_font_path"_q).toString();
+		const auto fontPath = Extera::String(u"custom_font_path"_q);
 		if (!fontPath.isEmpty() && QFile::exists(fontPath)) {
 			QFontDatabase::addApplicationFont(fontPath);
 		}
