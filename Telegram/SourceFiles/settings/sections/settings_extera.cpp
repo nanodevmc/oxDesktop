@@ -258,6 +258,16 @@ void AddLink(
 	});
 }
 
+void AddLink(
+		SectionBuilder &builder,
+		const QString &id,
+		const QString &title,
+		const QString &label,
+		const QString &url,
+		IconDescriptor icon) {
+	AddLink(builder, id, rpl::single(title), label, url, std::move(icon));
+}
+
 void AddSlider(
 		SectionBuilder &builder,
 		const QString &key,
@@ -2640,7 +2650,7 @@ struct SearchMatch {
 		}
 	}
 	ranges::sort(result.entities, ranges::less(), &EntityInText::offset);
-	auto cleaned = std::vector<EntityInText>();
+	auto cleaned = EntitiesInText();
 	auto lastEnd = 0;
 	for (const auto &entity : result.entities) {
 		if (entity.offset() >= lastEnd && entity.length() > 0) {
@@ -2981,7 +2991,7 @@ void AddCategoryGrid(SectionBuilder &builder) {
 				p.drawText(
 					QRect(textLeft, top, textWidth, st::semiboldFont->height),
 					Qt::AlignLeft | Qt::AlignTop,
-					st::semiboldFont->elided(state->titleFor(i), textWidth));
+					st::semiboldFont->elided(state->titles[i], textWidth));
 				top += st::semiboldFont->height + st::exteraCategoryAboutSkip;
 				p.setPen(st::windowSubTextFg);
 				p.setFont(aboutFont);
