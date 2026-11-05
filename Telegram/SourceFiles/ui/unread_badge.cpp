@@ -245,7 +245,7 @@ int PeerBadge::drawGetWidth(Painter &p, Descriptor &&descriptor) {
 	const auto allowed = (descriptor.premium && descriptor.premiumFg);
 	const auto trusted = allowed
 		&& Extera::PluginTrust::IsTrustedChannel(descriptor.peer);
-	const auto extera = (allowed && !trusted)
+	const auto extera = !trusted
 		? Extera::BadgeEmoji(descriptor.peer)
 		: DocumentId();
 	if (!extera && !trusted) {

@@ -180,22 +180,32 @@ void SaveToCache() {
 }
 
 void RefreshProfiles(QNetworkAccessManager *manager) {
-	auto request = QNetworkRequest(QUrl(
-		u"https://api.exteragram.app/api/v1/profiles"_q));
-	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
-	request.setRawHeader("Accept", "application/json");
-
-	const auto reply = manager->get(request);
-	QObject::connect(reply, &QNetworkReply::finished, [=] {
-		reply->deleteLater();
-		if (reply->error() != QNetworkReply::NoError) {
+	const auto urls = std::vector<QString>{
+		u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/badges.json"_q,
+		u"https://api.exteragram.app/api/v1/profiles"_q,
+	};
+	const auto tryNext = std::make_shared<Fn<void(size_t)>>();
+	*tryNext = [=](size_t index) {
+		if (index >= urls.size()) {
 			return;
 		}
-		const auto bytes = reply->readAll();
-		if (ApplyProfiles(bytes, false)) {
-			SaveToCache();
-		}
-	});
+		auto request = QNetworkRequest(QUrl(urls[index]));
+		request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+		request.setRawHeader("Accept", "application/json");
+		const auto reply = manager->get(request);
+		QObject::connect(reply, &QNetworkReply::finished, [=] {
+			reply->deleteLater();
+			if (reply->error() == QNetworkReply::NoError) {
+				const auto bytes = reply->readAll();
+				if (ApplyProfiles(bytes, false)) {
+					SaveToCache();
+					return;
+				}
+			}
+			(*tryNext)(index + 1);
+		});
+	};
+	(*tryNext)(0);
 }
 
 } // namespace
@@ -242,6 +252,9 @@ BadgeKind BadgeKindFor(not_null<PeerData*> peer) {
 		return BadgeKind::None;
 	}
 	const auto &profile = it->second;
+	if (profile.status == u"OWNER"_q) {
+		return BadgeKind::Owner;
+	}
 	if (profile.badgeDocumentId != 0) {
 		return BadgeKind::Custom;
 	}
@@ -268,6 +281,9 @@ DocumentId BadgeEmoji(not_null<PeerData*> peer) {
 	const auto it = items.find(bare);
 	if (it != end(items)) {
 		const auto &profile = it->second;
+		if (profile.status == u"OWNER"_q) {
+			return profile.badgeDocumentId ? profile.badgeDocumentId : kCustomLeadDevEmoji;
+		}
 		if (profile.badgeDocumentId != 0) {
 			return profile.badgeDocumentId;
 		}
@@ -303,8 +319,23 @@ QString BadgeCustomText(not_null<PeerData*> peer) {
 	return QString();
 }
 
+int BadgeNumber(not_null<PeerData*> peer) {
+	const auto bare = BareId(peer);
+	if (!bare) {
+		return 0;
+	}
+	const auto &items = State().items;
+	const auto it = items.find(bare);
+	if (it != end(items)) {
+		return it->second.number;
+	}
+	return 0;
+}
+
 DocumentId BadgeTypeEmoji(const QString &type) {
-	if (type == u"developer"_q) {
+	if (type == u"owner"_q) {
+		return kCustomLeadDevEmoji;
+	} else if (type == u"developer"_q) {
 		return kDeveloperEmoji;
 	} else if (type == u"bughunter"_q) {
 		return kBughunterEmoji;
