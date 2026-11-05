@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/controls/history_view_compose_controls.h"
 
+#include "extera/extera_config.h"
+
 #include "history/view/controls/history_view_bot_menu_button.h"
 
 #include "base/call_delayed.h"
@@ -6004,6 +6006,16 @@ void ComposeControls::replyToMessage(FullReplyTo id) {
 	if (!id) {
 		cancelReplyMessage();
 		return;
+	}
+	if (Extera::Bool(u"quote_reply"_q) && id.quote.empty()) {
+		if (const auto item = _history->owner().message(id.messageId)) {
+			const auto text = item->originalText();
+			if (!text.empty()) {
+				const auto max = _show->session().appConfig().quoteLengthMax();
+				id.quote = Ui::Text::Mid(text, 0, max ? max : 1024);
+				id.quoteOffset = 0;
+			}
+		}
 	}
 	if (isEditingMessage()) {
 		const auto key = draftKey(DraftType::Normal);

@@ -849,7 +849,7 @@ bool AddReplyToMessageAction(
 	const auto canSendReply = topic
 		? Data::CanSendAnything(topic)
 		: Data::CanSendAnything(peer);
-	const auto canReply = canSendReply || item->allowsForward();
+	const auto canReply = canSendReply || item->allowsForward() || allowQueueReply;
 	if (!canReply) {
 		return false;
 	}
@@ -858,7 +858,9 @@ bool AddReplyToMessageAction(
 		? request.link->property(kTodoListItemIdProperty).toInt()
 		: 0;
 	const auto &quote = request.quote;
-	auto text = (todoListTaskId
+	auto text = (allowQueueReply
+		? tr::lng_exd_queue_reply_badge
+		: todoListTaskId
 		? tr::lng_context_reply_to_task
 		: !quote
 		? tr::lng_context_reply_msg

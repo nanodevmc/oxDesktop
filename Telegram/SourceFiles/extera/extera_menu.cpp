@@ -154,7 +154,15 @@ struct QuickEntry {
 
 [[nodiscard]] const std::vector<QuickEntry> &QuickEntries() {
 	static const auto result = std::vector<QuickEntry>{
-		{ u"reply"_q, { tr::lng_context_reply_msg }, &st::menuIconReply },
+		{
+			u"reply"_q,
+			{
+				tr::lng_context_reply_msg,
+				tr::lng_exd_queue_reply_badge,
+				tr::lng_context_quote_and_reply,
+			},
+			&st::menuIconReply,
+		},
 		{ u"delete"_q, { tr::lng_context_delete_msg }, &st::menuIconDelete },
 		{
 			u"copy"_q,
