@@ -1182,22 +1182,27 @@ void ProxiesBox::setupTopButton() {
 void ProxiesBox::setupContent() {
 	const auto inner = setInnerWidget(object_ptr<Ui::VerticalLayout>(this));
 
-	if (Extera::WsProxy::Available()) {
-		const auto wsProxy = inner->add(
-			object_ptr<Ui::Checkbox>(
-				inner,
-				tr::lng_exd_ws_proxy(tr::now),
-				Extera::WsProxy::Enabled()),
-			st::proxyTryIPv6Padding);
-		wsProxy->checkedChanges(
-		) | rpl::on_next([](bool checked) {
-			Extera::WsProxy::SetEnabled(checked);
-		}, wsProxy->lifetime());
-		Extera::Config::Instance().boolChanges(
-			u"ws_proxy"_q
-		) | rpl::on_next([=](bool enabled) {
-			wsProxy->setChecked(enabled);
-		}, wsProxy->lifetime());
+	{
+		const auto wsProxyWrap = inner->add(
+			object_ptr<Ui::VerticalLayout>(inner));
+
+		const auto wsProxyButton = Settings::AddButtonWithLabel(
+			wsProxyWrap,
+			rpl::single(u"Встроенный обход (TgWsProxy v"_q + Extera::WsProxy::Version() + u")"_q),
+			Extera::WsProxy::statusTextValue(),
+			st::settingsButtonNoIcon);
+
+		wsProxyWrap->add(
+			object_ptr<Ui::FlatLabel>(
+				wsProxyWrap,
+				tr::lng_exd_ws_proxy_about(tr::now),
+				st::boxDividerLabel),
+			st::proxyAboutPadding);
+
+		wsProxyButton->setClickedCallback([=] {
+			const auto enable = !Extera::WsProxy::Enabled();
+			Extera::WsProxy::SetEnabled(enable);
+		});
 	}
 	_tryIPv6 = inner->add(
 		object_ptr<Ui::Checkbox>(

@@ -6,8 +6,11 @@
 #include "mtproto/mtproto_proxy_data.h"
 #include "base/timer.h"
 
+#include <QtCore/QDir>
+#include <QtCore/QFileInfo>
 #include <QtCore/QProcess>
 #include <QtCore/QRandomGenerator>
+#include <QtCore/QStandardPaths>
 #include <QtNetwork/QTcpServer>
 
 namespace Extera::WsProxy {
@@ -37,14 +40,57 @@ State &Instance() {
 
 [[nodiscard]] QString Interpreter() {
 #ifdef Q_OS_WIN
-	return PythonDir() + u"pythonw.exe"_q;
+	const auto localW = PythonDir() + u"pythonw.exe"_q;
+	if (QFile::exists(localW)) {
+		return localW;
+	}
+	const auto local = PythonDir() + u"python.exe"_q;
+	if (QFile::exists(local)) {
+		return local;
+	}
+	const auto foundW = QStandardPaths::findExecutable(u"pythonw"_q);
+	if (!foundW.isEmpty() && QFile::exists(foundW)) {
+		return foundW;
+	}
+	const auto found = QStandardPaths::findExecutable(u"python"_q);
+	if (!found.isEmpty() && QFile::exists(found)) {
+		return found;
+	}
+	return localW;
 #else
-	return PythonDir() + u"bin/python3"_q;
+	const auto local3 = PythonDir() + u"bin/python3"_q;
+	if (QFile::exists(local3)) {
+		return local3;
+	}
+	const auto local = PythonDir() + u"bin/python"_q;
+	if (QFile::exists(local)) {
+		return local;
+	}
+	const auto found3 = QStandardPaths::findExecutable(u"python3"_q);
+	if (!found3.isEmpty() && QFile::exists(found3)) {
+		return found3;
+	}
+	const auto found = QStandardPaths::findExecutable(u"python"_q);
+	if (!found.isEmpty() && QFile::exists(found)) {
+		return found;
+	}
+	return local3;
 #endif
 }
 
 [[nodiscard]] QString Script() {
-	return PythonDir() + u"tgws/exd_tgws.py"_q;
+	const auto candidates = {
+		PythonDir() + u"extera/tgws/exd_tgws.py"_q,
+		PythonDir() + u"tgws/exd_tgws.py"_q,
+		cExeDir() + u"Telegram/SourceFiles/extera/python/tgws/exd_tgws.py"_q,
+		cWorkingDir() + u"Telegram/SourceFiles/extera/python/tgws/exd_tgws.py"_q,
+	};
+	for (const auto &candidate : candidates) {
+		if (QFile::exists(candidate)) {
+			return candidate;
+		}
+	}
+	return PythonDir() + u"extera/tgws/exd_tgws.py"_q;
 }
 
 [[nodiscard]] QString Secret() {
@@ -120,13 +166,25 @@ void Launch() {
 	state.proxy.port = uint32(port);
 	state.proxy.password = u"dd"_q + secret;
 
+	auto &settings = Core::App().settings().proxy();
+	if (settings.indexInList(state.proxy) < 0) {
+		settings.addToList(state.proxy);
+	}
+	Core::App().setCurrentProxy(
+		state.proxy,
+		MTP::ProxyData::Settings::Enabled);
+
 	const auto process = new QProcess(qApp);
 	state.process = process;
-	process->setWorkingDirectory(PythonDir());
+	const auto scriptFile = Script();
+	const auto pyDir = QDir(PythonDir()).exists()
+		? PythonDir()
+		: QFileInfo(scriptFile).absolutePath();
+	process->setWorkingDirectory(pyDir);
 	process->setProgram(Interpreter());
 	process->setArguments({
 		u"-I"_q,
-		Script(),
+		scriptFile,
 		u"--parent-pid"_q,
 		QString::number(QCoreApplication::applicationPid()),
 		u"--port"_q,
@@ -137,6 +195,10 @@ void Launch() {
 	process->setStandardOutputFile(QProcess::nullDevice());
 	process->setStandardErrorFile(QProcess::nullDevice());
 	QObject::connect(process, &QProcess::started, [=] {
+		auto &settings = Core::App().settings().proxy();
+		if (settings.indexInList(Instance().proxy) < 0) {
+			settings.addToList(Instance().proxy);
+		}
 		Core::App().setCurrentProxy(
 			Instance().proxy,
 			MTP::ProxyData::Settings::Enabled);
@@ -168,6 +230,52 @@ void Launch() {
 	process->start();
 }
 
+} // namespace
+
+bool Available() {
+	const auto interp = Interpreter();
+	const auto script = Script();
+	return !interp.isEmpty()
+		&& !script.isEmpty()
+		&& QFile::exists(interp)
+		&& QFile::exists(script);
+}
+
+bool Enabled() {
+	return Available() && Extera::Bool(u"ws_proxy"_q);
+}
+
+QString Version() {
+	return u"1.11.4"_q;
+}
+
+int Port() {
+	return ChoosePort();
+}
+
+QString CurrentEndpoint() {
+	return u"127.0.0.1:"_q + QString::number(Port());
+}
+
+rpl::producer<QString> statusTextValue() {
+	return Extera::Config::Instance().boolChanges(u"ws_proxy"_q)
+		| rpl::map([](bool enabled) {
+			if (!Available()) {
+				return u"Недоступен (компоненты не найдены)"_q;
+			}
+			return enabled
+				? (u"Включен ("_q + CurrentEndpoint() + u")"_q)
+				: u"Отключен"_q;
+		});
+}
+
+void Start() {
+	if (Enabled()) {
+		Instance().restarts = 0;
+		Launch();
+	}
+}
+
 void Stop() {
 	auto &state = Instance();
 	state.stopping = true;
@@ -184,23 +292,6 @@ void Stop() {
 		Core::App().setCurrentProxy(
 			settings.selected(),
 			MTP::ProxyData::Settings::Disabled);
-	}
-}
-
-} // namespace
-
-bool Available() {
-	return QFile::exists(Interpreter()) && QFile::exists(Script());
-}
-
-bool Enabled() {
-	return Available() && Extera::Bool(u"ws_proxy"_q);
-}
-
-void Start() {
-	if (Enabled()) {
-		Instance().restarts = 0;
-		Launch();
 	}
 }
 

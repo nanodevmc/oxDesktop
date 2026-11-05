@@ -9623,11 +9623,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_exd_cat_support_about" = "Badge, donation, links";
 "lng_exd_badge_invite_support" = "Support the development too?";
 "lng_exd_badge_invite_get" = "Want a badge of your own? Support the development!";
-"lng_exd_ws_proxy_about" = "Connection to Telegram through WebSocket via the built-in tg-ws-proxy. The proxy runs locally and is configured automatically.";
+"lng_exd_ws_proxy_about" = "Direct tunnel to Telegram datacenters via secure WebSocket/TLS (no external VPN required). Local endpoint: 127.0.0.1.";
 "lng_exd_round_video_send" = "Send as Round Video";
 "lng_exd_full_members" = "Members in Groups with Hidden List";
 "lng_exd_full_members_about" = "The group profile shows administrators and message authors when the member list is hidden.";
-"lng_exd_ws_proxy" = "Use tg-ws-proxy";
+"lng_exd_ws_proxy" = "Built-in bypass (TgWsProxy v1.11.4)";
 "lng_exd_round_video" = "Round Video";
 "lng_exd_round_video_hint" = "Drag the circle to move the area. Use the mouse wheel to resize it.";
 "lng_exd_round_video_preparing" = "The video is being prepared for sending.";

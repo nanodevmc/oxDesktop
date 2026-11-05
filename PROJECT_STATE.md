@@ -39,11 +39,12 @@
 - **Audio Looper & Clip Exporter**: зацикливание `[A ⇄ B]` и экспорт отрезка в `media_player_instance.cpp`.
 - **Pitch-Preserved Time-Stretch**: сохранение естественной тональности через `atempo`.
 - **Mini-Player & Gapless**: компактный режим, поверх всех окон, бесшовный переход.
-- **Deduplication, Polls in PM, Default Forward, Bug Helper, Queue Reply, TgWsProxy**.
+- **Deduplication, Polls in PM, Default Forward, Bug Helper, Queue Reply**.
+- **Встроенный обход TgWsProxy v1.11.4**: кнопка быстрого переключения в `connection_box.cpp` («Встроенный обход (TgWsProxy v1.11.4)») со статусом подключения (`Включен (127.0.0.1:<port>)` / `Отключен`), автопоиск путей скрипта (`extera/tgws/exd_tgws.py`) и интерпретатора Python (`pythonw.exe`/`python.exe`/`python3`).
 
 ## Тестирование и CI
 - Python тест-сьют `tests/test_plugin_full_suite.py`: 28/28 тестов пройдено (100%).
-- Обе сборки (Windows и Linux) завершились со статусом 100% SUCCESS (Run `42011772109` и `42011771983`).
+- Windows и Linux сборки с реальными Telegram API credentials завершились 100% SUCCESS (Run `42034661759` и `42034661701`).
 - Windows бинарный релиз скачан локально в `builds/oxDesktop-windows-x64.zip` (174 МБ, инсталлятор Inno Setup + portable).
 - Добавлен ручной экшен публикации релизов `.github/workflows/publish-release.yml` (запуск релиза по кнопке с автосборкой артефактов из последних успешных билдов).
 - Обновлены монохромные иконки трея (oxDesktop эмблема) и сброс кэша при смене логотипа (`tray_win.cpp`).
