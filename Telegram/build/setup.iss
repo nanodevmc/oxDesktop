@@ -95,7 +95,9 @@ Source: "{#ReleasePath}\Telegram.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#ReleasePath}\Updater.exe"; DestDir: "{app}"; Flags: ignoreversion
 #endif
 Source: "{#ReleasePath}\python\*"; DestDir: "{app}\python"; Excludes: "tgws"; Flags: recursesubdirs createallsubdirs ignoreversion
-Source: "{#ReleasePath}\python\tgws\*"; DestDir: "{app}\python\tgws"; Tasks: tgws; Flags: recursesubdirs createallsubdirs ignoreversion
+#if DirExists(ReleasePath + "\\python\\tgws")
+Source: "{#ReleasePath}\python\tgws\*"; DestDir: "{app}\python\tgws"; Tasks: tgws; Flags: skipifsourcedoesntexist recursesubdirs createallsubdirs ignoreversion
+#endif
 #if MyBuildTarget != "winarm"
 Source: "{#ReleasePath}\{#ModulesFolder}\d3d\d3dcompiler_47.dll"; DestDir: "{app}\{#ModulesFolder}\d3d"; Flags: ignoreversion
 #endif
