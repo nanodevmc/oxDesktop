@@ -224,10 +224,14 @@ jobs:
 
       - name: Report sccache statistics and flush
         if: always() && steps.sccache.outcome == 'success'
+        continue-on-error: true
         shell: pwsh
         run: |
-          & $env:SCCACHE_PATH --show-stats
-          & $env:SCCACHE_PATH --stop-server
+          if (Test-Path $env:SCCACHE_PATH) {
+            try { & $env:SCCACHE_PATH --show-stats } catch { Write-Host "sccache show-stats: $_" }
+            try { & $env:SCCACHE_PATH --stop-server } catch { Write-Host "sccache stop-server: $_" }
+          }
+          $global:LASTEXITCODE = 0
 
       - name: Validate sccache size before save
         id: check_sccache
