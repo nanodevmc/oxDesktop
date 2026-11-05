@@ -1,0 +1,130 @@
+name: Publish Release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (leave empty to use version from version.txt, e.g. v7.3.3)'
+        required: false
+        default: ''
+      release_title:
+        description: 'Release Title (leave empty for "oxDesktop v<version>")'
+        required: false
+        default: ''
+      draft:
+        description: 'Create as Draft'
+        required: false
+        type: boolean
+        default: false
+      prerelease:
+        description: 'Mark as Pre-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine Version and Tag
+        id: meta
+        run: |
+          VERSION=$(cat version.txt | tr -d '\r\n ')
+          if [ -z "$VERSION" ]; then
+            VERSION="7.3.3"
+          fi
+          TAG="${{ github.event.inputs.tag_name }}"
+          if [ -z "$TAG" ]; then
+            TAG="v$VERSION"
+          fi
+          TITLE="${{ github.event.inputs.release_title }}"
+          if [ -z "$TITLE" ]; then
+            TITLE="oxDesktop $TAG"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "TITLE=$TITLE" >> $GITHUB_OUTPUT
+          echo "Preparing release: $TAG ($TITLE)"
+
+      - name: Download Artifacts from Latest Successful Builds
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release_assets/windows release_assets/linux
+          
+          echo "Fetching latest successful Windows build artifacts..."
+          WIN_RUN=$(gh run list --workflow="Windows build" --status=success --limit=1 --json databaseId -q '.[0].databaseId')
+          if [ -n "$WIN_RUN" ]; then
+            echo "Latest Windows run ID: $WIN_RUN"
+            gh run download "$WIN_RUN" -n oxDesktop-windows-x64 --dir release_assets/windows || true
+          else
+            echo "Warning: No successful Windows run found."
+          fi
+
+          echo "Fetching latest successful Linux build artifacts..."
+          LINUX_RUN=$(gh run list --workflow="Linux build" --status=success --limit=1 --json databaseId -q '.[0].databaseId')
+          if [ -n "$LINUX_RUN" ]; then
+            echo "Latest Linux run ID: $LINUX_RUN"
+            gh run download "$LINUX_RUN" -n oxDesktop-linux-x64 --dir release_assets/linux || true
+          else
+            echo "Warning: No successful Linux run found."
+          fi
+
+          echo "Collected assets:"
+          ls -la release_assets/windows release_assets/linux || true
+
+      - name: Prepare Release Notes
+        id: notes
+        run: |
+          if [ -f "CHANGELOG.md" ]; then
+            # Extract top section or use top 60 lines
+            head -n 60 CHANGELOG.md > release_notes.md
+          else
+            echo "oxDesktop ${{ steps.meta.outputs.TAG }}" > release_notes.md
+          fi
+
+      - name: Publish Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.TAG }}
+          TITLE: ${{ steps.meta.outputs.TITLE }}
+        run: |
+          # Flatten assets into a single directory for upload
+          mkdir -p final_assets
+          find release_assets -type f -exec cp {} final_assets/ \;
+          
+          echo "Files to attach:"
+          ls -lh final_assets/
+          
+          FILES=(final_assets/*)
+          if [ ${#FILES[@]} -eq 0 ] || [ ! -f "${FILES[0]}" ]; then
+            echo "Error: No release assets found to attach!"
+            exit 1
+          fi
+
+          FLAGS=()
+          if [ "${{ github.event.inputs.draft }}" = "true" ]; then
+            FLAGS+=("--draft")
+          fi
+          if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+            FLAGS+=("--prerelease")
+          fi
+
+          # Create release or upload to existing
+          gh release create "$TAG" "${FILES[@]}" \
+            --title "$TITLE" \
+            --notes-file release_notes.md \
+            "${FLAGS[@]}" || \
+          gh release upload "$TAG" "${FILES[@]}" --clobber
