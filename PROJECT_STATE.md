@@ -33,20 +33,17 @@
 - Автоматическое позиционирование плашек в `settings_extera.cpp` рядом с кнопками опций.
 
 ### 5. Внедрённые функции
-- **CLI Demo Engine (`extera_demo.cpp`)**: параметры `--demo-mode`, `--demo-view`, `--demo-screenshot`, `--demo-delay`, `--demo-exit`.
-- **Queue Reply (`queue_reply`)**: ответ на отправляемые сообщения с плашкой «Очередь отправки», авто-резолв в `data_histories.cpp` через `itemIdChanged`.
-- **Custom Reaction Strip (`static_reactions_enabled`, `static_reactions_list`)**: фиксированная раскладка реакций.
-- **Smart Bug Report Helper (`smart_bug_report_helper`)**: анимированная плашка `[ 📎 Вставить тех. информацию ]` над полем ввода при ключевых словах ошибок.
-- **Floating Mini-Player**: компактный режим `S(380)` (`mini_player_compact`) и режим поверх окон `Qt::WindowStaysOnTopHint` (`mini_player_always_on_top`).
-- **Media Deduplication Cache (`media_deduplication`)**: виртуальный кэш SHA-256 с авто-фоллбэком при устаревании `file_reference`.
-- **Polls in PM (`polls_in_pm`)**: создание опросов в личных сообщениях с плашкой BETA.
-- **Default Forward Mode (`default_forward_mode`)**: выбор стандартного режима пересылки.
-- **Lyrics Quote Card (`lyrics_quote_card`)**: контекстное меню цитирования строк песен с плашкой BETA.
-- **Gapless Audio Playback (`gapless_playback`)**: предзагрузка следующего трека за 3 секунды до конца с плашкой BETA.
-- **TgWsProxy Flowseal v1.11.4**: отключение перегруженного MLKEM TLS, MTU-защита и вотчдог родительского PID.
+- **HUD Quick Switcher (`Ctrl+K`)**: полноэкранный диалог выбора чатов/тем с фильтрацией.
+- **Shadow Drafts (`Ctrl+Shift+Z`)**: локальный кольцевой буфер (10 ревизий, 1.5с дебаунс, тост отмены).
+- **Smart Ghost Mode**: гранулярный анти-прочит (Каналы, Группы, ЛС) в `data_histories.cpp`.
+- **Audio Looper & Clip Exporter**: зацикливание `[A ⇄ B]` и экспорт отрезка в `media_player_instance.cpp`.
+- **Pitch-Preserved Time-Stretch**: сохранение естественной тональности через `atempo`.
+- **Mini-Player & Gapless**: компактный режим, поверх всех окон, бесшовный переход.
+- **Deduplication, Polls in PM, Default Forward, Bug Helper, Queue Reply, TgWsProxy**.
 
-## Тестирование
-- Тест-сьют плагинов `tests/test_plugin_full_suite.py`: 28/28 тестов пройдено (100% успех).
+## Тестирование и CI
+- Python тест-сьют `tests/test_plugin_full_suite.py`: 28/28 тестов пройдено (100%).
+- Текущий рабочий коммит: `369c794` (Windows run `41941009607`, Linux run `41941009506`). CI отслеживается каждые 7 минут.
 
 ### 6. Видео и промо
 - Видеоэффекты для промо/TikTok: при тыках накладывать наведение камеры на прицел (crosshair / target zoom punch-in), увеличение зоны клика и появление плашек функций.

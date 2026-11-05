@@ -44,14 +44,14 @@ void SetupConfirmActionBox(
 		p.drawText(QRect(cx - 24, cy - 24, 48, 48), Qt::AlignCenter, u"!"_q);
 	}, iconWidget->lifetime());
 
-	const auto title = content->add(
+	content->add(
 		object_ptr<Ui::FlatLabel>(
 			content,
 			u"Confirm action"_q,
 			st::boxTitle),
 		style::margins(st::boxRowPadding.left(), 0, st::boxRowPadding.right(), 2));
 
-	const auto category = content->add(
+	content->add(
 		object_ptr<Ui::FlatLabel>(
 			content,
 			action.category.isEmpty() ? u"Payments"_q : action.category,
@@ -107,14 +107,14 @@ void SetupConfirmActionBox(
 		addCardRow(u"Request"_q, action.requestMethod);
 	}
 
-	const auto warning = content->add(
+	content->add(
 		object_ptr<Ui::FlatLabel>(
 			content,
 			u"If you didn't start this yourself, tap Decline: it may have been started by a plugin."_q,
 			st::boxLabel),
 		style::margins(st::boxRowPadding.left(), 4, st::boxRowPadding.right(), st::boxRowPadding.bottom()));
 
-	const auto allow = box->addButton(tr::lng_box_ok(), [=] {
+	box->addButton(tr::lng_box_ok(), [=] {
 		if (!*handled) {
 			*handled = true;
 			box->closeBox();
@@ -122,7 +122,7 @@ void SetupConfirmActionBox(
 		}
 	});
 
-	box->addCancelButton([=] {
+	box->addButton(tr::lng_cancel(), [=] {
 		if (!*handled) {
 			*handled = true;
 			box->closeBox();
