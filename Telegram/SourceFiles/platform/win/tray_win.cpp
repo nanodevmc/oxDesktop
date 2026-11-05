@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "platform/win/tray_win.h"
 
+#include "extera/extera_config.h"
+
 #include "base/invoke_queued.h"
 #include "base/qt_signal_producer.h"
 #include "core/application.h"
@@ -67,16 +69,30 @@ bool DarkTasbarValueValid/* = false*/;
 		return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
 	}();
 	static auto Mask = base::flat_map<int, QImage>();
+	static auto Colored = base::flat_map<int, QImage>();
+	static auto ColoredDark = base::flat_map<int, QImage>();
+	static auto LastMonochromeLogoKey = qint64(0);
+	const auto currentLogoKey = Window::Logo().cacheKey();
+	if (LastMonochromeLogoKey != currentLogoKey) {
+		LastMonochromeLogoKey = currentLogoKey;
+		Mask.clear();
+		Colored.clear();
+		ColoredDark.clear();
+	}
 	auto it = Mask.find(size);
 	if (it == Mask.end()) {
 		const auto renderSize = std::max(size * 4, 128);
 		auto highRes = QImage(renderSize, renderSize, QImage::Format_ARGB32_Premultiplied);
 		highRes.fill(Qt::transparent);
-		{
+		const auto customIcon = Extera::String(u"app_icon"_q);
+		const auto &logo = Window::Logo();
+		if ((customIcon.isEmpty() || customIcon == u"ox_monogram"_q) && !Content.isEmpty()) {
 			auto p = QPainter(&highRes);
 			p.setRenderHint(QPainter::Antialiasing);
 			p.setRenderHint(QPainter::SmoothPixmapTransform);
 			QSvgRenderer(Content).render(&p, QRectF(0, 0, renderSize, renderSize));
+		} else if (!logo.isNull()) {
+			highRes = logo.scaled(renderSize, renderSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 		}
 		it = Mask.emplace(
 			size,

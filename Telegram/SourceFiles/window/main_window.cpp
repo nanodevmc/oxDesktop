@@ -10,6 +10,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extera/extera_app_icon.h"
 
 #include "extera/extera_config.h"
+#include "window/window_peer_menu.h"
+#include "base/event_filter.h"
 
 #include "api/api_updates.h"
 #include "storage/localstorage.h"
@@ -489,6 +491,30 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 	}
 
 	Shortcuts::Listen(this);
+
+	base::install_event_filter(this, [=](not_null<QEvent*> e) {
+		if (e->type() == QEvent::KeyPress) {
+			const auto k = static_cast<QKeyEvent*>(e.get());
+			const auto mod = k->modifiers();
+			const auto ctrlShiftK = ((mod & (Qt::ControlModifier | Qt::ShiftModifier)) == (Qt::ControlModifier | Qt::ShiftModifier))
+				&& (k->key() == Qt::Key_K);
+			const auto ctrlP = ((mod & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier)) == Qt::ControlModifier)
+				&& (k->key() == Qt::Key_P);
+			if ((ctrlShiftK || ctrlP) && Extera::Bool(u"hud_quick_switcher"_q)) {
+				if (const auto controller = sessionController()) {
+					const auto weak = base::make_weak(controller);
+					Window::ShowChooseRecipientBox(controller, [=](not_null<Data::Thread*> thread) {
+						if (const auto strong = weak.get()) {
+							strong->showThread(thread);
+						}
+						return true;
+					}, tr::lng_exd_hud_switcher());
+					return base::EventFilterResult::Stop;
+				}
+			}
+		}
+		return base::EventFilterResult::Continue;
+	});
 }
 
 Main::Account &MainWindow::account() const {

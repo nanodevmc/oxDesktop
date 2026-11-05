@@ -63,30 +63,35 @@ void PeerSearch::request(
 
 void PeerSearch::requestPeers() {
 	const auto injectNumericIdMatches = [=](PeerSearchResult &parsed) {
+		auto q = _query.trimmed();
+		if (q.startsWith(u"id"_q, Qt::CaseInsensitive)) {
+			q = q.mid(2).trimmed();
+		} else if (q.startsWith('#')) {
+			q = q.mid(1).trimmed();
+		}
 		bool ok = false;
-		const auto rawId = _query.trimmed().toLongLong(&ok);
+		const auto rawId = q.toLongLong(&ok);
 		if (!ok || rawId == 0) {
 			return;
 		}
 		std::vector<not_null<PeerData*>> matches;
 		if (rawId < 0) {
-			const auto trimmed = _query.trimmed();
-			if (trimmed.startsWith(u"-100"_q)) {
-				const auto channelId = ChannelId(trimmed.mid(4).toULongLong());
-				if (const auto peer = _session->data().peerLoaded(peerFromChannel(channelId))) {
+			if (q.startsWith(u"-100"_q)) {
+				const auto channelId = ChannelId(q.mid(4).toULongLong());
+				if (const auto peer = _session->data().peer(peerFromChannel(channelId))) {
 					matches.push_back(peer);
 				}
 			} else {
 				const auto chatId = ChatId(-rawId);
-				if (const auto peer = _session->data().peerLoaded(peerFromChat(chatId))) {
+				if (const auto peer = _session->data().peer(peerFromChat(chatId))) {
 					matches.push_back(peer);
 				}
 			}
 		} else {
-			if (const auto peer = _session->data().peerLoaded(peerFromUser(UserId(rawId)))) {
+			if (const auto peer = _session->data().peer(peerFromUser(UserId(rawId)))) {
 				matches.push_back(peer);
 			}
-			if (const auto peer = _session->data().peerLoaded(peerFromChannel(ChannelId(rawId)))) {
+			if (const auto peer = _session->data().peer(peerFromChannel(ChannelId(rawId)))) {
 				if (!ranges::contains(matches, not_null{ peer })) {
 					matches.push_back(peer);
 				}

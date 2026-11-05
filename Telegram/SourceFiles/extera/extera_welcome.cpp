@@ -180,7 +180,15 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				u"В разработке..."_q,
 				u"https://t.me/oxDesktop"_q,
 				&st::exteraIconWebsite);
-			box->addButton(tr::lng_exd_wizard_setup(), [=] {
+			const auto setupBtn = content->add(
+				object_ptr<Ui::RoundButton>(
+					content,
+					tr::lng_exd_wizard_setup(),
+					st::defaultBoxButton),
+				style::margins(0, 16, 0, 8),
+				style::al_top);
+			setupBtn->setTextTransform(Ui::RoundButton::TextTransform::NoTransform);
+			setupBtn->setClickedCallback([=] {
 				crl::on_main(box, [=] {
 					state->step = 1;
 					(*rebuild)();
@@ -307,15 +315,31 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 		};
 		const auto fillSettings = [=] {
 			addTitle(tr::lng_exd_wizard_settings());
+			const auto card = content->add(
+				object_ptr<Ui::VerticalLayout>(content),
+				style::margins(16, 8, 16, 8));
+			card->paintRequest() | rpl::on_next([=] {
+				auto p = QPainter(card);
+				auto hq = PainterHighQualityEnabler(p);
+				const auto rect = QRectF(card->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+				p.setPen(QPen(QColor(255, 255, 255, 24), 1.0));
+				p.setBrush(QColor(255, 255, 255, 8));
+				p.drawRoundedRect(rect, 10.0, 10.0);
+			}, card->lifetime());
+
 			const auto toggle = [=](
 					const QString &key,
 					rpl::producer<QString> title,
+					const style::icon *icon,
 					Fn<void(bool)> apply) {
-				const auto button = content->add(
+				const auto button = card->add(
 					object_ptr<Ui::SettingsButton>(
-						content,
+						card,
 						std::move(title),
-						st::settingsButtonNoIcon));
+						st::settingsButton));
+				if (icon) {
+					Settings::AddButtonIcon(button, st::settingsButton, { icon });
+				}
 				button->toggleOn(rpl::single(Bool(key)));
 				button->toggledChanges(
 				) | rpl::on_next([=](bool value) {
@@ -330,19 +354,97 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				toggle(
 					u"ws_proxy"_q,
 					tr::lng_exd_ws_proxy(),
+					&st::menuIconNetwork,
 					[](bool v) { WsProxy::SetEnabled(v); });
 			}
 			toggle(
 				u"time_with_seconds"_q,
 				tr::lng_extera_time_seconds(),
+				&st::menuIconSchedule,
 				nullptr);
-			toggle(u"hide_phone"_q, tr::lng_extera_hide_phone(), nullptr);
+			toggle(
+				u"hide_phone"_q,
+				tr::lng_extera_hide_phone(),
+				&st::menuIconLock,
+				nullptr);
 			toggle(
 				u"local_premium_emoji"_q,
 				tr::lng_extera_local_premium(),
+				&st::menuIconPremium,
 				nullptr);
-			toggle(u"chars_counter"_q, tr::lng_exd_chars_counter(), nullptr);
+			toggle(
+				u"chars_counter"_q,
+				tr::lng_exd_chars_counter(),
+				&st::menuIconEdit,
+				nullptr);
 			addText(tr::lng_exd_wizard_settings_about());
+			box->addButton(rpl::single(u"\u0427\u0442\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u279C"_q), [=] {
+				crl::on_main(box, [=] {
+					state->step = 3;
+					(*rebuild)();
+				});
+			});
+		};
+		const auto fillChangelog = [=] {
+			addTitle(rpl::single(u"\u0427\u0442\u043E \u043D\u043E\u0432\u043E\u0433\u043E"_q));
+			auto contentText = QString();
+			for (const auto &loc : {
+				u"changelog.txt"_q,
+				QCoreApplication::applicationDirPath() + u"/changelog.txt"_q,
+				QDir::currentPath() + u"/changelog.txt"_q,
+			}) {
+				auto f = QFile(loc);
+				if (f.open(QIODevice::ReadOnly)) {
+					contentText = QString::fromUtf8(f.readAll());
+					f.close();
+					break;
+				}
+			}
+			if (contentText.isEmpty()) {
+				contentText = u"v7.3.3:\nRu:\n- \u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 oxDesktop \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u043E"_q;
+			}
+			const auto lines = contentText.split('\n');
+			Ui::VerticalLayout *currentCard = nullptr;
+			for (const auto &line : lines) {
+				const auto trimmed = line.trimmed();
+				if (trimmed.isEmpty() || trimmed.startsWith(u"v7."_q) || trimmed.startsWith(u"v"_q)) {
+					continue;
+				}
+				if (trimmed.startsWith(u"Ru:"_q) || trimmed.startsWith(u"En:"_q)) {
+					currentCard = content->add(
+						object_ptr<Ui::VerticalLayout>(content),
+						style::margins(16, 6, 16, 6));
+					currentCard->paintRequest() | rpl::on_next([=] {
+						auto p = QPainter(currentCard);
+						auto hq = PainterHighQualityEnabler(p);
+						const auto rect = QRectF(currentCard->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+						p.setPen(QPen(QColor(255, 255, 255, 24), 1.0));
+						p.setBrush(QColor(255, 255, 255, 8));
+						p.drawRoundedRect(rect, 10.0, 10.0);
+					}, currentCard->lifetime());
+
+					const auto title = trimmed.startsWith(u"Ru:"_q)
+						? u"\u0420\u0443\u0441\u0441\u043A\u0430\u044F \u043B\u043E\u043A\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F"_q
+						: u"English"_q;
+					currentCard->add(
+						object_ptr<Ui::FlatLabel>(
+							currentCard,
+						rpl::single(title),
+						st::semiboldFont),
+						style::margins(12, 10, 12, 6));
+				} else if (currentCard) {
+					auto itemText = trimmed;
+					if (itemText.startsWith('-')) {
+						itemText = u"\u2014 "_q + itemText.mid(1).trimmed();
+					}
+					currentCard->add(
+						object_ptr<Ui::FlatLabel>(
+							currentCard,
+						rpl::single(itemText),
+						st::boxLabel),
+						style::margins(16, 2, 12, 4));
+				}
+			}
 			box->addButton(tr::lng_exd_wizard_finish(), finish);
 		};
 		*rebuild = [=] {
@@ -352,7 +454,8 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			switch (state->step) {
 			case 0: fillWelcome(); break;
 			case 1: fillIcon(); break;
-			default: fillSettings(); break;
+			case 2: fillSettings(); break;
+			default: fillChangelog(); break;
 			}
 			content->resizeToWidth(st::boxWideWidth);
 		};

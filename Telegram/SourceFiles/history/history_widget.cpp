@@ -2417,13 +2417,14 @@ void HistoryWidget::updateExdBugHelper() {
 			auto p = QPainter(inner);
 			auto hq = PainterHighQualityEnabler(p);
 			const auto rect = QRectF(inner->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
-			p.setPen(QPen(QColor(0, 210, 255, 120), 1.0));
-			p.setBrush(QColor(0, 160, 255, 36));
-			p.drawRoundedRect(rect, 4.0, 4.0);
+			const auto radius = rect.height() / 2.0;
+			p.setPen(QPen(QColor(255, 255, 255, 30), 1.0));
+			p.setBrush(QColor(255, 255, 255, 16));
+			p.drawRoundedRect(rect, radius, radius);
 
 			p.setFont(st::semiboldFont);
-			p.setPen(QColor(56, 189, 248));
-			p.drawText(inner->rect(), Qt::AlignCenter, u"[ \U0001F4CE \u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E ]"_q);
+			p.setPen(st::windowActiveTextFg);
+			p.drawText(inner->rect(), Qt::AlignCenter, u"\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E"_q);
 		}, inner->lifetime());
 
 		inner->events() | rpl::on_next([=](not_null<QEvent*> e) {
@@ -2433,7 +2434,7 @@ void HistoryWidget::updateExdBugHelper() {
 		}, inner->lifetime());
 	}
 	const auto inner = _exdBugHelperPill->entity();
-	const auto width = st::semiboldFont->width(u"[ \U0001F4CE \u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E ]"_q) + style::ConvertScale(24);
+	const auto width = st::semiboldFont->width(u"\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E"_q) + style::ConvertScale(24);
 	const auto height = style::ConvertScale(26);
 	inner->resize(width, height);
 	_exdBugHelperPill->resize(width, height);
@@ -2451,17 +2452,12 @@ void HistoryWidget::insertDiagnosticInfo() {
 		return;
 	}
 	const auto diag = QString(
-		u"\n\n--- \u0422\u0435\u0445\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044F ---\n"
-		"\u041A\u043B\u0438\u0435\u043D\u0442: oxDesktop %1\n"
-		"\u041E\u0421: %2 (%3)\n"
-		"\u042F\u0434\u0440\u043E: Qt %4\n"
-		"\u0412\u0435\u0442\u043A\u0430: main\n"
-		"--------------------------------"_q
+		u"\n\n\u041A\u043B\u0438\u0435\u043D\u0442: oxDesktop %1\n"
+		"\u041E\u0421: %2 (%3)"_q
 	).arg(
 		AppVersionStr,
 		QSysInfo::prettyProductName(),
-		QSysInfo::currentCpuArchitecture(),
-		qVersion());
+		QSysInfo::currentCpuArchitecture());
 	const auto current = _field->getTextWithTags();
 	_field->setTextWithTags({ current.text + diag, current.tags });
 	_field->setCursorPosition(_field->getLastText().size());
@@ -7063,19 +7059,6 @@ bool HistoryWidget::eventFilter(QObject *obj, QEvent *e) {
 				return true;
 			}
 		}
-		if ((k->modifiers() & kCommonModifiers) == Qt::ControlModifier) {
-			if (k->key() == Qt::Key_K) {
-				if (Extera::Bool(u"hud_quick_switcher"_q)) {
-					const auto weak = base::make_weak(controller());
-					Window::ShowChooseRecipientBox(controller(), [=](not_null<Data::Thread*> thread) {
-						if (const auto strong = weak.get()) {
-							strong->showThread(thread);
-						}
-						return true;
-					}, tr::lng_exd_hud_switcher());
-					return true;
-				}
-			}
 			if (k->key() == Qt::Key_Up) {
 #ifdef Q_OS_MAC
 				// Cmd + Up is used instead of Home.

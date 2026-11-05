@@ -756,131 +756,209 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 		box->setWidth(st::boxWideWidth);
 		box->setNoContentMargin(true);
 		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
-		const auto session = &controller->session();
 
-		const auto logoSize = st::exteraBadgeLogoSize;
-		const auto logo = box->addRow(
-			object_ptr<Ui::FixedHeightWidget>(box, logoSize),
-			st::exteraBadgeLogoPadding);
-		logo->paintRequest() | rpl::on_next([=] {
-			static const auto image = QImage(u":/gui/art/logo_256.png"_q);
-			auto p = QPainter(logo);
+		// 3D Rotating Triangular Badge Widget with Stars & Sparkles
+		constexpr auto kModelHeight = 160;
+		const auto canvas = box->addRow(
+			object_ptr<Ui::FixedHeightWidget>(box, kModelHeight),
+			style::margins(0, 8, 0, 0));
+
+		struct Star {
+			float x, y, size, phase;
+		};
+		static const std::vector<Star> kStars = {
+			{ -70.f, -45.f, 6.f, 0.0f },
+			{ 65.f, -50.f, 8.f, 1.2f },
+			{ -85.f, 10.f, 5.f, 2.1f },
+			{ 80.f, 15.f, 7.f, 3.4f },
+			{ -50.f, 50.f, 6.f, 4.5f },
+			{ 60.f, 55.f, 5.f, 5.2f },
+			{ -20.f, -60.f, 4.f, 0.8f },
+			{ 30.f, -55.f, 5.f, 2.7f },
+		};
+
+		const auto animState = canvas->lifetime().make_state<float>(0.0f);
+		const auto timer = Ui::CreateChild<QTimer>(canvas);
+		QObject::connect(timer, &QTimer::timeout, [=] {
+			*animState += 0.035f;
+			if (*animState > 6.283185f) {
+				*animState -= 6.283185f;
+			}
+			canvas->update();
+		});
+		timer->start(16);
+
+		canvas->paintRequest() | rpl::on_next([=] {
+			auto p = QPainter(canvas);
 			auto hq = PainterHighQualityEnabler(p);
-			p.drawImage(
-				QRect((logo->width() - logoSize) / 2, 0, logoSize, logoSize),
-				image);
-		}, logo->lifetime());
+			const auto cx = canvas->width() / 2.0;
+			const auto cy = canvas->height() / 2.0;
+			const auto angle = *animState;
+
+			// Draw glowing star particles
+			p.setFont(st::normalFont);
+			for (const auto &s : kStars) {
+				const auto pulse = 0.5f + 0.5f * std::sin(angle * 2.0f + s.phase);
+				const auto alpha = int(120 + 135 * pulse);
+				p.setPen(QColor(180, 245, 210, alpha));
+				p.drawText(
+					QRectF(cx + s.x - 10, cy + s.y - 10, 20, 20),
+					Qt::AlignCenter,
+					(s.size > 6.f) ? u"\u2726"_q : u"\u2727"_q);
+			}
+
+			// 3D Rotating Triangular Badge Prism
+			// Vertices of inverted rounded triangle in 3D
+			const auto cosA = std::cos(angle);
+			const auto sinA = std::sin(angle);
+			const auto r = 48.0;
+			const auto depth = 14.0;
+
+			// 3 base points in model space (pointing downwards like Android badge)
+			const QPointF basePts[3] = {
+				{ -r * 0.95, -r * 0.55 },
+				{  r * 0.95, -r * 0.55 },
+				{  0.0,       r * 0.85 }
+			};
+
+			// Perspective transform with Y rotation and slight X tilt
+			const auto project = [&](QPointF pt, double z) {
+				const auto rx = pt.x() * cosA - z * sinA;
+				const auto rz = pt.x() * sinA + z * cosA;
+				const auto ry = pt.y() + rz * 0.28; // X-tilt
+				const auto scale = 1.0 / (1.0 + rz * 0.0035);
+				return QPointF(cx + rx * scale, cy + ry * scale);
+			};
+
+			QPolygonF frontPoly, backPoly;
+			for (int i = 0; i < 3; ++i) {
+				frontPoly << project(basePts[i], depth);
+				backPoly  << project(basePts[i], -depth);
+			}
+
+			// Draw back / extrusion sides
+			p.setPen(Qt::NoPen);
+			for (int i = 0; i < 3; ++i) {
+				int next = (i + 1) % 3;
+				QPolygonF side;
+				side << frontPoly[i] << frontPoly[next] << backPoly[next] << backPoly[i];
+				auto sideGrad = QLinearGradient(frontPoly[i], backPoly[next]);
+				sideGrad.setColorAt(0.0, QColor(140, 215, 175));
+				sideGrad.setColorAt(1.0, QColor(95, 175, 135));
+				p.setBrush(sideGrad);
+				p.drawPolygon(side);
+			}
+
+			// Draw front face with smooth pearlescent mint gradient
+			auto frontGrad = QLinearGradient(frontPoly[0], frontPoly[2]);
+			frontGrad.setColorAt(0.0, QColor(225, 255, 238));
+			frontGrad.setColorAt(0.5, QColor(185, 242, 210));
+			frontGrad.setColorAt(1.0, QColor(150, 225, 185));
+			p.setBrush(frontGrad);
+			p.setPen(QPen(QColor(240, 255, 245, 180), 1.2));
+			p.drawPolygon(frontPoly);
+
+			// Badge number #8162 on front face
+			p.setFont(st::semiboldFont);
+			p.setPen(QColor(50, 110, 80, 220));
+			const auto badgeCenter = (frontPoly[0] + frontPoly[1] + frontPoly[2]) / 3.0;
+			p.drawText(
+				QRectF(badgeCenter.x() - 40, badgeCenter.y() - 16, 80, 20),
+				Qt::AlignCenter,
+				u"#8162"_q);
+		}, canvas->lifetime());
+
+		// Title & Subtitle
+		box->addRow(
+			object_ptr<Ui::FlatLabel>(
+				box,
+				rpl::single(u"\u0412\u0430\u0448\u0438 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438"_q),
+				st::exteraWelcomeTitle),
+			style::margins(16, 6, 16, 2),
+			style::al_top);
 
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
-				tr::lng_exd_support_title(),
-				st::exteraBadgeTitle),
-			st::exteraBadgeTitlePadding,
-			style::al_top);
-		box->addRow(
-			object_ptr<Ui::FlatLabel>(
-				box,
-				tr::lng_exd_support_text(),
-				st::exteraBadgeText),
-			st::exteraBadgeTextPadding,
+				rpl::single(u"\u0417\u043D\u0430\u0447\u043E\u043A #8162 \u2014 \u0432\u043E\u0442 \u0447\u0442\u043E \u0432\u0430\u043C \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E:"_q),
+				st::boxLabel),
+			style::margins(16, 0, 16, 10),
 			style::al_top);
 
-		const auto step = [&](
+		// Benefits Card
+		const auto card = box->addRow(
+			object_ptr<Ui::VerticalLayout>(box),
+			style::margins(16, 4, 16, 8));
+		card->paintRequest() | rpl::on_next([=] {
+			auto p = QPainter(card);
+			auto hq = PainterHighQualityEnabler(p);
+			const auto rect = QRectF(card->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+			p.setPen(QPen(QColor(255, 255, 255, 20), 1.0));
+			p.setBrush(QColor(255, 255, 255, 8));
+			p.drawRoundedRect(rect, 12.0, 12.0);
+		}, card->lifetime());
+
+		const auto addBenefit = [&](
 				const style::icon *icon,
-				rpl::producer<QString> title,
-				rpl::producer<TextWithEntities> text) {
-			const auto row = box->addRow(
-				object_ptr<Ui::VerticalLayout>(box),
-				st::exteraBadgeStepPadding);
-			const auto titleLabel = row->add(
+				const QString &title,
+				const QString &desc) {
+			const auto item = card->add(
+				object_ptr<Ui::VerticalLayout>(card),
+				style::margins(14, 8, 14, 8));
+			item->add(
 				object_ptr<Ui::FlatLabel>(
-					row,
-					std::move(title),
-					st::exteraBadgeStepTitle),
-				st::exteraBadgeStepLabelPadding);
-			row->add(
+					item,
+					rpl::single(title),
+					st::semiboldFont),
+				style::margins(28, 0, 0, 2));
+			item->add(
 				object_ptr<Ui::FlatLabel>(
-					row,
-					std::move(text),
-					st::exteraBadgeStepText),
-				st::exteraBadgeStepLabelPadding);
-			const auto iconWidget = Ui::CreateChild<Ui::RpWidget>(row);
+					item,
+					rpl::single(desc),
+					st::boxLabel),
+				style::margins(28, 0, 0, 0));
+			const auto iconWidget = Ui::CreateChild<Ui::RpWidget>(item);
 			iconWidget->resize(icon->width(), icon->height());
 			iconWidget->paintRequest() | rpl::on_next([=] {
 				auto p = QPainter(iconWidget);
-				icon->paint(p, 0, 0, iconWidget->width(), st::windowFg->c);
+				icon->paint(p, 0, 0, iconWidget->width(), st::windowActiveTextFg->c);
 			}, iconWidget->lifetime());
-			titleLabel->topValue() | rpl::on_next([=](int top) {
-				iconWidget->moveToLeft(0, top);
-			}, iconWidget->lifetime());
+			iconWidget->moveToLeft(0, 2);
 		};
-		step(
-			&st::menuIconEarn,
-			tr::lng_exd_support_step1_title(),
-			tr::lng_exd_support_step1_text(tr::rich));
-		step(
-			&st::menuIconPhoto,
-			tr::lng_exd_support_step2_title(),
-			tr::lng_exd_support_step2_text(tr::rich));
-		step(
+
+		addBenefit(
 			&st::menuIconPremium,
-			tr::lng_exd_support_step3_title(),
-			tr::lng_exd_support_step3_text(tr::rich));
+			u"\u041D\u043E\u043C\u0435\u0440\u043D\u043E\u0439 \u0437\u043D\u0430\u0447\u043E\u043A"_q,
+			u"\u0417\u043D\u0430\u0447\u043E\u043A \u0441 \u0432\u0430\u0448\u0438\u043C \u043D\u043E\u043C\u0435\u0440\u043E\u043C \u0440\u044F\u0434\u043E\u043C \u0441 \u0438\u043C\u0435\u043D\u0435\u043C, \u0435\u0433\u043E \u0432\u0438\u0434\u044F\u0442 \u0432\u0441\u0435 \u0432 exteraGram."_q);
 
-		const auto preview = box->addRow(
-			object_ptr<Ui::FixedHeightWidget>(box, st::exteraBadgePreviewHeight),
-			st::exteraBadgePreviewPadding);
-		const auto user = session->user();
-		const auto view = preview->lifetime().make_state<
-			Ui::PeerUserpicView>();
-		const auto badgeId = Extera::BadgeTypeEmoji(u"donor"_q);
-		auto nameText = TextWithEntities{ user->name() };
-		if (badgeId) {
-			nameText.append(' ').append(Data::SingleCustomEmoji(badgeId));
-		}
-		const auto name = Ui::CreateChild<Ui::FlatLabel>(
-			preview,
-			st::exteraBadgePreviewName);
-		name->setMarkedText(nameText, Core::TextContext({
-			.session = session,
-			.repaint = [=] { name->update(); },
-		}));
-		const auto message = Ui::CreateChild<Ui::FlatLabel>(
-			preview,
-			tr::lng_exd_support_preview(),
-			st::exteraBadgePreviewText);
-		preview->widthValue() | rpl::on_next([=](int width) {
-			const auto left = st::exteraBadgePreviewUserpic
-				+ st::exteraBadgePreviewSkip * 3;
-			name->resizeToWidth(width - left - st::exteraBadgePreviewSkip);
-			message->resizeToWidth(width - left - st::exteraBadgePreviewSkip);
-			name->moveToLeft(left, st::exteraBadgePreviewSkip);
-			message->moveToLeft(
-				left,
-				st::exteraBadgePreviewSkip + name->height());
-		}, preview->lifetime());
-		preview->paintRequest() | rpl::on_next([=] {
-			auto p = Painter(preview);
-			auto hq = PainterHighQualityEnabler(p);
-			const auto size = st::exteraBadgePreviewUserpic;
-			const auto skip = st::exteraBadgePreviewSkip;
-			user->paintUserpic(
-				p,
-				*view,
-				skip,
-				(preview->height() - size) / 2,
-				size);
-			p.setPen(Qt::NoPen);
-			p.setBrush(st::msgInBg);
-			const auto left = size + skip * 2;
-			p.drawRoundedRect(
-				QRect(left, 0, preview->width() - left, preview->height()),
-				st::bubbleRadiusLarge,
-				st::bubbleRadiusLarge);
-		}, preview->lifetime());
+		addBenefit(
+			&st::menuIconSchedule,
+			u"\u0414\u0430\u0442\u044B \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438"_q,
+			u"\u0411\u043E\u043B\u0435\u0435 \u0442\u043E\u0447\u043D\u044B\u0435 \u0434\u0430\u0442\u044B \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0430\u043A\u043A\u0430\u0443\u043D\u0442\u043E\u0432 \u0432 \u043F\u0440\u043E\u0444\u0438\u043B\u044F\u0445."_q);
 
-		box->addButton(tr::lng_exd_badge_contact(), [=] {
+		addBenefit(
+			&st::menuIconChannel,
+			u"\u0420\u0430\u043D\u043D\u0438\u0435 \u0441\u0431\u043E\u0440\u043A\u0438"_q,
+			u"\u0417\u0430\u043A\u0440\u044B\u0442\u044B\u0439 \u043A\u0430\u043D\u0430\u043B \u0441 \u0442\u0435\u0441\u0442\u043E\u0432\u044B\u043C\u0438 \u0432\u0435\u0440\u0441\u0438\u044F\u043C\u0438 \u0434\u043E \u0438\u0445 \u0432\u044B\u0445\u043E\u0434\u0430."_q);
+
+		// Prominent Buttons matching Android UI
+		const auto channelBtn = box->addRow(
+			object_ptr<Ui::RoundButton>(
+				box,
+				rpl::single(u"\u041A\u0430\u043D\u0430\u043B \u0440\u0430\u043D\u043D\u0438\u0445 \u0441\u0431\u043E\u0440\u043E\u043A"_q),
+				st::defaultBoxButton),
+			style::margins(16, 12, 16, 4),
+			style::al_top);
+		channelBtn->setTextTransform(Ui::RoundButton::TextTransform::NoTransform);
+		channelBtn->setClickedCallback([=] {
+			UrlClickHandler::Open(u"https://t.me/exteraGramBeta"_q);
+		});
+
+		box->addButton(rpl::single(u"ExteraGram (@ExteraOwner)"_q), [=] {
+			UrlClickHandler::Open(u"https://t.me/ExteraOwner"_q);
+			box->closeBox();
+		});
+		box->addButton(rpl::single(u"oxDesktop (@radoqi)"_q), [=] {
 			UrlClickHandler::Open(u"https://t.me/radoqi"_q);
 			box->closeBox();
 		});
@@ -2036,13 +2114,6 @@ void PartChats5(SectionBuilder &builder) {
 			tr::lng_exd_static_reactions(),
 			{ u"reactions"_q, u"static"_q },
 			tr::lng_exd_static_reactions_about(),
-			true);
-		AddToggle(
-			builder,
-			u"polls_in_pm"_q,
-			tr::lng_exd_polls_in_pm(),
-			{ u"poll"_q, u"pm"_q },
-			tr::lng_exd_polls_in_pm_about(),
 			true);
 		AddToggle(
 			builder,

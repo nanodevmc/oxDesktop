@@ -5,9 +5,12 @@ Ru:
 - Теневые черновики (Shadow Drafts): локальное сохранение редакций текста и откат по Ctrl+Shift+Z без отправки на серверы Telegram
 - Инлайн-калькулятор в поле ввода: расчет математических выражений, поддержка степеней (2²=, (2)²=, сложные формулы), конвертер валют и единиц измерения
 - Умный анти-призрак: статус набора текста скрывается при вычислениях на лету
-- Быстрый HUD-переключатель чатов по комбинации Ctrl+K
+- Быстрый HUD-переключатель чатов по комбинации Ctrl+Shift+K или Ctrl+P
+- Прямой поиск пользователей и каналов по цифровому ID (включая формат id123456)
+- Контекстное меню для сообщений в очереди отправки (быстрый ответ до завершения загрузки)
 - Лимит одновременно подключенных аккаунтов установлен на 5
-- Повышенная четкость иконки в системном трее Windows с поддержкой масштабирования дисплея (100%–200%)
+- Повышенная четкость и динамическое обновление иконки в системном трее Windows (100%–200%)
+- Интерактивная 3D-модель значка поддержки и обновленный мастер приветствия tg://welcome
 - Музыкальный виджет сохраненных треков в профиле пользователя с аккуратными отступами
 - Фирменная иконка OX Monogram по умолчанию и обновленное оформление стартового экрана
 
@@ -17,8 +20,11 @@ En:
 - Shadow Drafts: local message revision history with Ctrl+Shift+Z restore without sending drafts to Telegram
 - Inline input calculator: math evaluation with superscript exponent support (2²=, (2)²=, chained powers), currency conversion, and unit translations
 - Smart Ghost: typing indicator suppressed during math parsing
-- HUD Quick Chat Switcher shortcut (Ctrl+K)
+- HUD Quick Chat Switcher shortcut (Ctrl+Shift+K or Ctrl+P)
+- Direct peer search by numeric ID (including id123456 format)
+- Context menu for pending outgoing messages (queue reply before upload completes)
 - Max connected accounts limit set to 5
-- Crisp high-DPI Windows tray icon supersampling for 100%–200% display scales
+- Crisp high-DPI Windows tray icon supersampling and live refresh on icon change (100%–200%)
+- Interactive 3D support badge model and refreshed tg://welcome setup wizard
 - Profile saved music widget with adjusted vertical spacing
 - Default OX Monogram app icon and refreshed welcome layout
