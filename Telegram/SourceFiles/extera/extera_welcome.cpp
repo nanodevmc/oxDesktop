@@ -437,7 +437,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			Ui::VerticalLayout *currentCard = nullptr;
 			for (const auto &line : lines) {
 				const auto trimmed = line.trimmed();
-				if (trimmed.isEmpty() || trimmed.startsWith(u"v7."_q) || trimmed.startsWith(u"v"_q)) {
+				if (trimmed.isEmpty() || trimmed.startsWith(u"v7."_q) || trimmed.startsWith(u"v"_q) || trimmed.startsWith(u"7."_q)) {
 					continue;
 				}
 				if (trimmed.startsWith(u"Ru:"_q) || trimmed.startsWith(u"En:"_q)) {
