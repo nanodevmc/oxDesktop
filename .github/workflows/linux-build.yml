@@ -110,7 +110,6 @@ jobs:
             -e CCACHE_DIR=/var/cache/ccache \
             -e CCACHE_MAXSIZE=2G \
             -e CCACHE_COMPRESS=1 \
-            -e CCACHE_DISABLE=false \
             "$IMAGE_TAG" \
             bash -c '/usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
               -D CMAKE_CONFIGURATION_TYPES=Release \
