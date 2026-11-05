@@ -195,8 +195,9 @@ jobs:
       - name: Generate Demo Screenshots
         run: |
           mkdir -p screenshots
-          sudo apt-get update && sudo apt-get install -y xvfb
+          sudo apt-get update && sudo apt-get install -y xvfb libxcb-cursor0 libx11-xcb1 libxkbcommon-x11-0
           export DISPLAY=:99
+          export QT_QPA_PLATFORM=xcb
           Xvfb :99 -screen 0 1280x800x24 &
           XVFB_PID=$!
           sleep 2
@@ -217,9 +218,11 @@ jobs:
 
       - name: Upload screenshots artifact
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: oxdesktop-screenshots-linux
           path: screenshots/*.png
+          if-no-files-found: ignore
           retention-days: 7
 
       - name: Upload artifact
