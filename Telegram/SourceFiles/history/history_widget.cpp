@@ -7059,27 +7059,26 @@ bool HistoryWidget::eventFilter(QObject *obj, QEvent *e) {
 				return true;
 			}
 		}
-			if (k->key() == Qt::Key_Up) {
+		if (k->key() == Qt::Key_Up) {
 #ifdef Q_OS_MAC
-				// Cmd + Up is used instead of Home.
-				if (fieldHasSendText()
-					&& !base::options::value<bool>(
-						HistoryView::Controls::kOptionMacCmdReplyImmediately)) {
-					return false;
-				}
-#endif
-				return replyToPreviousMessage();
-			} else if (k->key() == Qt::Key_Down) {
-#ifdef Q_OS_MAC
-				// Cmd + Down is used instead of End.
-				if (fieldHasSendText()
-					&& !base::options::value<bool>(
-						HistoryView::Controls::kOptionMacCmdReplyImmediately)) {
-					return false;
-				}
-#endif
-				return replyToNextMessage();
+			// Cmd + Up is used instead of Home.
+			if (fieldHasSendText()
+				&& !base::options::value<bool>(
+					HistoryView::Controls::kOptionMacCmdReplyImmediately)) {
+				return false;
 			}
+#endif
+			return replyToPreviousMessage();
+		} else if (k->key() == Qt::Key_Down) {
+#ifdef Q_OS_MAC
+			// Cmd + Down is used instead of End.
+			if (fieldHasSendText()
+				&& !base::options::value<bool>(
+					HistoryView::Controls::kOptionMacCmdReplyImmediately)) {
+				return false;
+			}
+#endif
+			return replyToNextMessage();
 		}
 	}
 	return RpWidget::eventFilter(obj, e);
