@@ -47,7 +47,8 @@
 - **Встроенный обход TgWsProxy v1.11.4**: кнопка быстрого переключения в `connection_box.cpp` («Встроенный обход (TgWsProxy v1.11.4)») со статусом подключения.
 
 ## Тестирование и CI
-- Python тест-сьют `tests/test_plugin_full_suite.py`: 28/28 тестов пройдено (100%).
+- Python тест-сьют `tests/test_plugin_full_suite.py`: 56/56 тестов пройдено (100% покрытие реального oxDesktop Python SDK, безопасности, AST анализа и badges.json).
+- Устранена ошибка AppStream changelog на Linux CI (Rocky Linux 8) в `Telegram/build/changelog2appstream.py`.
 - Windows и Linux сборки с реальными Telegram API credentials завершились 100% SUCCESS (Run `42034661759` и `42034661701`).
 - Windows бинарный релиз скачан локально в `builds/oxDesktop-windows-x64.zip` (174 МБ, инсталлятор Inno Setup + portable).
 - Добавлен ручной экшен публикации релизов `.github/workflows/publish-release.yml` (запуск релиза по кнопке с автосборкой артефактов из последних успешных билдов).
