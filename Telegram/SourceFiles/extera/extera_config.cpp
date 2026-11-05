@@ -169,6 +169,11 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"ghost_hide_read_channels"_q, true },
 		{ u"ghost_hide_read_groups"_q, true },
 		{ u"ghost_hide_read_pms"_q, false },
+		{ u"local_audio_player"_q, true },
+		{ u"custom_font_enabled"_q, false },
+		{ u"custom_font_family"_q, QString() },
+		{ u"custom_font_path"_q, QString() },
+		{ u"amoled_pure_black"_q, false },
 	};
 	return result;
 }

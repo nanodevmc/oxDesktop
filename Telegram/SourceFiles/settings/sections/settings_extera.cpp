@@ -2,6 +2,7 @@
 #include "ui/new_badges.h"
 
 #include <QtCore/QRegularExpression>
+#include <QtGui/QFontDatabase>
 
 #include "ui/search_field_controller.h"
 
@@ -1680,8 +1681,45 @@ void PartAppearance4(SectionBuilder &builder) {
 			builder,
 			u"custom_chat_themes"_q,
 			tr::lng_extera_custom_themes());
+		builder.addButton({
+			.id = u"extera/custom_font_pick"_q,
+			.title = tr::lng_exd_custom_font_choose(),
+			.onClick = [=] {
+				FileDialog::GetOpenPath(
+					Core::App().getFileDialogParent(),
+					tr::lng_exd_custom_font_choose(tr::now),
+					u"Font files (*.ttf *.otf *.woff2);;All files (*.*)"_q,
+					[=](FileDialog::OpenResult &&result) {
+						if (!result.paths.isEmpty()) {
+							const auto path = result.paths.front();
+							const auto fontId = QFontDatabase::addApplicationFont(path);
+							if (fontId >= 0) {
+								const auto families = QFontDatabase::applicationFontFamilies(fontId);
+								if (!families.isEmpty()) {
+									const auto family = families.front();
+									Extera::Set(u"custom_font_family"_q, family);
+									Extera::Set(u"custom_font_path"_q, path);
+									Extera::Set(u"custom_font_enabled"_q, true);
+									settings->setCustomFontFamily(family);
+									controller->show(Ui::MakeConfirmBox({
+										.text = tr::lng_extera_restart_required(),
+										.confirmed = [] { Core::Restart(); },
+										.confirmText = tr::lng_extera_restart(),
+									}));
+								}
+							}
+						}
+					});
+			},
+		});
+		AddToggle(
+			builder,
+			u"amoled_pure_black"_q,
+			tr::lng_exd_amoled_pure_black(),
+			{ u"amoled"_q, u"black"_q, u"oled"_q });
 	});
 	AddAbout(builder, tr::lng_extera_custom_themes_about());
+	AddAbout(builder, tr::lng_exd_amoled_pure_black_about());
 }
 
 void PartChats0(SectionBuilder &builder) {
