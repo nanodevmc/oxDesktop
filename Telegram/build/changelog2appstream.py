@@ -6,24 +6,34 @@ from xml.etree import ElementTree as ET
 import argparse
 
 def parse_changelog(changelog_path):
-    version_re = re.compile(r'([\d.-]+)\s+(\w+)?\s*\((\d{2}.\d{2}\.\d{2})\)')
+    version_re = re.compile(r'v?([\d.-]+)\s*(\w+)?\s*(?:\((\d{2}.\d{2}\.\d{2})\))?')
     entry_re = re.compile(r'-\s(.*)')
 
     with open(changelog_path, "r", encoding="utf-8") as f:
         changelog_lines = f.read().splitlines()
 
+    release = None
     releases = []
     for l in changelog_lines:
         version_match = version_re.match(l)
         entry_match = entry_re.match(l)
-        if version_match is not None:
-            version, prerelease, date = version_match.groups()
+        if version_match is not None and version_match.group(1):
+            version = version_match.group(1)
+            prerelease = version_match.group(2)
+            raw_date = version_match.group(3)
+            if raw_date:
+                try:
+                    rel_date = datetime.datetime.strptime(raw_date, '%d.%m.%y').date()
+                except ValueError:
+                    rel_date = datetime.date.today()
+            else:
+                rel_date = datetime.date.today()
             release = (version,
                        prerelease,
-                       datetime.datetime.strptime(date, '%d.%m.%y').date(),
+                       rel_date,
                        [])
             releases.append(release)
-        elif entry_match is not None:
+        elif entry_match is not None and release is not None:
             release[3].append(entry_match.group(1))
 
     return releases

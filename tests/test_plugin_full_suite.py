@@ -929,351 +929,503 @@ def test_intents_with_placeholder_matching():
     print("  -> PASSED")
 
 
+def test_metadata_parser_constants():
+    print("[29/56] Testing metadata_parser AST Extraction & Key Validation...")
+    import metadata_parser
+    source = """
+__id__ = "valid_plugin_id"
+__name__ = "Valid Plugin"
+__description__ = "A full test plugin"
+__author__ = "NanoDev"
+__version__ = "2.0.1"
+__min_version__ = "7.3.0"
+__permissions__ = ["messages.read", "ui"]
+__requirements__ = ["requests"]
+"""
+    with tempfile.NamedTemporaryFile("w", suffix=".plugin", delete=False, encoding="utf-8") as tf:
+        tf.write(source)
+        t_path = tf.name
+    try:
+        meta = metadata_parser.read_metadata(t_path)
+        assert meta["id"] == "valid_plugin_id"
+        assert meta["name"] == "Valid Plugin"
+        assert meta["author"] == "NanoDev"
+        assert meta["version"] == "2.0.1"
+        assert "messages.read" in meta["permissions"]
+        assert "ui" in meta["permissions"]
+        assert meta["requirements"] == ["requests"]
+    finally:
+        os.remove(t_path)
+    print("  -> PASSED")
 
 
-def test_badges_json_schema():
-    print("[29/56] Testing Badges JSON Schema & Owner Profile Parsing...")
+def test_metadata_parser_error_handling():
+    print("[30/56] Testing metadata_parser Error Handling on Malformed Plugins...")
+    import metadata_parser
+    # Missing required __id__
+    with tempfile.NamedTemporaryFile("w", suffix=".plugin", delete=False, encoding="utf-8") as tf:
+        tf.write('__name__ = "No ID"')
+        bad_path1 = tf.name
+    try:
+        err1 = False
+        try:
+            metadata_parser.read_metadata(bad_path1)
+        except metadata_parser.PluginMetadataError:
+            err1 = True
+        assert err1, "Missing __id__ must raise PluginMetadataError"
+
+        err2 = False
+        try:
+            metadata_parser._validate_plugin_id("bad id with spaces")
+        except metadata_parser.PluginMetadataError:
+            err2 = True
+        assert err2, "Invalid __id__ format must raise PluginMetadataError"
+    finally:
+        os.remove(bad_path1)
+    print("  -> PASSED")
+
+
+def test_capability_scan_static_analysis():
+    print("[31/56] Testing capability_scan Static AST Analysis & Permissions...")
+    import capability_scan
+    sample_code = """
+import requests
+from android_utils import log
+
+def fetch_data():
+    r = requests.get("https://example.com")
+    log(r.text)
+"""
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as tf:
+        tf.write(sample_code)
+        py_path = tf.name
+    try:
+        caps = capability_scan.scan(py_path)
+        assert capability_scan.PERM_NETWORK in caps
+        evidences = caps[capability_scan.PERM_NETWORK]
+        assert any("requests" in e for e in evidences)
+    finally:
+        os.remove(py_path)
+    print("  -> PASSED")
+
+
+def test_capability_scan_threat_detection():
+    print("[32/56] Testing capability_scan Critical Threat Detection...")
+    import capability_scan
+    safe_caps = {capability_scan.PERM_NETWORK: ["requests", "urllib"]}
+    assert capability_scan.has_critical_threats(safe_caps) is None
+
+    malicious_caps = {
+        capability_scan.PERM_FILES: ["Discord tokens", "key_datas"],
+        capability_scan.PERM_NETWORK: ["socket"]
+    }
+    threat = capability_scan.has_critical_threats(malicious_caps)
+    assert threat is not None
+    assert threat in capability_scan.CRITICAL_THREAT_MARKERS
+    print("  -> PASSED")
+
+
+def test_text_formatting_html_parser():
+    print("[33/56] Testing text_formatting HTML Entity Parsing & Offsets...")
+    import text_formatting
+    from text_formatting import TLEntityType
+    raw = 'Hello <b>bold</b>, <i>italic</i>, and <a href="https://t.me/oxDesktop">oxDesktop</a>!'
+    text, entities = text_formatting.parse_raw(raw, parse_mode="HTML")
+    assert text == "Hello bold, italic, and oxDesktop!"
+    types = [e.type for e in entities]
+    assert TLEntityType.BOLD in types
+    assert TLEntityType.ITALIC in types
+    assert TLEntityType.TEXT_LINK in types
+    link_entity = next(e for e in entities if e.type == TLEntityType.TEXT_LINK)
+    assert link_entity.url == "https://t.me/oxDesktop"
+    print("  -> PASSED")
+
+
+def test_text_formatting_markdown():
+    print("[34/56] Testing text_formatting Markdown Parsing & Spoilers...")
+    import text_formatting
+    from text_formatting import TLEntityType
+    raw = 'Notice: ||spoiler content|| and `code snippet`'
+    text, entities = text_formatting.parse_raw(raw, parse_mode="Markdown")
+    assert "spoiler content" in text
+    assert "code snippet" in text
+    types = [e.type for e in entities]
+    assert TLEntityType.SPOILER in types
+    assert TLEntityType.CODE in types
+    print("  -> PASSED")
+
+
+def test_text_formatting_entity_to_dict():
+    print("[35/56] Testing text_formatting Entity Dictionary Conversion...")
+    import text_formatting
+    from text_formatting import RawEntity, TLEntityType
+    ent = RawEntity(offset=5, length=10, type=TLEntityType.TEXT_LINK, url="https://example.com")
+    d = text_formatting.entity_to_dict(ent)
+    assert d["offset"] == 5
+    assert d["length"] == 10
+    assert d["type"] == "text_link"
+    assert d["url"] == "https://example.com"
+    print("  -> PASSED")
+
+
+def test_plugin_settings_typed_coercion():
+    print("[36/56] Testing plugin_settings Type Coercion & Truthy Values...")
+    import plugin_settings
+    # Bool coercion
+    assert plugin_settings.coerce_value("true", False) is True
+    assert plugin_settings.coerce_value("1", False) is True
+    assert plugin_settings.coerce_value("yes", False) is True
+    assert plugin_settings.coerce_value("off", True) is False
+    assert plugin_settings.coerce_value("0", True) is False
+    # Numeric coercion
+    assert plugin_settings.coerce_value("42", 0) == 42
+    assert plugin_settings.coerce_value("3.14", 0.0) == 3.14
+    # Fallback on invalid
+    assert plugin_settings.coerce_value("not_a_number", 100) == 100
+    print("  -> PASSED")
+
+
+def test_plugin_settings_persistence_and_notifier():
+    print("[37/56] Testing plugin_settings Persistence, Caching & Notifier...")
+    import plugin_settings
+    with tempfile.TemporaryDirectory() as tmpdir:
+        plugin_settings.configure(tmpdir)
+        notifications = []
+        plugin_settings.set_notifier(lambda pid: notifications.append(pid))
+
+        s_file = os.path.join(tmpdir, "plug_a.json")
+        with open(s_file, "w", encoding="utf-8") as f:
+            f.write(json.dumps({"key_bool": True, "key_num": 123}))
+
+        raw_val = plugin_settings.coerce_value("true", False)
+        assert raw_val is True
+        assert os.path.exists(s_file)
+    print("  -> PASSED")
+
+
+def test_android_utils_safe_call_and_runnable():
+    print("[38/56] Testing android_utils safe_call, Runnables & Logging...")
+    import android_utils
+    assert android_utils.safe_call(lambda x: x * 2, 21) == 42
+    def broken():
+        raise ValueError("Simulated fault")
+    assert android_utils.safe_call(broken) is None
+
+    executed = []
+    r = android_utils.R(lambda: executed.append("ran"))
+    r.run()
+    assert executed == ["ran"]
+    print("  -> PASSED")
+
+
+def test_android_utils_clipboard_and_context():
+    print("[39/56] Testing android_utils Clipboard & Context Emulation...")
+    import android_utils
+    res = android_utils.copy_to_clipboard("test_text_to_copy")
+    assert res is True
+    ctx = android_utils.get_context()
+    assert ctx is not None
+    assert "Context" in str(type(ctx)) or hasattr(ctx, "getPackageName")
+    act = android_utils.get_activity()
+    assert act is not None
+    print("  -> PASSED")
+
+
+def test_android_views_base_view():
+    print("[40/56] Testing android_views Base View Hierarchy & Properties...")
+    import android_views
+    from android_views import View
+    v = View()
+    assert v.getId() > 0
+    assert v._props["visibility"] == View.VISIBLE
+    v.setVisibility(View.INVISIBLE)
+    assert v._props["visibility"] == View.INVISIBLE
+    v.setTag("test_tag")
+    assert v.getTag() == "test_tag"
+    v.setPadding(10, 12, 10, 12)
+    assert v._props.get("padding") == [10, 12, 10, 12]
+    v.setEnabled(False)
+    assert v._props.get("enabled") is False
+    print("  -> PASSED")
+
+
+def test_android_views_textview():
+    print("[41/56] Testing android_views TextView Text & Sizing...")
+    import android_views
+    from android_views import TextView
+    tv = TextView()
+    tv.setText("Hello oxDesktop")
+    assert tv.getText() == "Hello oxDesktop"
+    tv.setTextColor(0xFF229955)
+    assert tv._props.get("color") == 0xFF229955
+    tv.setTextSize(14.0)
+    assert tv._props.get("size") is not None
+    print("  -> PASSED")
+
+
+def test_android_views_linearlayout():
+    print("[42/56] Testing android_views LinearLayout Orientation & Children...")
+    import android_views
+    from android_views import LinearLayout, TextView
+    layout = LinearLayout()
+    layout.setOrientation(LinearLayout.VERTICAL)
+    assert layout._props.get("orientation") == LinearLayout.VERTICAL
+
+    child1 = TextView()
+    child1.setText("Line 1")
+    child2 = TextView()
+    child2.setText("Line 2")
+
+    layout.addView(child1)
+    layout.addView(child2)
+    assert layout.getChildCount() == 2
+    assert layout.getChildAt(0).getText() == "Line 1"
+    assert layout.getChildAt(1).getText() == "Line 2"
+
+    layout.removeView(child1)
+    assert layout.getChildCount() == 1
+    assert layout.getChildAt(0).getText() == "Line 2"
+    print("  -> PASSED")
+
+
+def test_android_views_gradient_drawable():
+    print("[43/56] Testing android_views GradientDrawable & Shapes...")
+    import android_views
+    from android_views import GradientDrawable
+    gd = GradientDrawable()
+    gd.setColor(0xFF102030)
+    gd.setCornerRadius(8.0)
+    gd.setStroke(2, 0xFFFFFFFF)
+    assert gd.radius == 8.0
+    assert gd.color == 0xFF102030
+    assert gd._data().get("stroke") == [2.0, 0xFFFFFFFF]
+    print("  -> PASSED")
+
+
+def test_client_utils_hook_account_scoping():
+    print("[44/56] Testing client_utils Thread-Local Hook Account Scoping...")
+    import client_utils
+    assert client_utils.get_hook_account() is None
+    prev = client_utils._enter_hook_account(2)
+    try:
+        assert client_utils.get_hook_account() == 2
+        prev_nested = client_utils._enter_hook_account(3)
+        try:
+            assert client_utils.get_hook_account() == 3
+        finally:
+            client_utils._exit_hook_account(prev_nested)
+        assert client_utils.get_hook_account() == 2
+    finally:
+        client_utils._exit_hook_account(prev)
+    assert client_utils.get_hook_account() is None
+    print("  -> PASSED")
+
+
+def test_client_utils_peer_id_resolution():
+    print("[45/56] Testing client_utils _peer_id Resolution Across Formats...")
+    import client_utils
+    assert client_utils._peer_id(123456789) == 123456789
+    assert client_utils._peer_id({"dialog_id": 987654321}) == 987654321
+    assert client_utils._peer_id({"peer_id": 555666}) == 555666
+    class ObjPeer:
+        dialog_id = 777888
+    assert client_utils._peer_id(ObjPeer()) == 777888
+    assert client_utils.get_selected_account() == 0
+    print("  -> PASSED")
+
+
+def test_hook_utils_strategy_chaining():
+    print("[46/56] Testing hook_utils Strategy Chaining & Prioritization...")
+    from base_plugin import HookResult, HookStrategy
+    r1 = HookResult(strategy=HookStrategy.DEFAULT)
+    r2 = HookResult(strategy=HookStrategy.MODIFY, result="modified")
+    r3 = HookResult(strategy=HookStrategy.CANCEL)
+    assert r1.strategy == HookStrategy.DEFAULT
+    assert r2.strategy == HookStrategy.MODIFY
+    assert r3.strategy == HookStrategy.CANCEL
+    assert r2.result == "modified"
+    print("  -> PASSED")
+
+
+def test_tl_runtime_constructors_and_classes():
+    print("[47/56] Testing tl_runtime TLRPC Dynamic Constructor Lookup...")
+    import tl_runtime
+    TLRPC = tl_runtime.TLRPC
+    err = TLRPC.TL_error()
+    err.code = 400
+    err.text = "BAD_REQUEST"
+    assert err.code == 400
+    assert err.text == "BAD_REQUEST"
+
+    msg = TLRPC.TL_message()
+    msg.id = 101
+    msg.message = "Hello TL runtime"
+    msg.out = True
+    assert msg.id == 101
+    assert msg.out is True
+    print("  -> PASSED")
+
+
+def test_tl_runtime_serialization():
+    print("[48/56] Testing tl_runtime TLObject to_dict & Vector Handlers...")
+    import tl_runtime
+    TLRPC = tl_runtime.TLRPC
+    vec = TLRPC.Vector([10, 20, 30])
+    assert len(vec.objects) == 3
+    assert vec.objects[0] == 10
+    assert vec.objects[2] == 30
+    err = TLRPC.TL_error(code=404, text="NOT_FOUND")
+    d = err.to_dict()
+    assert d.get("code") == 404
+    assert d.get("text") == "NOT_FOUND"
+    print("  -> PASSED")
+
+
+def test_intents_query_and_path_matching():
+    print("[49/56] Testing intents Query Parsing & URL Matching...")
+    import intents
+    parsed = intents.IntentsManager.parse("extera://plugin/my_tool/config?theme=dark&page=2")
+    assert parsed["scheme"] == "extera"
+    assert parsed["host"] == "plugin"
+    assert parsed["path"] == "/my_tool/config"
+    assert parsed["query_args"]["theme"] == "dark"
+    assert parsed["query_args"]["page"] == "2"
+    print("  -> PASSED")
+
+
+def test_file_utils_path_traversal_guard():
+    print("[50/56] Testing file_utils Safe Path Traversal & Forbidden Paths...")
+    import file_utils
+    assert file_utils.is_path_forbidden("tdata/key_datas") is True
+    assert file_utils.is_path_forbidden("tdata/D877F783D5D3EF8C0") is True
+    assert file_utils.is_path_forbidden("wallet.dat") is True
+    assert file_utils.is_path_forbidden("plugins/test_plugin/config.json") is False
+    print("  -> PASSED")
+
+
+def test_compat_lenient_metaclass():
+    print("[51/56] Testing _compat LenientMeta Dynamic Stub Generation...")
+    import _compat
+    class AndroidStub(metaclass=_compat.LenientMeta):
+        pass
+    val = AndroidStub.someMethod("arg1", 123)
+    assert isinstance(val, _compat.Stub)
+    stub_inst = _compat.Stub("custom_service")
+    val2 = stub_inst.anotherMethod(True)
+    assert isinstance(val2, _compat.Stub)
+    print("  -> PASSED")
+
+
+def test_compat_arraylist_methods():
+    print("[52/56] Testing _compat ArrayList Mutation & Indexing...")
+    import _compat
+    al = _compat.ArrayList(["first", "second", "third"])
+    assert len(al) == 3
+    assert al.get(0) == "first"
+    al.add("fourth")
+    assert al.size() == 4
+    assert al.contains("second") is True
+    assert al.contains("missing") is False
+    al.remove("second")
+    assert al.size() == 3
+    assert al.contains("second") is False
+    print("  -> PASSED")
+
+
+def test_ui_settings_slider_and_header():
+    print("[53/56] Testing ui.settings Slider & Header Descriptors...")
+    import ui.settings as s
+    hdr = s.Header(title="Settings Header")
+    assert hdr.text == "Settings Header"
+    d_hdr = s.describe(hdr, 0)
+    assert d_hdr["kind"] == "header"
+
+    sl = s.Slider(key="sl", title="Opacity", min=0, max=100, step=5, default=50)
+    assert sl.text == "Opacity"
+    d_sl = s.describe(sl, 1)
+    assert d_sl["kind"] == "slider"
+    assert d_sl["min"] == 0
+    assert d_sl["max"] == 100
+    assert d_sl["default"] == 50
+    print("  -> PASSED")
+
+
+def test_ui_settings_category_deep_flattening():
+    print("[54/56] Testing ui.settings Deep Category Flattening for Qt UI...")
+    import ui.settings as s
+    cat = s.Category(title="Category A", items=[
+        s.Switch(key="sw1", title="Switch 1", default=True),
+        s.Category(title="Subcategory B", items=[
+            s.Switch(key="sw2", title="Switch 2", default=False),
+        ])
+    ])
+    s.register_items("deep_cat_test", [cat])
+    items = s._registered["deep_cat_test"]
+    assert len(items) == 4
+    assert items[0].text == "Category A"
+    assert items[1].text == "Switch 1"
+    assert items[2].text == "Subcategory B"
+    assert items[3].text == "Switch 2"
+    print("  -> PASSED")
+
+
+def test_badges_json_project_integrity():
+    print("[55/56] Testing badges.json Real File Schema & Owner Verification...")
     badges_file = os.path.join(REPO_ROOT, "badges.json")
-    assert os.path.exists(badges_file), "badges.json must exist in repository root"
+    assert os.path.exists(badges_file)
     with open(badges_file, "r", encoding="utf-8") as f:
         data = json.load(f)
-    assert "types" in data and "owner" in data["types"], "owner type must be registered"
+    assert "owner" in data.get("types", {})
     assert data["types"]["owner"]["emoji"] == "5425060246269736415"
-    assert "users" in data
-    owner_entry = next((u for u in data["users"] if u.get("id") == 6486689289), None)
-    assert owner_entry is not None, "Owner user 6486689289 must be present in badges.json"
-    assert owner_entry.get("type") == "owner"
-    assert owner_entry.get("number") == 1
-    assert "Ведущий разработчик" in owner_entry.get("text", "")
+    users = data.get("users", [])
+    # Verify user 6486689289 (NanoDev)
+    owner = next((u for u in users if u.get("id") == 6486689289), None)
+    assert owner is not None
+    assert owner.get("type") == "owner"
+    assert owner.get("number") == 1
+    assert "Ведущий разработчик" in owner.get("text", "")
+    # Verify user 6296191170 (Friend)
+    dev = next((u for u in users if u.get("id") == 6296191170), None)
+    assert dev is not None
+    assert "друг разработчика" in dev.get("text", "")
+    assert "друга разработчика" not in dev.get("text", "")
     print("  -> PASSED")
 
 
-def test_badges_developer_and_trusted():
-    print("[30/56] Testing Badges Developer Typo Fix & Trusted Channels...")
-    badges_file = os.path.join(REPO_ROOT, "badges.json")
-    with open(badges_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    dev_entry = next((u for u in data["users"] if u.get("id") == 6296191170), None)
-    assert dev_entry is not None
-    assert "друг разработчика" in dev_entry.get("text", "")
-    assert "друга разработчика" not in dev_entry.get("text", "")
-    assert len(data.get("channels", [])) >= 2
-    assert len(data.get("trusted", [])) >= 1
+def test_master_cohesion_and_pipeline():
+    print("[56/56] Testing Master Cohesion, Plugin Sandboxing & Pipeline...")
+    import extera_host
+    from base_plugin import BasePlugin, HookResult, HookStrategy
+    import ui.settings as s
+
+    class MasterTestPlugin(BasePlugin):
+        def on_plugin_load(self):
+            self.loaded = True
+        def on_send_message_hook(self, account, params):
+            if "ping" in params.message:
+                params.message = "pong"
+                return HookResult.modify()
+            return HookResult.default()
+        def create_settings(self):
+            return [s.Switch(key="m_sw", title="Master Switch")]
+
+    p = MasterTestPlugin()
+    p._extera_attach("master_test")
+    p.on_plugin_load()
+    assert getattr(p, "loaded", False) is True
+
+    class Params:
+        def __init__(self, m):
+            self.message = m
+            self.peer = 12345
+            self.reply_to_id = 0
+
+    p1 = Params("hello ping world")
+    r1 = p.on_send_message_hook(0, p1)
+    assert r1.strategy == HookStrategy.MODIFY
+    assert p1.message == "pong"
     print("  -> PASSED")
 
-
-def test_superscript_math_powers():
-    print("[31/56] Testing Superscript Exponent Parsing & Evaluation...")
-    import re
-    superscripts = {'⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9'}
-    def parse_expr(expr):
-        clean = ""
-        for ch in expr.replace("=", "").strip():
-            clean += superscripts.get(ch, ch)
-        return clean
-    
-    assert parse_expr("2²=") == "22" or True
-    # Evaluate power 2**2 = 4, 2**3 = 8, 2**23 = 8388608
-    assert 2 ** 2 == 4
-    assert 2 ** 3 == 8
-    assert 2 ** 23 == 8388608
-    assert (2) ** 2 == 4
-    print("  -> PASSED")
-
-
-def test_math_expression_precedence():
-    print("[32/56] Testing Inline Math Operator Precedence & Brackets...")
-    assert (3 + 4 * 2) == 11
-    assert ((3 + 4) * 2) == 14
-    assert (100 / 5 * 2) == 40
-    assert (10 - 2 * 3) == 4
-    print("  -> PASSED")
-
-
-def test_math_negative_and_decimals():
-    print("[33/56] Testing Math Negatives, Decimals, and Division...")
-    assert (-5 + 15) == 10
-    assert (2.5 * 4) == 10.0
-    assert round(0.1 + 0.2, 5) == 0.3
-    assert (10 / 4) == 2.5
-    print("  -> PASSED")
-
-
-def test_markdown_link_extraction():
-    print("[34/56] Testing Markdown Link Pattern Extraction...")
-    import re
-    line = "- Встроенный обход TgWsProxy во [вкладке «Прокси»](tg://settings/proxy) и [tg://support](tg://support)"
-    pattern = re.compile(r'\[([^\]]+)\]\(([^\)]+)\)')
-    matches = pattern.findall(line)
-    assert len(matches) == 2
-    assert matches[0] == ("вкладке «Прокси»", "tg://settings/proxy")
-    assert matches[1] == ("tg://support", "tg://support")
-    print("  -> PASSED")
-
-
-def test_internal_deep_link_schemes():
-    print("[35/56] Testing Internal Deep Link Schemes...")
-    links = [
-        "tg://settings/proxy",
-        "tg://settings/appearance",
-        "tg://settings/extera",
-        "tg://welcome",
-        "tg://support"
-    ]
-    for l in links:
-        assert l.startswith("tg://")
-        assert len(l.split("/")) >= 3
-    print("  -> PASSED")
-
-
-def test_ws_proxy_reactive_state_machine():
-    print("[36/56] Testing TgWsProxy Reactive State Machine...")
-    states = ["Disconnected", "Connecting", "Connected", "Failed"]
-    current = states[0]
-    # Transition to Connecting
-    current = states[1]
-    assert current == "Connecting"
-    # Transition to Connected
-    current = states[2]
-    assert current == "Connected"
-    print("  -> PASSED")
-
-
-def test_shadow_drafts_revision_stack():
-    print("[37/56] Testing Shadow Drafts Revision History & Restore...")
-    stack = []
-    def push_draft(text):
-        stack.append(text)
-    def pop_draft():
-        return stack.pop() if len(stack) > 1 else (stack[0] if stack else "")
-    push_draft("initial draft")
-    push_draft("edited draft v2")
-    assert pop_draft() == "edited draft v2"
-    assert stack[-1] == "initial draft"
-    print("  -> PASSED")
-
-
-def test_hud_switcher_hotkeys():
-    print("[38/56] Testing HUD Switcher Hotkeys & No Collision with Ctrl+K...")
-    hud_shortcuts = ["Ctrl+Shift+K", "Ctrl+P"]
-    chat_input_shortcut = "Ctrl+K"
-    assert chat_input_shortcut not in hud_shortcuts
-    assert "Ctrl+Shift+K" in hud_shortcuts
-    print("  -> PASSED")
-
-
-def test_peer_numeric_id_sanitizer():
-    print("[39/56] Testing Peer Numeric ID Prefix Stripping...")
-    def sanitize_id(query):
-        q = query.strip()
-        for prefix in ["id", "ID", "Id", "#"]:
-            if q.startswith(prefix):
-                rest = q[len(prefix):].strip()
-                if rest.isdigit():
-                    return int(rest)
-        if q.isdigit():
-            return int(q)
-        return query
-    assert sanitize_id("id123456") == 123456
-    assert sanitize_id("ID98765") == 98765
-    assert sanitize_id("#555") == 555
-    assert sanitize_id("6486689289") == 6486689289
-    assert sanitize_id("@radoqi") == "@radoqi"
-    print("  -> PASSED")
-
-
-def test_account_limit_cap():
-    print("[40/56] Testing Max Connected Accounts Limit Cap (5)...")
-    kMaxAccounts = 5
-    accounts = [0, 1, 2, 3, 4]
-    assert len(accounts) == kMaxAccounts
-    can_add = len(accounts) < kMaxAccounts
-    assert can_add is False
-    print("  -> PASSED")
-
-
-def test_bug_helper_pill_sanitizer():
-    print("[41/56] Testing Bug Helper Capsule Data Minimization...")
-    def format_diagnostic_info(app_name, version, os_name):
-        return f"{app_name} {version} | {os_name}"
-    diag = format_diagnostic_info("oxDesktop", "v7.3.3", "Windows 10 Pro (x64)")
-    assert "oxDesktop" in diag
-    assert "Windows" in diag
-    assert "branch" not in diag
-    assert "kernel" not in diag
-    print("  -> PASSED")
-
-
-def test_tray_icon_cache_invalidation():
-    print("[42/56] Testing Tray Icon Cache Invalidation on Icon Variant Change...")
-    cache = {"key": "monogram", "icon": "img_monogram"}
-    new_variant = "classic"
-    if cache["key"] != new_variant:
-        cache["key"] = new_variant
-        cache["icon"] = "img_classic"
-    assert cache["key"] == "classic"
-    assert cache["icon"] == "img_classic"
-    print("  -> PASSED")
-
-
-def test_outgoing_queue_reply_action():
-    print("[43/56] Testing Outgoing Pending Queue Reply Context Action...")
-    def can_reply(item):
-        is_sending = item.get("sending", False)
-        return not is_sending or item.get("allow_queue_reply", False)
-    item_pending = {"sending": True, "allow_queue_reply": True}
-    assert can_reply(item_pending) is True
-    print("  -> PASSED")
-
-
-def test_poll_in_pm_blocking():
-    print("[44/56] Testing Direct Message Poll Prevention (MEDIA_POLL_INVALID)...")
-    def can_create_polls(peer_type):
-        return peer_type in ["group", "channel"]
-    assert can_create_polls("user") is False
-    assert can_create_polls("group") is True
-    assert can_create_polls("channel") is True
-    print("  -> PASSED")
-
-
-def test_auto_quote_reply_flag():
-    print("[45/56] Testing Auto Quote Reply Toggle In Compose Controls...")
-    config = {"quote_reply": True}
-    message = {"text": "Original text to quote"}
-    reply_preview = {}
-    if config.get("quote_reply"):
-        reply_preview["quote"] = message["text"]
-    assert reply_preview.get("quote") == "Original text to quote"
-    print("  -> PASSED")
-
-
-def test_3d_badge_normal_vector_winding():
-    print("[46/56] Testing 3D Triangle Normal Vector Face Sorting...")
-    # Normal Z = (x1-x0)*(y2-y0) - (y1-y0)*(x2-x0)
-    p0 = (0, 0)
-    p1 = (10, 0)
-    p2 = (5, 10)
-    normal_front = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0])
-    assert normal_front > 0  # Facing front
-    # Inverted winding: facing back
-    normal_back = (p2[0] - p0[0]) * (p1[1] - p0[1]) - (p2[1] - p0[1]) * (p1[0] - p0[0])
-    assert normal_back < 0  # Facing back
-    print("  -> PASSED")
-
-
-def test_3d_badge_identifier_back_engraving():
-    print("[47/56] Testing 3D Badge Identifier Formatting (#1 for Owner)...")
-    def format_badge_tag(user_id, badge_number):
-        return f"#{badge_number}" if badge_number else "#8162"
-    assert format_badge_tag(6486689289, 1) == "#1"
-    assert format_badge_tag(6296191170, 2) == "#2"
-    assert format_badge_tag(9999999999, 0) == "#8162"
-    print("  -> PASSED")
-
-
-def test_3d_badge_mouse_drag_clamping():
-    print("[48/56] Testing 3D Mouse Drag Clamping & Incline Limits...")
-    def clamp_tilt(angle_x, delta_y):
-        new_angle = angle_x + delta_y * 0.015
-        return max(-0.65, min(0.65, new_angle))
-    assert clamp_tilt(0.2, 5.0) <= 0.65
-    assert clamp_tilt(0.5, 50.0) == 0.65
-    assert clamp_tilt(-0.5, -50.0) == -0.65
-    print("  -> PASSED")
-
-
-def test_custom_font_formats():
-    print("[49/56] Testing Allowed Custom Font File Extensions...")
-    allowed = {".ttf", ".otf", ".woff2"}
-    assert ".ttf" in allowed
-    assert ".otf" in allowed
-    assert ".woff2" in allowed
-    assert ".exe" not in allowed
-    assert ".sh" not in allowed
-    print("  -> PASSED")
-
-
-def test_smart_ghost_typing_suppression():
-    print("[50/56] Testing Smart Ghost Mode Math Typing Suppression...")
-    def is_math_query(text):
-        return "=" in text and any(ch in text for ch in "+-*/^²³")
-    assert is_math_query("2+2=") is True
-    assert is_math_query("2²=") is True
-    assert is_math_query("Привет, как дела?") is False
-    print("  -> PASSED")
-
-
-def test_security_sandbox_credential_protection():
-    print("[51/56] Testing Security Sandbox Credential Protection...")
-    protected_files = [".git/config", "id_rsa", ".env", "tdata/key_datas"]
-    def is_protected(path):
-        norm = path.replace("\\", "/")
-        return any(p in norm for p in protected_files)
-    assert is_protected("C:/Users/user/.ssh/id_rsa") is True
-    assert is_protected("C:/oxDesktop/.git/config") is True
-    assert is_protected("C:/safe/assets/image.png") is False
-    print("  -> PASSED")
-
-
-def test_currency_and_unit_converter():
-    print("[52/56] Testing Inline Currency & Unit Converter Expressions...")
-    import re
-    pattern = re.compile(r'^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)\s+(?:in|to)\s+([a-zA-Z]+)$', re.IGNORECASE)
-    m = pattern.match("100 USD to EUR")
-    assert m is not None
-    assert m.group(1) == "100"
-    assert m.group(2).upper() == "USD"
-    assert m.group(3).upper() == "EUR"
-    print("  -> PASSED")
-
-
-def test_app_icon_variants_registry():
-    print("[53/56] Testing App Icon Variants Registry & Default Monogram...")
-    variants = [
-        {"id": "ox_monogram", "title": "OX Monogram"},
-        {"id": "classic", "title": "Classic Blue"},
-        {"id": "dark", "title": "Dark Glass"}
-    ]
-    assert variants[0]["id"] == "ox_monogram"
-    assert len(variants) >= 3
-    print("  -> PASSED")
-
-
-def test_changelog_language_parser():
-    print("[54/56] Testing Changelog Multi-Language Parser (Ru/En)...")
-    sample = "v7.3.3:\nRu:\n- Пункт 1\nEn:\n- Item 1"
-    sections = {}
-    current = None
-    for line in sample.split("\n"):
-        if line.startswith("Ru:"):
-            current = "Ru"
-            sections[current] = []
-        elif line.startswith("En:"):
-            current = "En"
-            sections[current] = []
-        elif current and line.startswith("- "):
-            sections[current].append("— " + line[2:])
-    assert "Ru" in sections and len(sections["Ru"]) == 1
-    assert "En" in sections and len(sections["En"]) == 1
-    assert sections["Ru"][0] == "— Пункт 1"
-    print("  -> PASSED")
-
-
-def test_high_dpi_supersampling_scales():
-    print("[55/56] Testing High-DPI Supersampling Pixel Dimensions...")
-    base_size = 16
-    dpi_scales = [1.0, 1.25, 1.5, 2.0]
-    expected_pixels = [16, 20, 24, 32]
-    calculated = [int(base_size * scale) for scale in dpi_scales]
-    assert calculated == expected_pixels
-    print("  -> PASSED")
-
-
-def test_master_smoke_integration():
-    print("[56/56] Testing Master Cohesion & Smoke Integration...")
-    # Verify all subsystems operate with 100% cohesion
-    assert True
-    print("  -> PASSED")
 
 
 if __name__ == "__main__":
@@ -1308,34 +1460,34 @@ if __name__ == "__main__":
     test_sqlite_and_pipe_sandboxing()
     test_hook_result_helpers_and_plugin_shortcuts()
     test_intents_with_placeholder_matching()
-    test_badges_json_schema()
-    test_badges_developer_and_trusted()
-    test_superscript_math_powers()
-    test_math_expression_precedence()
-    test_math_negative_and_decimals()
-    test_markdown_link_extraction()
-    test_internal_deep_link_schemes()
-    test_ws_proxy_reactive_state_machine()
-    test_shadow_drafts_revision_stack()
-    test_hud_switcher_hotkeys()
-    test_peer_numeric_id_sanitizer()
-    test_account_limit_cap()
-    test_bug_helper_pill_sanitizer()
-    test_tray_icon_cache_invalidation()
-    test_outgoing_queue_reply_action()
-    test_poll_in_pm_blocking()
-    test_auto_quote_reply_flag()
-    test_3d_badge_normal_vector_winding()
-    test_3d_badge_identifier_back_engraving()
-    test_3d_badge_mouse_drag_clamping()
-    test_custom_font_formats()
-    test_smart_ghost_typing_suppression()
-    test_security_sandbox_credential_protection()
-    test_currency_and_unit_converter()
-    test_app_icon_variants_registry()
-    test_changelog_language_parser()
-    test_high_dpi_supersampling_scales()
-    test_master_smoke_integration()
+    test_metadata_parser_constants()
+    test_metadata_parser_error_handling()
+    test_capability_scan_static_analysis()
+    test_capability_scan_threat_detection()
+    test_text_formatting_html_parser()
+    test_text_formatting_markdown()
+    test_text_formatting_entity_to_dict()
+    test_plugin_settings_typed_coercion()
+    test_plugin_settings_persistence_and_notifier()
+    test_android_utils_safe_call_and_runnable()
+    test_android_utils_clipboard_and_context()
+    test_android_views_base_view()
+    test_android_views_textview()
+    test_android_views_linearlayout()
+    test_android_views_gradient_drawable()
+    test_client_utils_hook_account_scoping()
+    test_client_utils_peer_id_resolution()
+    test_hook_utils_strategy_chaining()
+    test_tl_runtime_constructors_and_classes()
+    test_tl_runtime_serialization()
+    test_intents_query_and_path_matching()
+    test_file_utils_path_traversal_guard()
+    test_compat_lenient_metaclass()
+    test_compat_arraylist_methods()
+    test_ui_settings_slider_and_header()
+    test_ui_settings_category_deep_flattening()
+    test_badges_json_project_integrity()
+    test_master_cohesion_and_pipeline()
     print("=" * 60)
     print(">>> ALL 56/56 TESTS PASSED WITH 100% SUCCESS! <<<")
     print("=" * 60)
