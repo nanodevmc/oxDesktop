@@ -1767,7 +1767,17 @@ void RegisterSettingsHandlers(Router &router) {
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
-			::Settings::OpenAskQuestionConfirm(ctx.controller);
+			::Settings::ShowExteraSupportBox(ctx.controller);
+			return Result::Handled;
+		}},
+	});
+
+	router.add(u"donate"_q, {
+		.action = CodeBlock{ [](const Context &ctx) {
+			if (!ctx.controller) {
+				return Result::NeedsAuth;
+			}
+			::Settings::ShowExteraSupportBox(ctx.controller);
 			return Result::Handled;
 		}},
 	});
@@ -1778,7 +1788,18 @@ void RegisterSettingsHandlers(Router &router) {
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
-			::Settings::OpenAskQuestionConfirm(ctx.controller);
+			::Settings::ShowExteraSupportBox(ctx.controller);
+			return Result::Handled;
+		}},
+	});
+
+	router.add(u"settings"_q, {
+		.path = u"donate"_q,
+		.action = CodeBlock{ [](const Context &ctx) {
+			if (!ctx.controller) {
+				return Result::NeedsAuth;
+			}
+			::Settings::ShowExteraSupportBox(ctx.controller);
 			return Result::Handled;
 		}},
 	});

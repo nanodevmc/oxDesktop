@@ -177,6 +177,14 @@ std::vector<Variant> Variants() {
 	const auto accent = AccentColor();
 	return {
 		{
+			u"ox_monogram"_q,
+			u"OX Monogram"_q,
+			QColor(218, 48, 24),
+			QColor(255, 108, 42),
+			Qt::white,
+			u":/gui/art/app_icon_glyph_ox_monogram.png"_q,
+		},
+		{
 			QString(),
 			u"Aero Delta"_q,
 			QColor(218, 48, 24),
@@ -191,14 +199,6 @@ std::vector<Variant> Variants() {
 			QColor(255, 108, 42),
 			Qt::white,
 			u":/gui/art/app_icon_glyph_cyber_ox.png"_q,
-		},
-		{
-			u"ox_monogram"_q,
-			u"OX Monogram"_q,
-			QColor(218, 48, 24),
-			QColor(255, 108, 42),
-			Qt::white,
-			u":/gui/art/app_icon_glyph_ox_monogram.png"_q,
 		},
 		{
 			u"telegram"_q,
@@ -275,9 +275,10 @@ QImage Render(int size, const QString &id, bool square) {
 }
 
 QImage Current(int size) {
+	const auto id = Extera::String(u"app_icon"_q);
 	return Render(
 		size,
-		Extera::String(u"app_icon"_q),
+		id.isEmpty() ? u"ox_monogram"_q : id,
 		Extera::Bool(u"app_icon_square"_q));
 }
 
