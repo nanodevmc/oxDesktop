@@ -1681,9 +1681,16 @@ void PartAppearance4(SectionBuilder &builder) {
 			builder,
 			u"custom_chat_themes"_q,
 			tr::lng_extera_custom_themes());
+	});
+	AddAbout(builder, tr::lng_extera_custom_themes_about());
+
+	builder.addSkip();
+	builder.card([&] {
+		const auto settings = &Core::App().settings();
 		builder.addButton({
 			.id = u"extera/custom_font_pick"_q,
 			.title = tr::lng_exd_custom_font_choose(),
+			.icon = { &st::exteraIconAppearance },
 			.onClick = [=] {
 				FileDialog::GetOpenPath(
 					Core::App().getFileDialogParent(),
@@ -1712,14 +1719,7 @@ void PartAppearance4(SectionBuilder &builder) {
 					});
 			},
 		});
-		AddToggle(
-			builder,
-			u"amoled_pure_black"_q,
-			tr::lng_exd_amoled_pure_black(),
-			{ u"amoled"_q, u"black"_q, u"oled"_q });
 	});
-	AddAbout(builder, tr::lng_extera_custom_themes_about());
-	AddAbout(builder, tr::lng_exd_amoled_pure_black_about());
 }
 
 void PartChats0(SectionBuilder &builder) {

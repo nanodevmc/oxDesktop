@@ -124,7 +124,7 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"md3_sliders"_q, true },
 		{ u"material_design"_q, true },
 		{ u"custom_chat_themes"_q, true },
-		{ u"app_icon"_q, QString() },
+		{ u"app_icon"_q, u"ox_monogram"_q },
 		{ u"app_icon_square"_q, false },
 		{ u"full_members"_q, true },
 		{ u"ws_proxy"_q, true },

@@ -224,13 +224,56 @@ private:
 		return number();
 	}
 
+	[[nodiscard]] static std::optional<char> FromSuperscript(QChar ch) {
+		const auto u = ch.unicode();
+		if (u == 0x2070) return '0';
+		if (u == 0x00B9) return '1';
+		if (u == 0x00B2) return '2';
+		if (u == 0x00B3) return '3';
+		if (u >= 0x2074 && u <= 0x2079) return char('0' + (u - 0x2070));
+		if (u == 0x207A) return '+';
+		if (u == 0x207B) return '-';
+		if (u == 0x207D) return '(';
+		if (u == 0x207E) return ')';
+		return std::nullopt;
+	}
+
+	[[nodiscard]] std::optional<double> superscriptPower() {
+		skipSpaces();
+		if (_position >= _text.size() || !FromSuperscript(_text[_position])) {
+			return std::nullopt;
+		}
+		QString subExpr;
+		while (_position < _text.size()) {
+			if (const auto ch = FromSuperscript(_text[_position])) {
+				subExpr.append(QChar(*ch));
+				++_position;
+			} else {
+				break;
+			}
+		}
+		return MathParser(subExpr).parse();
+	}
+
 	[[nodiscard]] std::optional<double> power() {
 		auto left = factor();
-		if (left && take('^')) {
+		if (!left) {
+			return std::nullopt;
+		}
+		if (take('^')) {
 			const auto right = power();
 			return right
 				? std::make_optional(std::pow(*left, *right))
 				: std::nullopt;
+		} else if (const auto superExp = superscriptPower()) {
+			auto res = std::pow(*left, *superExp);
+			if (take('^')) {
+				const auto right = power();
+				return right
+					? std::make_optional(std::pow(res, *right))
+					: std::nullopt;
+			}
+			return res;
 		}
 		return left;
 	}

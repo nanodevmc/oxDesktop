@@ -71,7 +71,8 @@ void SetupSavedMusic(
 						DocumentMusicButtonData(document),
 						[window = controller, peer] {
 							window->showSection(Info::Saved::MakeMusic(peer));
-						}));
+						}),
+					QMargins(0, 8, 0, 8));
 				music->setOverrideBg(color);
 			}
 			divider->toggle(true, anim::type::normal);

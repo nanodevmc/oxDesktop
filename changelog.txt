@@ -1,33 +1,24 @@
-7.3.3 (04.11.26)
-- Complete Python plugin ecosystem compatibility: CactusLib, exteraGram and AyuGram extensions.
-- Multi-file plugin archive support (.elyx, .eaf) with automatic background extraction.
-- Automatic malicious threat scanner detecting DPAPI theft, process memory injection, keyloggers, and cookie grabbers.
-- Advanced AST taint analysis for obfuscated and decoded payloads in capability scanner.
-- Sandboxed file system and execution: access to session tdata, key_datas, Chrome, and Discord credentials blocked.
-- Official 3D animated Extera badges (Developer, Bughunter, Helper, Supporter/Donor, Trusted) and tg://support deeplink.
-- Centralized NEW and BETA badges registry with refined liquid glass badge styling.
-- Queue Reply: reply to pending and outgoing messages in chain up to 50 items with automatic parent resolution.
-- Smart bug report helper with one-click insertion of system, build, and Qt diagnostic information.
-- Floating mini player with Always-on-Top pinned mode and ultra-compact 380px layout.
-- Gapless audio playback with 3-second pre-buffering.
-- Lyrics quote card generation with markdown formatting from player context menu.
-- Polls creation in private chats and Saved Messages.
-- Default forward mode setting (forward without author, without author and caption).
-- Virtual media deduplication cache based on SHA-256 hashes without repeated data transfer.
-- Static quick reactions bar in chats.
-- TgWsProxy Flowseal v1.11.4 with MTU protection, MLKEM TLS safety, and parent PID watchdog.
-- Inline math calculator and converter: units, currencies, percentages, base radices, and timezones.
-- Search by numeric Telegram ID for users, basic groups, channels, and supergroups.
-- Option to disable automatic Markdown formatting on text input.
-- Cross-platform update checking directly via oxDesktop GitHub Releases API for Windows, Linux, and macOS.
-- Fixed Windows MSVC compilation and Linux Docker build cache invalidation.
-- Fixed session persistence and instance locking on first launch from installer.
-- Fixed badges disappearing during scrolling of member and chat lists.
-- Zalgo filter now properly inspects and strips symbols from formatted messages while preserving entities.
-- Phone numbers with brackets and special characters correctly parsed and searched.
-- Full-screen music player and channel feed categories.
-- Built-in PDF viewer and round video from local file sender.
-- Redesigned settings UI with instant switch toggles and typo-tolerant search.
-- Streamer mode with granular hiding of avatars, names, and message previews.
-- Screen capture protection for OBS, screenshot utilities, and screen sharing.
-- More than three accounts support and custom application icon choices.
+v7.3.3:
+Ru:
+- Встроенный обход TgWsProxy: отдельная кнопка подключения и реактивный статус во вкладке «Прокси»
+- Выбор кастомного шрифта (TTF / OTF / WOFF2) в меню настроек оформления
+- Теневые черновики (Shadow Drafts): локальное сохранение редакций текста и откат по Ctrl+Shift+Z без отправки на серверы Telegram
+- Инлайн-калькулятор в поле ввода: расчет математических выражений, поддержка степеней (2²=, (2)²=, сложные формулы), конвертер валют и единиц измерения
+- Умный анти-призрак: статус набора текста скрывается при вычислениях на лету
+- Быстрый HUD-переключатель чатов по комбинации Ctrl+K
+- Лимит одновременно подключенных аккаунтов установлен на 5
+- Повышенная четкость иконки в системном трее Windows с поддержкой масштабирования дисплея (100%–200%)
+- Музыкальный виджет сохраненных треков в профиле пользователя с аккуратными отступами
+- Фирменная иконка OX Monogram по умолчанию и обновленное оформление стартового экрана
+
+En:
+- Built-in TgWsProxy bypass: dedicated toggle button with reactive status in the Proxy connection settings
+- Custom font picker (TTF / OTF / WOFF2) in Appearance settings
+- Shadow Drafts: local message revision history with Ctrl+Shift+Z restore without sending drafts to Telegram
+- Inline input calculator: math evaluation with superscript exponent support (2²=, (2)²=, chained powers), currency conversion, and unit translations
+- Smart Ghost: typing indicator suppressed during math parsing
+- HUD Quick Chat Switcher shortcut (Ctrl+K)
+- Max connected accounts limit set to 5
+- Crisp high-DPI Windows tray icon supersampling for 100%–200% display scales
+- Profile saved music widget with adjusted vertical spacing
+- Default OX Monogram app icon and refreshed welcome layout

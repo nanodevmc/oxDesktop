@@ -1115,7 +1115,7 @@ exteraWelcomeLogoPadding: margins(0px, 8px, 0px, 14px);
 exteraWelcomeTitle: FlatLabel(defaultFlatLabel) {
 	align: align(top);
 	minWidth: 100px;
-	textFg: windowBoldFg;
+	textFg: windowActiveTextFg;
 	style: TextStyle(defaultTextStyle) {
 		font: font(20px semibold);
 	}

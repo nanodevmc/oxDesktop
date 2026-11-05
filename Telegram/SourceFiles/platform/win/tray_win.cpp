@@ -66,24 +66,36 @@ bool DarkTasbarValueValid/* = false*/;
 		auto f = QFile(u":/gui/icons/tray/monochrome.svg"_q);
 		return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
 	}();
-	static auto Mask = QImage();
-	static auto Size = 0;
-	if (Mask.isNull() || Size != size) {
-		Size = size;
-		Mask = QImage(size, size, QImage::Format_ARGB32_Premultiplied);
-		Mask.fill(Qt::transparent);
-		auto p = QPainter(&Mask);
-		QSvgRenderer(Content).render(&p, QRectF(0, 0, size, size));
+	static auto Mask = base::flat_map<int, QImage>();
+	auto it = Mask.find(size);
+	if (it == Mask.end()) {
+		const auto renderSize = std::max(size * 4, 128);
+		auto highRes = QImage(renderSize, renderSize, QImage::Format_ARGB32_Premultiplied);
+		highRes.fill(Qt::transparent);
+		{
+			auto p = QPainter(&highRes);
+			p.setRenderHint(QPainter::Antialiasing);
+			p.setRenderHint(QPainter::SmoothPixmapTransform);
+			QSvgRenderer(Content).render(&p, QRectF(0, 0, renderSize, renderSize));
+		}
+		it = Mask.emplace(
+			size,
+			highRes.scaled(size, size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
+		).first;
 	}
-	static auto Colored = QImage();
-	static auto ColoredDark = QImage();
-	auto &use = darkMode ? ColoredDark : Colored;
-	if (use.size() != Mask.size()) {
+	static auto Colored = base::flat_map<int, QImage>();
+	static auto ColoredDark = base::flat_map<int, QImage>();
+	auto &useMap = darkMode ? ColoredDark : Colored;
+	auto colorIt = useMap.find(size);
+	if (colorIt == useMap.end()) {
 		const auto color = darkMode ? 255 : 0;
 		const auto alpha = darkMode ? 255 : 228;
-		use = style::colorizeImage(Mask, { color, color, color, alpha });
+		colorIt = useMap.emplace(
+			size,
+			style::colorizeImage(it->second, { color, color, color, alpha })
+		).first;
 	}
-	return use;
+	return colorIt->second;
 }
 
 [[nodiscard]] QImage MonochromeWithDot(QImage image, style::color color) {
@@ -226,17 +238,24 @@ void Tray::updateIcon() {
 		? nullptr
 		: &controller->sessionController()->session();
 
-	// Force Qt to use right icon size, not the larger one.
+	// Provide crisp native sizes for Windows display scaling (100%, 125%, 150%, 200%).
+	const auto smIcon = GetSystemMetrics(SM_CXSMICON);
+	const auto sizes = { 16, 20, 24, 32, 48, smIcon };
 	QIcon forTrayIcon;
-	forTrayIcon.addPixmap(
-		Tray::IconWithCounter(
-			CounterLayerArgs(
-				GetSystemMetrics(SM_CXSMICON),
-				Core::App().unreadBadge(),
-				Core::App().unreadBadgeMuted()),
-			true,
-			Core::App().settings().trayIconMonochrome(),
-			session && session->supportMode()));
+	auto added = base::flat_set<int>();
+	for (const auto s : sizes) {
+		if (s > 0 && added.insert(s).second) {
+			forTrayIcon.addPixmap(
+				Tray::IconWithCounter(
+					CounterLayerArgs(
+						s,
+						Core::App().unreadBadge(),
+						Core::App().unreadBadgeMuted()),
+					true,
+					Core::App().settings().trayIconMonochrome(),
+					session && session->supportMode()));
+		}
+	}
 	_icon->updateIcon(forTrayIcon);
 	_icon->updateToolTip(Core::TrayIconToolTip());
 }
