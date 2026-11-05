@@ -565,6 +565,9 @@ TopBar::TopBar(
 				return;
 			}
 			switch (kind) {
+			case Kind::Owner:
+				exdToast(u"\u0421\u043E\u0437\u0434\u0430\u0442\u0435\u043B\u044C oxDesktop: "_q + name);
+				break;
 			case Kind::Porter:
 				exdToast(tr::lng_extera_badge_developer(
 					tr::now, lt_name, name));

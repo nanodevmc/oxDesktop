@@ -763,6 +763,13 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			object_ptr<Ui::FixedHeightWidget>(box, kModelHeight),
 			style::margins(0, 8, 0, 0));
 
+		const auto self = controller->session().user();
+		const auto selfNumber = Extera::BadgeNumber(self);
+		const auto badgeNumStr = (selfNumber > 0)
+			? QString::number(selfNumber)
+			: u"8162"_q;
+		const auto badgeTag = u"#"_q + badgeNumStr;
+
 		struct Star {
 			float x, y, size, phase;
 		};
@@ -777,14 +784,46 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			{ 30.f, -55.f, 5.f, 2.7f },
 		};
 
-		const auto animState = canvas->lifetime().make_state<float>(0.0f);
+		struct DragState {
+			bool dragging = false;
+			QPoint lastPos;
+			float angleY = 0.0f;
+			float angleX = 0.22f;
+		};
+		const auto drag = canvas->lifetime().make_state<DragState>();
+		canvas->setCursor(style::cur_pointer);
+		canvas->events(
+		) | rpl::on_next([=](not_null<QEvent*> e) {
+			if (e->type() == QEvent::MouseButtonPress) {
+				const auto me = static_cast<QMouseEvent*>(e.get());
+				if (me->button() == Qt::LeftButton) {
+					drag->dragging = true;
+					drag->lastPos = me->pos();
+				}
+			} else if (e->type() == QEvent::MouseMove) {
+				const auto me = static_cast<QMouseEvent*>(e.get());
+				if (drag->dragging) {
+					const auto dx = me->pos().x() - drag->lastPos.x();
+					const auto dy = me->pos().y() - drag->lastPos.y();
+					drag->lastPos = me->pos();
+					drag->angleY += dx * 0.018f;
+					drag->angleX = std::clamp(drag->angleX + dy * 0.015f, -0.65f, 0.65f);
+					canvas->update();
+				}
+			} else if (e->type() == QEvent::MouseButtonRelease) {
+				drag->dragging = false;
+			}
+		}, canvas->lifetime());
+
 		const auto timer = Ui::CreateChild<QTimer>(canvas);
 		QObject::connect(timer, &QTimer::timeout, [=] {
-			*animState += 0.035f;
-			if (*animState > 6.283185f) {
-				*animState -= 6.283185f;
+			if (!drag->dragging) {
+				drag->angleY += 0.038f;
+				if (drag->angleY > 6.283185f) {
+					drag->angleY -= 6.283185f;
+				}
+				canvas->update();
 			}
-			canvas->update();
 		});
 		timer->start(16);
 
@@ -793,12 +832,13 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			auto hq = PainterHighQualityEnabler(p);
 			const auto cx = canvas->width() / 2.0;
 			const auto cy = canvas->height() / 2.0;
-			const auto angle = *animState;
+			const auto angleY = drag->angleY;
+			const auto angleX = drag->angleX;
 
 			// Draw glowing star particles
 			p.setFont(st::normalFont);
 			for (const auto &s : kStars) {
-				const auto pulse = 0.5f + 0.5f * std::sin(angle * 2.0f + s.phase);
+				const auto pulse = 0.5f + 0.5f * std::sin(angleY * 2.0f + s.phase);
 				const auto alpha = int(120 + 135 * pulse);
 				p.setPen(QColor(180, 245, 210, alpha));
 				p.drawText(
@@ -808,24 +848,23 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			}
 
 			// 3D Rotating Triangular Badge Prism
-			// Vertices of inverted rounded triangle in 3D
-			const auto cosA = std::cos(angle);
-			const auto sinA = std::sin(angle);
-			const auto r = 48.0;
-			const auto depth = 14.0;
+			const auto cosY = std::cos(angleY);
+			const auto sinY = std::sin(angleY);
+			const auto r = 50.0;
+			const auto depth = 15.0;
 
-			// 3 base points in model space (pointing downwards like Android badge)
+			// Base points in model space (pointing downwards like Android badge)
 			const QPointF basePts[3] = {
 				{ -r * 0.95, -r * 0.55 },
 				{  r * 0.95, -r * 0.55 },
 				{  0.0,       r * 0.85 }
 			};
 
-			// Perspective transform with Y rotation and slight X tilt
+			// Perspective transform with Y rotation and interactive X tilt
 			const auto project = [&](QPointF pt, double z) {
-				const auto rx = pt.x() * cosA - z * sinA;
-				const auto rz = pt.x() * sinA + z * cosA;
-				const auto ry = pt.y() + rz * 0.28; // X-tilt
+				const auto rx = pt.x() * cosY - z * sinY;
+				const auto rz = pt.x() * sinY + z * cosY;
+				const auto ry = pt.y() + rz * angleX;
 				const auto scale = 1.0 / (1.0 + rz * 0.0035);
 				return QPointF(cx + rx * scale, cy + ry * scale);
 			};
@@ -836,7 +875,11 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 				backPoly  << project(basePts[i], -depth);
 			}
 
-			// Draw back / extrusion sides
+			const auto normalZ = (frontPoly[1].x() - frontPoly[0].x()) * (frontPoly[2].y() - frontPoly[0].y())
+				- (frontPoly[1].y() - frontPoly[0].y()) * (frontPoly[2].x() - frontPoly[0].x());
+			const auto isFrontFacing = (normalZ > 0);
+
+			// Draw extrusion sides
 			p.setPen(Qt::NoPen);
 			for (int i = 0; i < 3; ++i) {
 				int next = (i + 1) % 3;
@@ -844,28 +887,58 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 				side << frontPoly[i] << frontPoly[next] << backPoly[next] << backPoly[i];
 				auto sideGrad = QLinearGradient(frontPoly[i], backPoly[next]);
 				sideGrad.setColorAt(0.0, QColor(140, 215, 175));
-				sideGrad.setColorAt(1.0, QColor(95, 175, 135));
+				sideGrad.setColorAt(1.0, QColor(90, 165, 125));
 				p.setBrush(sideGrad);
 				p.drawPolygon(side);
 			}
 
-			// Draw front face with smooth pearlescent mint gradient
-			auto frontGrad = QLinearGradient(frontPoly[0], frontPoly[2]);
-			frontGrad.setColorAt(0.0, QColor(225, 255, 238));
-			frontGrad.setColorAt(0.5, QColor(185, 242, 210));
-			frontGrad.setColorAt(1.0, QColor(150, 225, 185));
-			p.setBrush(frontGrad);
-			p.setPen(QPen(QColor(240, 255, 245, 180), 1.2));
-			p.drawPolygon(frontPoly);
+			if (isFrontFacing) {
+				p.setBrush(QColor(115, 195, 150));
+				p.drawPolygon(backPoly);
 
-			// Badge number #8162 on front face
-			p.setFont(st::semiboldFont);
-			p.setPen(QColor(50, 110, 80, 220));
-			const auto badgeCenter = (frontPoly[0] + frontPoly[1] + frontPoly[2]) / 3.0;
-			p.drawText(
-				QRectF(badgeCenter.x() - 40, badgeCenter.y() - 16, 80, 20),
-				Qt::AlignCenter,
-				u"#8162"_q);
+				auto frontGrad = QLinearGradient(frontPoly[0], frontPoly[2]);
+				frontGrad.setColorAt(0.0, QColor(230, 255, 242));
+				frontGrad.setColorAt(0.5, QColor(190, 245, 215));
+				frontGrad.setColorAt(1.0, QColor(150, 225, 185));
+				p.setBrush(frontGrad);
+				p.setPen(QPen(QColor(240, 255, 245, 190), 1.2));
+				p.drawPolygon(frontPoly);
+
+				p.setFont(st::semiboldFont);
+				p.setPen(QColor(45, 105, 75, 220));
+				const auto badgeCenter = (frontPoly[0] + frontPoly[1] + frontPoly[2]) / 3.0;
+				p.drawText(
+					QRectF(badgeCenter.x() - 40, badgeCenter.y() - 16, 80, 20),
+					Qt::AlignCenter,
+					badgeTag);
+			} else {
+				p.setBrush(QColor(125, 200, 160));
+				p.drawPolygon(frontPoly);
+
+				auto backGrad = QLinearGradient(backPoly[0], backPoly[2]);
+				backGrad.setColorAt(0.0, QColor(175, 235, 200));
+				backGrad.setColorAt(0.6, QColor(140, 210, 170));
+				backGrad.setColorAt(1.0, QColor(110, 180, 140));
+				p.setBrush(backGrad);
+				p.setPen(QPen(QColor(210, 245, 225, 160), 1.2));
+				p.drawPolygon(backPoly);
+
+				// Identifier and branding on the back face of the 3D rotating badge
+				const auto backCenter = (backPoly[0] + backPoly[1] + backPoly[2]) / 3.0;
+				p.setFont(st::semiboldFont);
+				p.setPen(QColor(25, 75, 50, 240));
+				p.drawText(
+					QRectF(backCenter.x() - 45, backCenter.y() - 20, 90, 20),
+					Qt::AlignCenter,
+					badgeTag);
+
+				p.setFont(st::normalFont);
+				p.setPen(QColor(35, 95, 65, 200));
+				p.drawText(
+					QRectF(backCenter.x() - 45, backCenter.y() + 2, 90, 16),
+					Qt::AlignCenter,
+					u"oxDesktop"_q);
+			}
 		}, canvas->lifetime());
 
 		// Title & Subtitle
@@ -880,7 +953,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
-				rpl::single(u"\u0417\u043D\u0430\u0447\u043E\u043A #8162 \u2014 \u0432\u043E\u0442 \u0447\u0442\u043E \u0432\u0430\u043C \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E:"_q),
+				rpl::single(QString::fromUtf8("\xD0\x97\xD0\xBD\xD0\xB0\xD1\x87\xD0\xBE\xD0\xBA ") + badgeTag + QString::fromUtf8(" \xE2\x80\x94 \xD0\xB2\xD0\xBE\xD1\x82 \xD1\x87\xD1\x82\xD0\xBE \xD0\xB2\xD0\xB0\xD0\xBC \xD0\xB4\xD0\xBE\xD1\x81\xD1\x82\xD1\x83\xD0\xBF\xD0\xBD\xD0\xBE:")),
 				st::boxLabel),
 			style::margins(16, 0, 16, 10),
 			style::al_top);

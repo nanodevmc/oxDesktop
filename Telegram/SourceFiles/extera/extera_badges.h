@@ -6,6 +6,7 @@ namespace Extera {
 
 enum class BadgeKind {
 	None,
+	Owner,
 	Porter,
 	PorterChannel,
 	Developer,
@@ -28,6 +29,7 @@ void StartBadges();
 [[nodiscard]] BadgeKind BadgeKindFor(not_null<PeerData*> peer);
 [[nodiscard]] DocumentId BadgeEmoji(not_null<PeerData*> peer);
 [[nodiscard]] QString BadgeCustomText(not_null<PeerData*> peer);
+[[nodiscard]] int BadgeNumber(not_null<PeerData*> peer);
 [[nodiscard]] DocumentId BadgeTypeEmoji(const QString &type);
 [[nodiscard]] std::optional<std::vector<TrustedSource>> TrustedSources();
 [[nodiscard]] bool IsTrustedHash(const QString &sha256);
