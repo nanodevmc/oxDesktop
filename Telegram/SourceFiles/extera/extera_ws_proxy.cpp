@@ -35,6 +35,16 @@ State &Instance() {
 }
 
 [[nodiscard]] QString PythonDir() {
+	for (const auto &cand : {
+		cExeDir() + u"python/"_q,
+		cWorkingDir() + u"python/"_q,
+		cWorkingDir() + u"Telegram/SourceFiles/extera/python/"_q,
+		cExeDir() + u"Telegram/SourceFiles/extera/python/"_q,
+	}) {
+		if (QDir(cand).exists()) {
+			return cand;
+		}
+	}
 	return cExeDir() + u"python/"_q;
 }
 
@@ -82,6 +92,10 @@ State &Instance() {
 	const auto candidates = {
 		PythonDir() + u"extera/tgws/exd_tgws.py"_q,
 		PythonDir() + u"tgws/exd_tgws.py"_q,
+		cExeDir() + u"python/extera/tgws/exd_tgws.py"_q,
+		cExeDir() + u"python/tgws/exd_tgws.py"_q,
+		cWorkingDir() + u"python/extera/tgws/exd_tgws.py"_q,
+		cWorkingDir() + u"python/tgws/exd_tgws.py"_q,
 		cExeDir() + u"Telegram/SourceFiles/extera/python/tgws/exd_tgws.py"_q,
 		cWorkingDir() + u"Telegram/SourceFiles/extera/python/tgws/exd_tgws.py"_q,
 	};
@@ -183,7 +197,7 @@ void Launch() {
 	process->setWorkingDirectory(pyDir);
 	process->setProgram(Interpreter());
 	process->setArguments({
-		u"-I"_q,
+		u"-u"_q,
 		scriptFile,
 		u"--parent-pid"_q,
 		QString::number(QCoreApplication::applicationPid()),
@@ -261,7 +275,7 @@ rpl::producer<QString> statusTextValue() {
 	return Extera::Config::Instance().boolChanges(u"ws_proxy"_q)
 		| rpl::map([](bool enabled) {
 			if (!Available()) {
-				return u"Недоступен (компоненты не найдены)"_q;
+				return u"Недоступен"_q;
 			}
 			return enabled
 				? (u"Включен ("_q + CurrentEndpoint() + u")"_q)

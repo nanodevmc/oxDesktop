@@ -278,6 +278,11 @@ jobs:
           Copy-Item (Join-Path $release 'python') $portable -Recurse
           Copy-Item (Join-Path $release 'modules') $portable -Recurse
           if (Test-Path (Join-Path $release 'Updater.exe')) { Copy-Item (Join-Path $release 'Updater.exe') $portable }
+          $cl = Join-Path $env:GITHUB_WORKSPACE 'tdesktop\changelog.txt'
+          if (Test-Path $cl) {
+            Copy-Item $cl $release -Force
+            Copy-Item $cl $portable -Force
+          }
           $portableZip = "oxDesktop-portable-x64.$packageVersion.zip"
           Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $env:GITHUB_WORKSPACE $portableZip) -Force
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"

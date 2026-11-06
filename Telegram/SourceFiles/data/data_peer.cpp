@@ -452,6 +452,17 @@ void PeerData::paintUserpic(
 		return;
 	}
 	const auto size = context.size;
+	if (id == kServiceNotificationsId) {
+		const auto &logo = Window::Logo();
+		auto hq = PainterHighQualityEnabler(p);
+		auto path = QPainterPath();
+		path.addEllipse(QRectF(context.position, QSizeF(size, size)));
+		p.save();
+		p.setClipPath(path);
+		p.drawImage(QRect(context.position, QSize(size, size)), logo);
+		p.restore();
+		return;
+	}
 	if (isSelf() && Extera::Streamer::HideAvatar()) {
 		const auto &logo = Extera::Streamer::Avatar();
 		auto hq = PainterHighQualityEnabler(p);
@@ -482,6 +493,9 @@ void PeerData::loadUserpic() {
 }
 
 bool PeerData::hasUserpic() const {
+	if (id == kServiceNotificationsId) {
+		return true;
+	}
 	return !_userpic.empty();
 }
 
@@ -499,6 +513,9 @@ Ui::PeerUserpicView PeerData::createUserpicView() {
 }
 
 bool PeerData::useEmptyUserpic(Ui::PeerUserpicView &view) const {
+	if (id == kServiceNotificationsId) {
+		return false;
+	}
 	return !userpicCloudImage(view);
 }
 
@@ -516,6 +533,22 @@ QImage PeerData::GenerateUserpicImage(
 		Ui::PeerUserpicView &view,
 		int size,
 		std::optional<int> radius) {
+	if (peer->id == kServiceNotificationsId) {
+		const auto &logo = Window::Logo();
+		auto image = logo.scaled(
+			{ size, size },
+			Qt::IgnoreAspectRatio,
+			Qt::SmoothTransformation);
+		if (radius == 0) {
+			return image;
+		} else if (radius) {
+			return Images::Round(
+				std::move(image),
+				Images::CornersMask(*radius / style::DevicePixelRatio()));
+		} else {
+			return Images::Circle(std::move(image));
+		}
+	}
 	if (const auto userpic = peer->userpicCloudImage(view)) {
 		auto image = userpic->scaled(
 			{ size, size },

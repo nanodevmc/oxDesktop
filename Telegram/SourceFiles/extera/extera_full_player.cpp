@@ -63,6 +63,45 @@ enum class Lyrics {
 	None,
 };
 
+struct GlobalLyricsState {
+	DocumentData *document = nullptr;
+	Lyrics lyrics = Lyrics::None;
+	std::vector<Line> lines;
+	int current = -1;
+};
+static GlobalLyricsState gLyricsState;
+static rpl::lifetime gGlobalFollowerLifetime;
+
+void EnsureGlobalLyricsFollower() {
+	if (gGlobalFollowerLifetime) {
+		return;
+	}
+	const auto instance = Media::Player::instance();
+	instance->updatedNotifier(
+	) | rpl::filter([](const Media::Player::TrackState &state) {
+		return state.id.type() == AudioMsgId::Type::Song;
+	}) | rpl::on_next([](const Media::Player::TrackState &state) {
+		if (!gLyricsState.document || state.id.audio() != gLyricsState.document) {
+			return;
+		}
+		if (gLyricsState.lyrics != Lyrics::Synced || gLyricsState.lines.empty()) {
+			return;
+		}
+		const auto pos = (state.frequency > 0)
+			? (state.position * 1000 / state.frequency)
+			: 0;
+		auto current = -1;
+		for (auto i = 0; i != int(gLyricsState.lines.size()); ++i) {
+			if (gLyricsState.lines[i].time <= pos) {
+				current = i;
+			} else {
+				break;
+			}
+		}
+		gLyricsState.current = current;
+	}, gGlobalFollowerLifetime);
+}
+
 enum class Button {
 	None,
 	Previous,
@@ -367,6 +406,16 @@ void View::applyCover(QImage image) {
 }
 
 void View::requestLyrics() {
+	EnsureGlobalLyricsFollower();
+	if (_document && gLyricsState.document == _document && !gLyricsState.lines.empty()) {
+		_lyrics = gLyricsState.lyrics;
+		_lines = gLyricsState.lines;
+		_current = gLyricsState.current;
+		_linesWidth = 0;
+		updateCurrentLine();
+		update();
+		return;
+	}
 	const auto requestId = ++_requestId;
 	_lyrics = Lyrics::Loading;
 	_lines.clear();
@@ -573,8 +622,13 @@ bool View::applyLyrics(const QJsonObject &object) {
 	}
 	_linesWidth = 0;
 	_current = -1;
+	gLyricsState.document = _document;
+	gLyricsState.lyrics = _lyrics;
+	gLyricsState.lines = _lines;
+	gLyricsState.current = -1;
 	updateCurrentLine();
 	update();
+	EnsureGlobalLyricsFollower();
 	return true;
 }
 
@@ -646,6 +700,7 @@ void View::updateCurrentLine() {
 		return;
 	}
 	_current = current;
+	gLyricsState.current = current;
 	const auto rect = lyricsRect();
 	const auto &line = _lines[std::max(current, 0)];
 	const auto target = std::clamp(

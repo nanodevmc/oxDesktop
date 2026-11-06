@@ -1188,7 +1188,7 @@ void ProxiesBox::setupContent() {
 
 		const auto wsProxyButton = Settings::AddButtonWithLabel(
 			wsProxyWrap,
-			rpl::single(u"Встроенный обход (TgWsProxy v"_q + Extera::WsProxy::Version() + u")"_q),
+			rpl::single(u"Встроенный обход"_q),
 			Extera::WsProxy::statusTextValue(),
 			st::settingsButtonNoIcon);
 

@@ -1200,10 +1200,9 @@ void InitialLoadTheme() {
 		).arg(_themeKeyDay
 		).arg(_themeKeyNight));
 	if (!key) {
-		if (Window::Theme::IsNightMode()) {
-			DEBUG_LOG(("Theme: zero key for night mode."));
-			Window::Theme::SetNightModeValue(false);
-		}
+		Window::Theme::SetNightModeValue(true);
+		Window::Theme::ApplyDefaultWithPath(Window::Theme::NightThemePath());
+		Window::Theme::KeepApplied();
 		return;
 	} else if (const auto path = InitialLoadThemeUsingKey(key)) {
 		DEBUG_LOG(("Theme: loaded with result: %1").arg(*path));
@@ -1228,7 +1227,7 @@ void InitialLoadTheme() {
 }
 
 bool ApplyDefaultNightMode() {
-	const auto NightByDefault = Platform::IsMacStoreBuild();
+	const auto NightByDefault = true;
 	if (!NightByDefault
 		|| Window::Theme::IsNightMode()
 		|| _themeKeyDay

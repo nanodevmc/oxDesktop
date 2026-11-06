@@ -210,14 +210,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				u"В разработке..."_q,
 				u"https://t.me/oxDesktop"_q,
 				&st::exteraIconWebsite);
-			const auto setupBtn = content->add(
-				object_ptr<Ui::RoundButton>(
-					content,
-					tr::lng_exd_wizard_setup(),
-					st::defaultBoxButton),
-				style::margins(0, 16, 0, 8),
-				style::al_top);
-			setupBtn->setClickedCallback([=] {
+			box->addButton(tr::lng_exd_wizard_setup(), [=] {
 				crl::on_main(box, [=] {
 					state->step = 1;
 					(*rebuild)();
@@ -430,7 +423,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				}
 			}
 			if (contentText.isEmpty()) {
-				contentText = u"v7.3.3:\nRu:\n- \u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 oxDesktop \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u043E"_q;
+				contentText = u"7.3.3 (05.11.26)\nRu:\n- Встроенный обход TgWsProxy: отдельная кнопка подключения и реактивный статус во [вкладке «Прокси»](tg://settings/proxy)\n- Выбор кастомного шрифта (TTF / OTF / WOFF2) в [настройках оформления](tg://settings/appearance)\n- Теневые черновики (Shadow Drafts): локальное сохранение редакций текста и откат по Ctrl+Shift+Z в [настройках oxDesktop](tg://settings/extera)\n- Инлайн-калькулятор в поле ввода: расчет математических выражений, поддержка степеней (2²=, (2)²=, сложные формулы), конвертер валют и величин\n- Умный анти-призрак: статус набора текста скрывается при вычислениях на лету\n- Быстрый HUD-переключатель чатов по комбинации Ctrl+Shift+K или Ctrl+P\n- Прямой поиск пользователей и каналов по цифровому ID (включая формат id123456)\n- Контекстное меню для сообщений в очереди отправки (быстрый ответ до завершения загрузки)\n- Лимит одновременно подключенных аккаунтов установлен на 5 в [управлении профилем](tg://settings)\n- Повышенная четкость и динамическое обновление иконки в системном трее Windows (100%–200%)\n- Интерактивная 3D-модель значка поддержки [tg://support](tg://support) и обновленный мастер приветствия [tg://welcome](tg://welcome)\n- Музыкальный виджет сохраненных треков в профиле пользователя с аккуратными отступами\n- Фирменная иконка OX Monogram по умолчанию и обновленное оформление стартового экрана\n\nEn:\n- Built-in TgWsProxy bypass: dedicated toggle button with reactive status in the [Proxy settings](tg://settings/proxy)\n- Custom font picker (TTF / OTF / WOFF2) in [Appearance settings](tg://settings/appearance)\n- Shadow Drafts: local message revision history with Ctrl+Shift+Z restore in [oxDesktop settings](tg://settings/extera)\n- Inline input calculator: math evaluation with superscript exponent support (2²=, (2)²=, chained powers), currency conversion, and unit translations\n- Smart Ghost: typing indicator suppressed during math parsing\n- HUD Quick Chat Switcher shortcut (Ctrl+Shift+K or Ctrl+P)\n- Direct peer search by numeric ID (including id123456 format)\n- Context menu for pending outgoing messages (queue reply before upload completes)\n- Max connected accounts limit set to 5 in [Account settings](tg://settings)\n- Crisp high-DPI Windows tray icon supersampling and live refresh on icon change (100%–200%)\n- Interactive 3D support badge model [tg://support](tg://support) and refreshed welcome setup wizard [tg://welcome](tg://welcome)\n- Profile saved music widget with adjusted vertical spacing\n- Default OX Monogram app icon and refreshed welcome layout\n"_q;
 			}
 			const auto lines = contentText.split('\n');
 			Ui::VerticalLayout *currentCard = nullptr;
