@@ -509,7 +509,7 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 						}
 						return true;
 					}, tr::lng_exd_hud_switcher());
-					return base::EventFilterResult::Stop;
+					return base::EventFilterResult::Cancel;
 				}
 			}
 		}
