@@ -49,8 +49,11 @@
 ## Тестирование и CI
 - Python тест-сьют `tests/test_plugin_full_suite.py`: 56/56 тестов пройдено (100% покрытие реального oxDesktop Python SDK, безопасности, AST анализа и badges.json).
 - Устранена ошибка AppStream changelog на Linux CI (Rocky Linux 8) в `Telegram/build/changelog2appstream.py`.
-- Windows и Linux сборки с реальными Telegram API credentials завершились 100% SUCCESS (Run `42034661759` и `42034661701`).
-- Windows бинарный релиз скачан локально в `builds/oxDesktop-windows-x64.zip` (174 МБ, инсталлятор Inno Setup + portable).
+- Полностью исправлены все ошибки сборки: `history_widget.cpp` (eventFilter braces), `extera_welcome.cpp` (FlatLabel & TextTransform), `tray_win.cpp` (Colored map duplicate), `settings_extera.cpp` (QTimer, RoundButtonTextTransform, FlatLabel), `main_window.cpp` (EventFilterResult::Cancel).
+- **Windows и Linux сборки завершились 100% SUCCESS** (коммит `10e0dbc`, Windows Run `42190374308`, Linux Run `42190374333`).
+- Сформированы и выгружены релизные артефакты:
+  - `oxDesktop-windows-x64` (166.41 MB): Inno Setup installer + portable.
+  - `oxDesktop-linux-x64` (120.56 MB): Linux x64 bundle.
 - Добавлен ручной экшен публикации релизов `.github/workflows/publish-release.yml` (запуск релиза по кнопке с автосборкой артефактов из последних успешных билдов).
 - Обновлены монохромные иконки трея (oxDesktop эмблема) и сброс кэша при смене логотипа (`tray_win.cpp`).
 
