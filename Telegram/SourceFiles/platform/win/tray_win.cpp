@@ -99,8 +99,6 @@ bool DarkTasbarValueValid/* = false*/;
 			highRes.scaled(size, size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
 		).first;
 	}
-	static auto Colored = base::flat_map<int, QImage>();
-	static auto ColoredDark = base::flat_map<int, QImage>();
 	auto &useMap = darkMode ? ColoredDark : Colored;
 	auto colorIt = useMap.find(size);
 	if (colorIt == useMap.end()) {

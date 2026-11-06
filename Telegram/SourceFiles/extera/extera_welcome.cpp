@@ -217,7 +217,6 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 					st::defaultBoxButton),
 				style::margins(0, 16, 0, 8),
 				style::al_top);
-			setupBtn->setTextTransform(Ui::RoundButton::TextTransform::NoTransform);
 			setupBtn->setClickedCallback([=] {
 				crl::on_main(box, [=] {
 					state->step = 1;
@@ -459,8 +458,8 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 					currentCard->add(
 						object_ptr<Ui::FlatLabel>(
 							currentCard,
-						rpl::single(title),
-						st::semiboldFont),
+							rpl::single(title),
+							st::boxTitle),
 						style::margins(12, 10, 12, 6));
 				} else if (currentCard) {
 					auto itemText = trimmed;
