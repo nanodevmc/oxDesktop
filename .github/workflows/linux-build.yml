@@ -184,13 +184,13 @@ jobs:
               mkdir -p "$PKG/python/extera"
               cp -r Telegram/SourceFiles/extera/python/. "$PKG/python/extera/"
               cat > "$PKG/oxDesktop" <<SH
-#!/bin/sh
-DIR="\$(cd "\$(dirname "\$0")" && pwd)"
-export LD_LIBRARY_PATH="\$DIR/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
-export PYTHONHOME="\$DIR/python311"
-export PYTHONPATH="\$DIR/python311/lib/python3.11:\$DIR/python311/lib/python3.11/lib-dynload"
-exec "\$DIR/oxDesktop-bin" "\$@"
-SH
+          #!/bin/sh
+          DIR="\$(cd "\$(dirname "\$0")" && pwd)"
+          export LD_LIBRARY_PATH="\$DIR/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
+          export PYTHONHOME="\$DIR/python311"
+          export PYTHONPATH="\$DIR/python311/lib/python3.11:\$DIR/python311/lib/python3.11/lib-dynload"
+          exec "\$DIR/oxDesktop-bin" "\$@"
+          SH
               chmod +x "$PKG/oxDesktop" "$PKG/oxDesktop-bin"
               tar -C pkg -czf "oxDesktop-linux-x64.$VERSION.tar.gz" oxDesktop
             '
