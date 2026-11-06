@@ -324,7 +324,7 @@ style::colorizer ColorizerForTheme(const QString &absolutePath) {
 	if (const auto accent = colors.get(i->type)) {
 		return ColorizerFrom(*i, *accent);
 	}
-	return {};
+	return ColorizerFrom(*i, style::ColorFromHex("da3018"));
 }
 
 void Colorize(EmbeddedScheme &scheme, const style::colorizer &colorizer) {
@@ -440,6 +440,7 @@ std::vector<QColor> DefaultAccentColors(EmbeddedType type) {
 		};
 	case EmbeddedType::NightGreen:
 		return {
+			qColor("da3018"),
 			qColor("60a8e7"),
 			qColor("4e9c57"),
 			qColor("ca7896"),
@@ -466,7 +467,7 @@ Fn<void(style::palette&)> PreparePaletteCallback(
 		Assert(i != end(embedded));
 		const auto colorizer = accent
 			? ColorizerFrom(*i, *accent)
-			: style::colorizer();
+			: ColorizerFrom(*i, style::ColorFromHex("da3018"));
 
 		auto instance = Instance();
 		const auto loaded = LoadFromFile(

@@ -561,8 +561,13 @@ void ChatBackground::initialRead() {
 	if (started()) {
 		return;
 	}
-	if (_themeObject.pathAbsolute.isEmpty() && !nightMode()) {
-		applyDefaultThemeAccentColorizer();
+	if (_themeObject.pathAbsolute.isEmpty()) {
+		if (nightMode()) {
+			ApplyDefaultWithPath(NightThemePath());
+			KeepApplied();
+		} else {
+			applyDefaultThemeAccentColorizer();
+		}
 	}
 	if (!Local::readBackground()) {
 		set(Data::ThemeWallPaper());

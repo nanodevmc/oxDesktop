@@ -177,20 +177,20 @@ std::vector<Variant> Variants() {
 	const auto accent = AccentColor();
 	return {
 		{
-			u"ox_monogram"_q,
-			u"OX Monogram"_q,
-			QColor(218, 48, 24),
-			QColor(255, 108, 42),
-			Qt::white,
-			u":/gui/art/app_icon_glyph_ox_monogram.png"_q,
-		},
-		{
 			QString(),
 			u"Aero Delta"_q,
 			QColor(218, 48, 24),
 			QColor(255, 108, 42),
 			Qt::white,
 			QString(),
+		},
+		{
+			u"ox_monogram"_q,
+			u"OX Monogram"_q,
+			QColor(218, 48, 24),
+			QColor(255, 108, 42),
+			Qt::white,
+			u":/gui/art/app_icon_glyph_ox_monogram.png"_q,
 		},
 		{
 			u"cyber_ox"_q,
@@ -278,7 +278,7 @@ QImage Current(int size) {
 	const auto id = Extera::String(u"app_icon"_q);
 	return Render(
 		size,
-		id.isEmpty() ? u"ox_monogram"_q : id,
+		id,
 		Extera::Bool(u"app_icon_square"_q));
 }
 
