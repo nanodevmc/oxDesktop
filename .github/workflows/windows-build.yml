@@ -27,7 +27,8 @@ jobs:
     timeout-minutes: 360
     env:
       SCCACHE_DIR: "${{ github.workspace }}\\.sccache"
-      SCCACHE_CACHE_SIZE: "2G"
+      SCCACHE_CACHE_SIZE: "5G"
+      SCCACHE_DIRECT: "true"
       CLEAR_QT_BUILD_TREE: "1"
     permissions:
       contents: write
@@ -227,9 +228,10 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
-          if (Test-Path $env:SCCACHE_PATH) {
-            try { & $env:SCCACHE_PATH --show-stats } catch { Write-Host "sccache show-stats: $_" }
-            try { & $env:SCCACHE_PATH --stop-server } catch { Write-Host "sccache stop-server: $_" }
+          $sccache = if (Get-Command sccache -ErrorAction SilentlyContinue) { 'sccache' } elseif ($env:SCCACHE_PATH -and (Test-Path "$env:SCCACHE_PATH.exe")) { "$env:SCCACHE_PATH.exe" } elseif ($env:SCCACHE_PATH -and (Test-Path $env:SCCACHE_PATH)) { $env:SCCACHE_PATH } else { $null }
+          if ($sccache) {
+            try { & $sccache --show-stats } catch { Write-Host "sccache show-stats: $_" }
+            try { & $sccache --stop-server } catch { Write-Host "sccache stop-server: $_" }
           }
           $global:LASTEXITCODE = 0
 

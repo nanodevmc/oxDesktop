@@ -11,6 +11,7 @@
 #include <QtGui/QPixmap>
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
+#include <iostream>
 
 namespace Extera::Demo {
 namespace {
@@ -117,7 +118,10 @@ void Start(not_null<Window::Controller*> window) {
 			const auto pixmap = widget->grab();
 			const auto file = QFileInfo(path);
 			QDir().mkpath(file.absolutePath());
-			pixmap.save(path, "PNG");
+			const auto ok = pixmap.save(path, "PNG");
+			std::cout << "[Demo] Saving screenshot to " << path.toStdString()
+				<< " (" << pixmap.width() << "x" << pixmap.height()
+				<< ") result=" << (ok ? "SUCCESS" : "FAILED") << std::endl;
 		}
 		if (exit) {
 			QGuiApplication::quit();

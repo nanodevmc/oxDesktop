@@ -108,8 +108,10 @@ jobs:
             -e CONFIG=Release \
             -e API_ID -e API_HASH \
             -e CCACHE_DIR=/var/cache/ccache \
-            -e CCACHE_MAXSIZE=2G \
+            -e CCACHE_MAXSIZE=5G \
             -e CCACHE_COMPRESS=1 \
+            -e CCACHE_SLOPPINESS=pch_defines,time_macros \
+            -e CCACHE_BASEDIR=/usr/src/tdesktop \
             "$IMAGE_TAG" \
             bash -c '/usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
               -D CMAKE_CONFIGURATION_TYPES=Release \
@@ -178,15 +180,17 @@ jobs:
               rm -rf "$PKG/python311/lib/python3.11/test" \
                 "$PKG/python311/lib/python3.11/site-packages"
               find "$PKG/python311" -name "__pycache__" -type d -prune -exec rm -rf {} +
+              ln -sf lib "$PKG/python311/lib64"
               mkdir -p "$PKG/python/extera"
               cp -r Telegram/SourceFiles/extera/python/. "$PKG/python/extera/"
               cat > "$PKG/oxDesktop" <<SH
-          #!/bin/sh
-          DIR="\$(cd "\$(dirname "\$0")" && pwd)"
-          export LD_LIBRARY_PATH="\$DIR/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
-          export PYTHONHOME="\$DIR/python311"
-          exec "\$DIR/oxDesktop-bin" "\$@"
-          SH
+#!/bin/sh
+DIR="\$(cd "\$(dirname "\$0")" && pwd)"
+export LD_LIBRARY_PATH="\$DIR/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
+export PYTHONHOME="\$DIR/python311"
+export PYTHONPATH="\$DIR/python311/lib/python3.11:\$DIR/python311/lib/python3.11/lib-dynload"
+exec "\$DIR/oxDesktop-bin" "\$@"
+SH
               chmod +x "$PKG/oxDesktop" "$PKG/oxDesktop-bin"
               tar -C pkg -czf "oxDesktop-linux-x64.$VERSION.tar.gz" oxDesktop
             '
@@ -198,22 +202,22 @@ jobs:
           sudo apt-get update && sudo apt-get install -y xvfb libxcb-cursor0 libx11-xcb1 libxkbcommon-x11-0
           export DISPLAY=:99
           export QT_QPA_PLATFORM=xcb
-          Xvfb :99 -screen 0 1280x800x24 &
+          Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset &
           XVFB_PID=$!
           sleep 2
           PKG="./pkg/oxDesktop/oxDesktop"
           chmod +x "$PKG" ./pkg/oxDesktop/oxDesktop-bin
           SHOTS_DIR="$PWD/screenshots"
           echo "Capturing Settings view..."
-          $PKG --demo-mode --demo-view=settings --demo-screenshot="$SHOTS_DIR/settings.png" --demo-delay=3500 --demo-exit || true
+          $PKG --demo-mode --demo-view settings --demo-screenshot "$SHOTS_DIR/settings.png" --demo-delay 3500 --demo-exit || true
           echo "Capturing Appearance view..."
-          $PKG --demo-mode --demo-view=appearance --demo-screenshot="$SHOTS_DIR/appearance.png" --demo-delay=3500 --demo-exit || true
+          $PKG --demo-mode --demo-view appearance --demo-screenshot "$SHOTS_DIR/appearance.png" --demo-delay 3500 --demo-exit || true
           echo "Capturing Chats view..."
-          $PKG --demo-mode --demo-view=chats --demo-screenshot="$SHOTS_DIR/chats.png" --demo-delay=3500 --demo-exit || true
+          $PKG --demo-mode --demo-view chats --demo-screenshot "$SHOTS_DIR/chats.png" --demo-delay 3500 --demo-exit || true
           echo "Capturing Plugins view..."
-          $PKG --demo-mode --demo-view=plugins --demo-screenshot="$SHOTS_DIR/plugins.png" --demo-delay=3500 --demo-exit || true
+          $PKG --demo-mode --demo-view plugins --demo-screenshot "$SHOTS_DIR/plugins.png" --demo-delay 3500 --demo-exit || true
           echo "Capturing Main window..."
-          $PKG --demo-mode --demo-view=main --demo-screenshot="$SHOTS_DIR/oxdesktop.png" --demo-delay=3500 --demo-exit || true
+          $PKG --demo-mode --demo-view main --demo-screenshot "$SHOTS_DIR/oxdesktop.png" --demo-delay 3500 --demo-exit || true
           kill $XVFB_PID || true
           ls -la screenshots/
 
