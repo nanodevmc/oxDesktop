@@ -203,16 +203,17 @@ jobs:
           sleep 2
           PKG="./pkg/oxDesktop/oxDesktop"
           chmod +x "$PKG" ./pkg/oxDesktop/oxDesktop-bin
+          SHOTS_DIR="$PWD/screenshots"
           echo "Capturing Settings view..."
-          $PKG --demo-mode --demo-view=settings --demo-screenshot="screenshots/settings.png" --demo-delay=1200 --demo-exit || true
+          $PKG --demo-mode --demo-view=settings --demo-screenshot="$SHOTS_DIR/settings.png" --demo-delay=3500 --demo-exit || true
           echo "Capturing Appearance view..."
-          $PKG --demo-mode --demo-view=appearance --demo-screenshot="screenshots/appearance.png" --demo-delay=1200 --demo-exit || true
+          $PKG --demo-mode --demo-view=appearance --demo-screenshot="$SHOTS_DIR/appearance.png" --demo-delay=3500 --demo-exit || true
           echo "Capturing Chats view..."
-          $PKG --demo-mode --demo-view=chats --demo-screenshot="screenshots/chats.png" --demo-delay=1200 --demo-exit || true
+          $PKG --demo-mode --demo-view=chats --demo-screenshot="$SHOTS_DIR/chats.png" --demo-delay=3500 --demo-exit || true
           echo "Capturing Plugins view..."
-          $PKG --demo-mode --demo-view=plugins --demo-screenshot="screenshots/plugins.png" --demo-delay=1200 --demo-exit || true
+          $PKG --demo-mode --demo-view=plugins --demo-screenshot="$SHOTS_DIR/plugins.png" --demo-delay=3500 --demo-exit || true
           echo "Capturing Main window..."
-          $PKG --demo-mode --demo-view=main --demo-screenshot="screenshots/oxdesktop.png" --demo-delay=1200 --demo-exit || true
+          $PKG --demo-mode --demo-view=main --demo-screenshot="$SHOTS_DIR/oxdesktop.png" --demo-delay=3500 --demo-exit || true
           kill $XVFB_PID || true
           ls -la screenshots/
 

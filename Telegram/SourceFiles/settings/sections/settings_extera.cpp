@@ -2,6 +2,7 @@
 #include "ui/new_badges.h"
 
 #include <QtCore/QRegularExpression>
+#include <QtCore/QTimer>
 #include <QtGui/QFontDatabase>
 
 #include "ui/search_field_controller.h"
@@ -982,7 +983,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 				object_ptr<Ui::FlatLabel>(
 					item,
 					rpl::single(title),
-					st::semiboldFont),
+					st::boxTitle),
 				style::margins(28, 0, 0, 2));
 			item->add(
 				object_ptr<Ui::FlatLabel>(
@@ -1002,7 +1003,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 		addBenefit(
 			&st::menuIconPremium,
 			u"\u041D\u043E\u043C\u0435\u0440\u043D\u043E\u0439 \u0437\u043D\u0430\u0447\u043E\u043A"_q,
-			u"\u0417\u043D\u0430\u0447\u043E\u043A \u0441 \u0432\u0430\u0448\u0438\u043C \u043D\u043E\u043C\u0435\u0440\u043E\u043C \u0440\u044F\u0434\u043E\u043C \u0441 \u0438\u043C\u0435\u043D\u0435\u043C, \u0435\u0433\u043E \u0432\u0438\u0434\u044F\u0442 \u0432\u0441\u0435 \u0432 exteraGram."_q);
+			u"\u0417\u043D\u0430\u0447\u043E\u043A \u0441 \u0432\u0430\u0448\u0438\u043C \u043D\u043E\u043C\u0435\u0440\u043E\u043C \u0440\u044F\u0434\u043E\u043C \u0441 \u0438\u043C\u0435\u043D\u0435\u043C, \u0435\u0433\u043E \u0432\u0438\u0434\u044F\u0442 \u0432\u0441\u0435 \u0432 oxDesktop."_q);
 
 		addBenefit(
 			&st::menuIconSchedule,
@@ -1022,16 +1023,16 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 				st::defaultBoxButton),
 			style::margins(16, 12, 16, 4),
 			style::al_top);
-		channelBtn->setTextTransform(Ui::RoundButton::TextTransform::NoTransform);
+		channelBtn->setTextTransform(Ui::RoundButtonTextTransform::NoTransform);
 		channelBtn->setClickedCallback([=] {
-			UrlClickHandler::Open(u"https://t.me/exteraGramBeta"_q);
+			UrlClickHandler::Open(u"https://t.me/WineSquad"_q);
 		});
 
-		box->addButton(rpl::single(u"ExteraGram (@ExteraOwner)"_q), [=] {
-			UrlClickHandler::Open(u"https://t.me/ExteraOwner"_q);
+		box->addButton(rpl::single(u"WineSquad (@WineSquad)"_q), [=] {
+			UrlClickHandler::Open(u"https://t.me/WineSquad"_q);
 			box->closeBox();
 		});
-		box->addButton(rpl::single(u"oxDesktop (@radoqi)"_q), [=] {
+		box->addButton(rpl::single(u"NanoDev (@radoqi)"_q), [=] {
 			UrlClickHandler::Open(u"https://t.me/radoqi"_q);
 			box->closeBox();
 		});
