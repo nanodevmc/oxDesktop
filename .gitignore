@@ -84,3 +84,4 @@ docs/tiktok
 docs/tiktok/*
 
 builds/
+BUILD_LOG.md

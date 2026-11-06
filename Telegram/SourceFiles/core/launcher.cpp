@@ -646,6 +646,15 @@ void Launcher::processArguments() {
 				parseResult[parsingKey] = QStringList();
 				continue;
 			}
+			const auto eqIndex = argument.indexOf('=');
+			if (eqIndex > 0) {
+				const auto keyPart = argument.left(eqIndex).toLatin1();
+				auto itEq = parseMap.find(keyPart);
+				if (itEq != parseMap.end() && itEq->second == KeyFormat::OneValue) {
+					parseResult[keyPart] = QStringList(argument.mid(eqIndex + 1, 8192));
+					continue;
+				}
+			}
 			parseResult["--"].push_back(argument.mid(0, 8192));
 		} break;
 		}

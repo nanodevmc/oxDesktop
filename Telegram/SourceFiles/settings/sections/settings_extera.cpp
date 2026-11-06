@@ -1028,12 +1028,12 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			UrlClickHandler::Open(u"https://t.me/WineSquad"_q);
 		});
 
-		box->addButton(rpl::single(u"WineSquad (@WineSquad)"_q), [=] {
-			UrlClickHandler::Open(u"https://t.me/WineSquad"_q);
+		box->addButton(rpl::single(u"Кастомный (@radoqi)"_q), [=] {
+			UrlClickHandler::Open(u"https://t.me/radoqi"_q);
 			box->closeBox();
 		});
-		box->addButton(rpl::single(u"NanoDev (@radoqi)"_q), [=] {
-			UrlClickHandler::Open(u"https://t.me/radoqi"_q);
+		box->addButton(rpl::single(u"ExteraGram (@ExteraOwner)"_q), [=] {
+			UrlClickHandler::Open(u"https://t.me/ExteraOwner"_q);
 			box->closeBox();
 		});
 	}));
