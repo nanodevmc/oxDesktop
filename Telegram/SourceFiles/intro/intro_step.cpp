@@ -28,6 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/confirm_box.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/labels.h"
+#include "ui/painter.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/effects/slide_animation.h"
 #include "ui/ui_utility.h"
@@ -474,16 +475,16 @@ void Step::paintCover(QPainter &p, int top) {
 	st::introCoverLeft.paint(p, left, coverHeight - st::introCoverLeft.height(), width());
 	st::introCoverRight.paint(p, width() - right - st::introCoverRight.width(), coverHeight - st::introCoverRight.height(), width());
 
-	auto planeLeft = (width() - st::introCoverIcon.width()) / 2 - st::introCoverIconLeft;
-	auto planeTop = top + st::introCoverIconTop;
+	static const auto deltaGlyph = QImage(u":/gui/art/app_icon_glyph.png"_q)
+		.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+	constexpr auto kDeltaSize = 108;
+	const auto deltaLeft = (width() - kDeltaSize) / 2;
+	auto deltaTop = top + 72;
 	if (top < 0 && !_hasCover) {
-		const auto ratio = float64(st::introPlaneWidth / st::introPlaneHeight);
-		auto deltaLeft = -int(base::SafeRound(ratio * top));
-//		auto deltaTop = top;
-		planeLeft += deltaLeft;
-	//	planeTop += top;
+		deltaTop += top;
 	}
-	st::introCoverIcon.paint(p, planeLeft, planeTop, width());
+	auto hq = PainterHighQualityEnabler(p);
+	p.drawImage(QRect(deltaLeft, deltaTop, kDeltaSize, kDeltaSize), deltaGlyph);
 }
 
 int Step::contentLeft() const {
