@@ -110,7 +110,7 @@ jobs:
 
       - name: Capture views under headless display
         run: |
-          mkdir -p screenshots
+          mkdir -p screenshots /tmp/empty_xdg
           APP_DIR="$PWD/app/oxDesktop"
           BIN="$APP_DIR/oxDesktop-bin"
           chmod +x "$APP_DIR/oxDesktop" "$BIN"
@@ -128,8 +128,11 @@ jobs:
           export AUDIODEV=null
           export PULSE_SERVER=""
           export PIPEWIRE_REMOTE=""
-          export QT_QPA_PLATFORMTHEME=generic
+          export QT_QPA_PLATFORMTHEME=""
           export QT_STYLE_OVERRIDE=Fusion
+          export GSETTINGS_BACKEND=memory
+          export XDG_DATA_DIRS=/tmp/empty_xdg
+          unset DBUS_SESSION_BUS_ADDRESS
           unset XDG_CURRENT_DESKTOP
           unset DESKTOP_SESSION
           unset XDG_SESSION_DESKTOP
@@ -155,8 +158,14 @@ jobs:
                 echo "Fallback: attempting offscreen capture for $view..."
                 timeout 15s "$BIN" -platform offscreen -many -workdir "/tmp/prof_off_$view" --demo-mode --demo-view "$view" --demo-screenshot "$out" --demo-delay 3500 --demo-exit || {
                   echo "Offscreen capture also exited with code $?"
-                  echo "Diagnostics: running under gdb..."
-                  gdb -batch -ex "run" -ex "bt 30" -ex "quit" --args "$BIN" -many -workdir "/tmp/prof_dbg_$view" --demo-mode --demo-view "$view" --demo-delay 1500 --demo-exit || true
+                  echo "Diagnostics: running under gdb with clean environment..."
+                  env -u PYTHONHOME -u PYTHONPATH gdb -batch \
+                    -ex "run" \
+                    -ex "info registers" \
+                    -ex "x/10i \$pc - 16" \
+                    -ex "bt 30" \
+                    -ex "quit" \
+                    --args "$BIN" -many -workdir "/tmp/prof_dbg_$view" --demo-mode --demo-view "$view" --demo-delay 1500 --demo-exit || true
                 }
               fi
             }
