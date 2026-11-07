@@ -119,6 +119,10 @@ jobs:
           export LIBGL_ALWAYS_SOFTWARE=1
           export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
           export QT_XCB_GL_INTEGRATION=none
+          export ALSOFT_DRIVERS=dummy
+          export AUDIODEV=null
+          export PULSE_SERVER=""
+          export PIPEWIRE_REMOTE=""
           unset XDG_CURRENT_DESKTOP
           unset DESKTOP_SESSION
           unset XDG_SESSION_DESKTOP
@@ -151,6 +155,10 @@ jobs:
             export LIBGL_ALWAYS_SOFTWARE=1
             export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
             export QT_XCB_GL_INTEGRATION=none
+            export ALSOFT_DRIVERS=dummy
+            export AUDIODEV=null
+            export PULSE_SERVER=''
+            export PIPEWIRE_REMOTE=''
             unset XDG_CURRENT_DESKTOP
             unset DESKTOP_SESSION
             unset XDG_SESSION_DESKTOP
