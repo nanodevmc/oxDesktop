@@ -575,7 +575,15 @@ QImage TelegramLogoImage() {
 		p.setBrush(QrActiveColor());
 		p.setPen(Qt::NoPen);
 		p.drawEllipse(QRect(QPoint(), size));
-		st::introQrPlane.paintInCenter(p, QRect(QPoint(), size));
+		static const auto deltaGlyph = QImage(u":/gui/art/app_icon_glyph.png"_q)
+			.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+		const auto glyphSize = int(base::SafeRound(st::introQrCenterSize * 0.65));
+		const auto glyphRect = QRect(
+			(st::introQrCenterSize - glyphSize) / 2,
+			(st::introQrCenterSize - glyphSize) / 2,
+			glyphSize,
+			glyphSize);
+		p.drawImage(glyphRect, deltaGlyph);
 	}
 	return result;
 }
