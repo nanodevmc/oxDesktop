@@ -111,6 +111,13 @@ jobs:
       - name: Capture views under headless display
         run: |
           mkdir -p screenshots
+          APP_DIR="$PWD/app/oxDesktop"
+          BIN="$APP_DIR/oxDesktop-bin"
+          chmod +x "$APP_DIR/oxDesktop" "$BIN"
+
+          export LD_LIBRARY_PATH="$APP_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          export PYTHONHOME="$APP_DIR/python311"
+          export PYTHONPATH="$APP_DIR/python311/lib/python3.11:$APP_DIR/python311/lib/python3.11/lib-dynload"
           export DISPLAY=:99
           export NO_AT_SPI=1
           export QT_QPA_PLATFORM=xcb
@@ -128,26 +135,28 @@ jobs:
           unset XDG_SESSION_DESKTOP
           unset GNOME_DESKTOP_SESSION_ID
 
+          echo "=== Inspecting binary dependencies ==="
+          ldd "$BIN" | grep "not found" || echo "All dynamic libraries resolved successfully!"
+
           Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset &
           XVFB_PID=$!
           sleep 2
 
-          PKG="$PWD/app/oxDesktop/oxDesktop"
           SHOTS_DIR="$PWD/screenshots"
 
           capture_view() {
             local view="$1"
             local out="$2"
             echo "=== Capturing view: $view -> $out ==="
-            timeout 15s $PKG -many -workdir "/tmp/prof_$view" --demo-mode --demo-view "$view" --demo-screenshot "$out" --demo-delay 3500 --demo-exit || {
+            timeout 15s "$BIN" -many -workdir "/tmp/prof_$view" --demo-mode --demo-view "$view" --demo-screenshot "$out" --demo-delay 3500 --demo-exit || {
               local ec=$?
               echo "Standard capture exited with code $ec"
               if [ ! -f "$out" ]; then
                 echo "Fallback: attempting offscreen capture for $view..."
-                timeout 15s $PKG -platform offscreen -many -workdir "/tmp/prof_off_$view" --demo-mode --demo-view "$view" --demo-screenshot "$out" --demo-delay 3500 --demo-exit || {
+                timeout 15s "$BIN" -platform offscreen -many -workdir "/tmp/prof_off_$view" --demo-mode --demo-view "$view" --demo-screenshot "$out" --demo-delay 3500 --demo-exit || {
                   echo "Offscreen capture also exited with code $?"
                   echo "Diagnostics: running under gdb..."
-                  gdb -batch -ex "set follow-fork-mode child" -ex "run" -ex "bt 25" -ex "quit" --args "$PKG" -many -workdir "/tmp/prof_dbg_$view" --demo-mode --demo-view "$view" --demo-delay 1500 --demo-exit || true
+                  gdb -batch -ex "run" -ex "bt 30" -ex "quit" --args "$BIN" -many -workdir "/tmp/prof_dbg_$view" --demo-mode --demo-view "$view" --demo-delay 1500 --demo-exit || true
                 }
               fi
             }
