@@ -145,6 +145,92 @@ class _FunctionalHook:
     pass
 
 
+class VirtualParam:
+    def __init__(self, args, this=None, method=None):
+        self.args = list(args)
+        self.thisObject = this
+        self.method = method
+        self.returnEarly = False
+        self._result = None
+        self._throwable = None
+
+    def setResult(self, value):
+        self._result = value
+        self.returnEarly = True
+
+    def getResult(self):
+        return self._result
+
+    def getResultOrThrowable(self):
+        return self._result
+
+    def setThrowable(self, throwable):
+        self._throwable = throwable
+        self.returnEarly = True
+
+    def getThrowable(self):
+        return self._throwable
+
+    def hasThrowable(self):
+        return self._throwable is not None
+
+    def getArgs(self):
+        return self.args
+
+    def getThisObject(self):
+        return self.thisObject
+
+
+_VIRTUAL_HOOKS = {
+    ("SendMessagesHelper", "sendMessage"): "send",
+    ("MessagesController", "processNewMessages"): "incoming",
+    ("LaunchActivity", "onActivityResult"): "activity_result",
+    ("ChatActivity", "onResume"): "chat_open",
+    ("ChatActivity", "createView"): "chat_open",
+    ("ChatActivity", "onFragmentCreate"): "chat_open",
+    ("ChatActivity", "onBecomeFullyVisible"): "chat_open",
+    ("ChatActivity", "onPause"): "chat_close",
+    ("ChatActivity", "onFragmentDestroy"): "chat_close",
+    ("ProfileActivity", "onResume"): "profile_open",
+    ("ProfileActivity", "createView"): "profile_open",
+    ("ProfileActivity", "onFragmentCreate"): "profile_open",
+    ("DialogsActivity", "onResume"): "dialogs_open",
+    ("DialogsActivity", "createView"): "dialogs_open",
+    ("Activity", "onActivityResult"): "activity_result",
+    ("BaseFragment", "onActivityResultFragment"): "activity_result",
+    ("ChatActivity", "onActivityResultFragment"): "activity_result",
+    ("ProfileActivity", "onActivityResultFragment"): "activity_result",
+    ("NotificationsController", "processNewMessages"): "incoming",
+    ("LaunchActivity", "onCreate"): "app_create",
+    ("LaunchActivity", "onResume"): "app_resume",
+    ("LaunchActivity", "onStart"): "app_resume",
+    ("LaunchActivity", "onPause"): "app_pause",
+    ("LaunchActivity", "onStop"): "app_pause",
+    ("ProfileActivity", "onPause"): "profile_close",
+    ("ProfileActivity", "onFragmentDestroy"): "profile_close",
+    ("DialogsActivity", "onPause"): "dialogs_close",
+    ("DialogsActivity", "onFragmentDestroy"): "dialogs_close",
+    ("DialogsActivity", "onBecomeFullyVisible"): "dialogs_open",
+    ("DialogsActivity", "onFragmentCreate"): "dialogs_open",
+    ("ProfileActivity", "onBecomeFullyVisible"): "profile_open",
+}
+
+
+def _exd_shim_target(target, method_name=None):
+    import exd_java
+    if isinstance(target, exd_java.ShimMethod):
+        return target._cls, target._method
+    cls = target
+    if not isinstance(cls, type):
+        inner = getattr(target, "_class", None)
+        cls = inner if isinstance(inner, type) else None
+    if cls is None or not method_name:
+        return None, None
+    if exd_java.shim_method(cls, method_name) is None and not exd_java.has_shim_hooks(cls, method_name):
+        return None, None
+    return cls, method_name
+
+
 class UnhookId(str):
     __slots__ = ("_owner",)
 
@@ -385,28 +471,14 @@ class BasePlugin:
     error_message: Optional[str] = None
 
     def on_plugin_load(self):
-        if hasattr(self, "on_load") and callable(self.on_load) and type(self).on_load is not BasePlugin.on_load:
-            self.on_load()
-        elif hasattr(self, "on_enable") and callable(self.on_enable) and type(self).on_enable is not BasePlugin.on_enable:
-            self.on_enable()
+        fallback = getattr(self, "on_load", None)
+        if callable(fallback) and fallback != self.on_plugin_load:
+            return fallback()
 
     def on_plugin_unload(self):
-        if hasattr(self, "on_unload") and callable(self.on_unload) and type(self).on_unload is not BasePlugin.on_unload:
-            self.on_unload()
-        elif hasattr(self, "on_disable") and callable(self.on_disable) and type(self).on_disable is not BasePlugin.on_disable:
-            self.on_disable()
-
-    def on_load(self):
-        pass
-
-    def on_unload(self):
-        pass
-
-    def on_enable(self):
-        pass
-
-    def on_disable(self):
-        pass
+        fallback = getattr(self, "on_unload", None)
+        if callable(fallback) and fallback != self.on_plugin_unload:
+            return fallback()
 
     def on_app_event(self, event_type: str):
         pass
@@ -443,8 +515,6 @@ class BasePlugin:
         self._extera_state("_extera_menu_callbacks", dict)
         if "_extera_send_message_registered" not in self.__dict__:
             self.__dict__["_extera_send_message_registered"] = False
-        if type(self).on_send_message_hook is not BasePlugin.on_send_message_hook:
-            self.add_on_send_message_hook(0)
 
     @property
     def plugin_id(self) -> Optional[str]:
@@ -547,6 +617,128 @@ class BasePlugin:
     def client(self):
         self.__dict__.pop("_extera_client_override", None)
 
+    def _extera_build_method_handler(self, handler, before=None, after=None):
+        if isinstance(handler, (MethodHook, MethodReplacement)):
+            return handler
+        if handler is not None and any(
+                hasattr(handler, attr) for attr in
+                ("before_hooked_method", "after_hooked_method", "replace_hooked_method")):
+            return handler
+        if handler is not None:
+            if not callable(handler):
+                raise TypeError(
+                    "handler must be a MethodHook/MethodReplacement instance or a callable")
+            if before is not None:
+                raise TypeError("pass either a handler callable or before=, not both")
+            before, handler = handler, None
+        if before is None and after is None:
+            raise TypeError("hook_method requires a handler or before=/after= callbacks")
+        wrapper = _FunctionalHook()
+        if before is not None:
+            wrapper.before_hooked_method = before
+        if after is not None:
+            wrapper.after_hooked_method = after
+        return wrapper
+
+    def _exd_target(self, target, method_name=None):
+        name = None
+        for attr in ("getName", "_java_name", "_name", "__name__"):
+            try:
+                value = getattr(target, attr, None)
+                value = value() if callable(value) and attr == "getName" else value
+            except Exception:
+                value = None
+            if isinstance(value, str) and value:
+                name = value
+                break
+        if not name:
+            try:
+                name = str(target)
+            except Exception:
+                name = "?"
+        name = name.replace("<class ", "").strip("<>' ")
+        parts = [p for p in name.replace("$", ".").split(".") if p]
+        short = ""
+        for part in parts:
+            if part[:1].isupper() and part != "TLRPC":
+                short = part
+        short = short or (parts[-1] if parts else "?")
+        if not method_name and parts and parts[-1] != short and parts[-1][:1].islower():
+            method_name = parts[-1]
+        return short, method_name
+
+    def _exd_note_hook(self, target, method_name=None):
+        short, method_name = self._exd_target(target, method_name)
+        if method_name:
+            short = "%s.%s" % (short, method_name)
+        notes = self.__dict__.setdefault("_exd_unsupported", [])
+        if short not in notes and len(notes) < 32:
+            notes.append(short)
+
+    def _exd_virtual_hook(self, target, method_name, handler_obj, priority):
+        key = self._exd_target(target, method_name)
+        kind = _VIRTUAL_HOOKS.get(key)
+        if kind is None:
+            return None
+        handlers = self.__dict__.setdefault("_exd_virtual_" + kind, [])
+        handlers.append(handler_obj)
+        if kind == "send":
+            _host.add_send_hook(self.id, int(priority or 0))
+        hook_id = "exd_virtual_%s_%d" % (kind, len(handlers))
+        return UnhookId(hook_id, self)
+
+    def _exd_shim_hook(self, target, method_name, handler_obj, priority):
+        try:
+            import exd_java
+            cls, name = _exd_shim_target(target, method_name)
+            if cls is None:
+                return None
+            hook_id = exd_java.hook_shim(cls, name, self.id, handler_obj, priority)
+        except Exception:
+            return None
+        return UnhookId(hook_id, self) if hook_id else None
+
+    def _extera_hook_all(self, kind: str, clazz, method_name, handler_obj, priority, filters_json):
+        virtual = self._exd_virtual_hook(clazz, method_name, handler_obj, priority)
+        if virtual is not None:
+            return UnhookIdList((str(virtual),), self)
+        shim = self._exd_shim_hook(clazz, method_name, handler_obj, priority)
+        if shim is not None:
+            return UnhookIdList((str(shim),), self)
+        self._exd_note_hook(clazz, method_name)
+        self.log(f"{kind} requires the Android runtime, not available on desktop")
+        return UnhookIdList(("exd_unsupported",), self)
+
+    def hook_method(self, method, handler=None, priority: int = 50, filters=None,
+                    before=None, after=None, before_filters=None, after_filters=None):
+        if isinstance(method, str) and isinstance(handler, str):
+            real = priority if not isinstance(priority, int) else filters
+            return self.hook_all_methods(method, handler, real, before=before, after=after)
+        handler_obj = self._extera_build_method_handler(handler, before=before, after=after)
+        virtual = self._exd_virtual_hook(method, None, handler_obj, priority)
+        if virtual is not None:
+            return virtual
+        shim = self._exd_shim_hook(method, None, handler_obj, priority)
+        if shim is not None:
+            return shim
+        self._exd_note_hook(method)
+        self.log("hook_method is not available on desktop")
+        return UnhookId("exd_unsupported", self)
+
+    def hook_all_methods(self, clazz, method_name, handler=None, priority: int = 50,
+                         filters=None, before=None, after=None,
+                         before_filters=None, after_filters=None) -> list:
+        handler_obj = self._extera_build_method_handler(handler, before=before, after=after)
+        return self._extera_hook_all("methods", clazz, method_name, handler_obj,
+                                     priority, None)
+
+    def hook_all_constructors(self, clazz, handler=None, priority: int = 50,
+                              filters=None, before=None, after=None,
+                              before_filters=None, after_filters=None) -> list:
+        handler_obj = self._extera_build_method_handler(handler, before=before, after=after)
+        return self._extera_hook_all("constructors", clazz, None, handler_obj,
+                                     priority, None)
+
     def send_text(self, peer_id, text, reply_to=None, parse_mode=None, account=None):
         import client_utils
         return client_utils.send_text(peer_id, text, replyToMsg=reply_to,
@@ -595,60 +787,31 @@ class BasePlugin:
         except Exception:
             pass
 
-    def _extera_build_method_handler(self, handler, before=None, after=None):
-        if isinstance(handler, (MethodHook, MethodReplacement)):
-            return handler
-        if handler is not None and any(
-                hasattr(handler, attr) for attr in
-                ("before_hooked_method", "after_hooked_method", "replace_hooked_method")):
-            return handler
-        if handler is not None:
-            if not callable(handler):
-                raise TypeError(
-                    "handler must be a MethodHook/MethodReplacement instance or a callable")
-            if before is not None:
-                raise TypeError("pass either a handler callable or before=, not both")
-            before, handler = handler, None
-        if before is None and after is None:
-            raise TypeError("hook_method requires a handler or before=/after= callbacks")
-        wrapper = _FunctionalHook()
-        if before is not None:
-            wrapper.before_hooked_method = before
-        if after is not None:
-            wrapper.after_hooked_method = after
-        return wrapper
-
-    def _extera_hook_all(self, kind: str, clazz, method_name, handler_obj, priority, filters_json):
-        self.log(f"{kind} requires the Android runtime, not available on desktop")
-        return UnhookIdList((), None)
-
-    def hook_method(self, method, handler=None, priority: int = 50, filters=None,
-                    before=None, after=None, before_filters=None, after_filters=None):
-        handler_obj = self._extera_build_method_handler(handler, before=before, after=after)
-        self.log("hook_method is not available on desktop")
-        return None
-
-    def hook_all_methods(self, clazz, method_name, handler=None, priority: int = 50,
-                         filters=None, before=None, after=None,
-                         before_filters=None, after_filters=None) -> list:
-        handler_obj = self._extera_build_method_handler(handler, before=before, after=after)
-        return self._extera_hook_all("methods", clazz, method_name, handler_obj,
-                                     priority, None)
-
-    def hook_all_constructors(self, clazz, handler=None, priority: int = 50,
-                              filters=None, before=None, after=None,
-                              before_filters=None, after_filters=None) -> list:
-        handler_obj = self._extera_build_method_handler(handler, before=before, after=after)
-        return self._extera_hook_all("constructors", clazz, None, handler_obj,
-                                     priority, None)
-
     def unhook_method(self, unhook_obj):
         if unhook_obj is None:
             return
+        ids = unhook_obj if isinstance(unhook_obj, (list, tuple)) else [unhook_obj]
+        for value in ids:
+            value = str(value)
+            if value.startswith("exd_shim_"):
+                try:
+                    import exd_java
+                    exd_java.unhook_shim(hook_id=value)
+                except Exception:
+                    pass
+                continue
+            for kind in set(_VIRTUAL_HOOKS.values()) - {"send"}:
+                if value.startswith("exd_virtual_%s_" % kind):
+                    self.__dict__["_exd_virtual_" + kind] = []
+            if value.startswith("exd_virtual_send_"):
+                self.__dict__["_exd_virtual_send"] = []
+                if not self.__dict__.get("_extera_send_message_registered"):
+                    _host.remove_send_hook(self.id)
 
     def _extera_cleanup_resources(self):
         try:
-            _host.remove_send_hook(self.id)
+            import exd_java
+            exd_java.unhook_shim(plugin_id=self._extera_plugin_id)
         except Exception:
             pass
         for module_name, cleanup in (("file_utils", "_unregister_all_for_plugin"),

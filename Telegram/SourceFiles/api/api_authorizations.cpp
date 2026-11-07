@@ -16,6 +16,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_app_config.h"
 #include "main/main_session_settings.h"
 #include "main/main_session.h"
+#include "core/version.h"
+#include "config.h"
 
 namespace Api {
 namespace {
@@ -35,7 +37,9 @@ Authorizations::Entry ParseEntry(const MTPDauthorization &data) {
 	const auto isTest = (apiId == TestApiId);
 	const auto isDesktop = (apiId == DesktopApiId)
 		|| (apiId == SnapApiId)
-		|| isTest;
+		|| isTest
+		|| (apiId == ApiId)
+		|| data.is_current();
 
 	const auto appName = isDesktop
 		? u"oxDesktop%1"_q.arg(isTest ? " (GitHub)" : QString())
@@ -47,6 +51,10 @@ Authorizations::Entry ParseEntry(const MTPDauthorization &data) {
 			if (version == QString::number(verInt)) {
 				return Core::FormatVersionDisplay(verInt);
 			}
+			if (version.startsWith(u"oxDesktop "_q)) {
+				return version.mid(10);
+			}
+			return version.startsWith('v') ? version : ('v' + version);
 		} else {
 			if (const auto index = version.indexOf('('); index >= 0) {
 				return version.mid(index);

@@ -1,0 +1,3 @@
+files:
+  - source: /Telegram/Resources/langs/oxdesktop_en.strings
+    translation: /Telegram/Resources/langs/oxdesktop_%two_letters_code%.strings

@@ -95,9 +95,10 @@ def _validate_plugin_id(plugin_id: Any) -> str:
         raise PluginMetadataError(
             f"invalid __id__ {plugin_id!r}: must be 2-32 characters, start with a letter "
             "and contain only Latin letters, digits, '_' or '-'")
-    if plugin_id in sys.stdlib_module_names:
+    _DANGEROUS_CORE = {"sys", "os", "builtins", "_compat", "extera_host", "exd_java", "base_plugin"}
+    if plugin_id in _DANGEROUS_CORE:
         raise PluginMetadataError(
-            f"__id__ {plugin_id!r} collides with a Python standard library module name")
+            f"__id__ {plugin_id!r} collides with a critical core module name")
     return plugin_id
 
 
@@ -135,6 +136,12 @@ def _validate_permissions(declared: Any) -> list:
 
 
 def _read_metadata_uncached(path: str) -> Dict[str, Any]:
+    if str(path).endswith(".elyx"):
+        try:
+            import exd_elyx
+            return exd_elyx.read_meta(path)
+        except Exception:
+            pass
     is_zip = os.path.isfile(path) and zipfile.is_zipfile(path)
     if is_zip:
         try:

@@ -240,10 +240,7 @@ int Build() {
 }
 
 QString VersionText() {
-	return QString::fromLatin1(AppVersionStr)
-		+ u" ("_q
-		+ QString::number(kExteraBuild)
-		+ u")"_q;
+	return u"v%1"_q.arg(AppVersionStr);
 }
 
 rpl::producer<bool> AvailableValue() {

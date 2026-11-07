@@ -20,6 +20,7 @@ namespace Window {
 namespace Theme {
 
 enum class EmbeddedType {
+	AeroDelta,
 	DayBlue,
 	Default,
 	Night,

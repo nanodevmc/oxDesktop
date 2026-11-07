@@ -1,0 +1,7 @@
+{
+  "metainfo": "pgplugin/metainfo.json",
+  "main": "pgplugin/src/main.py",
+  "strings": "pgplugin/locales",
+  "assets": "pgplugin/res",
+  "elyxbuilder": "pgplugin/.elyxbuilder"
+}

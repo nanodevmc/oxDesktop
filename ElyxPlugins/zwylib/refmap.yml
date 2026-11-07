@@ -1,0 +1,2 @@
+metainfo: metainfo.yml
+main: src/main.py

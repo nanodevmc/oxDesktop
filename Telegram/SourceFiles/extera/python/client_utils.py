@@ -834,3 +834,21 @@ class NotificationCenterDelegate:
 
 
 from android_utils import log, run_on_ui_thread  # noqa: E402,F401
+
+
+def _prepare_document(path: str, mime_type: str = "application/octet-stream"):
+    import tl_runtime
+    import time
+    import os
+    doc = None
+    if hasattr(tl_runtime, "TLRPC") and hasattr(tl_runtime.TLRPC, "TL_document"):
+        doc = tl_runtime.TLRPC.TL_document()
+    if doc is None:
+        import _compat
+        doc = _compat.Missing("TL_document")
+    doc.id = int(time.time() * 1000)
+    doc.mime_type = mime_type
+    doc.size = os.path.getsize(path) if os.path.exists(path) else 0
+    if not hasattr(doc, "attributes") or doc.attributes is None:
+        doc.attributes = tl_runtime.ArrayList()
+    return doc

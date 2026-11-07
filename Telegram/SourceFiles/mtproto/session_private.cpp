@@ -82,26 +82,7 @@ using namespace details;
 }
 
 [[nodiscard]] QString ComputeAppVersion() {
-#if defined Q_OS_WIN && defined Q_PROCESSOR_X86_64
-	const auto arch = u" x64"_q;
-#elif (defined Q_OS_WIN && defined Q_PROCESSOR_X86_32) || defined Q_PROCESSOR_X86_64
-	const auto arch = QString();
-#else
-	const auto arch = ' ' + QSysInfo::buildCpuArchitecture();
-#endif
-	return Extera::Update::VersionText() + arch + ([] {
-#if defined OS_MAC_STORE
-		return u" Mac App Store"_q;
-#elif defined OS_WIN_STORE // OS_MAC_STORE
-		return u" Microsoft Store"_q;
-#else // OS_MAC_STORE || OS_WIN_STORE
-		return KSandbox::isFlatpak()
-			? u" Flatpak"_q
-			: KSandbox::isSnap()
-			? u" Snap"_q
-			: QString();
-#endif // OS_MAC_STORE || OS_WIN_STORE
-	})();
+	return u"oxDesktop v%1"_q.arg(AppVersionStr);
 }
 
 void WrapInvokeAfter(

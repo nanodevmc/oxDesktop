@@ -1,0 +1,4 @@
+metainfo: wave/meta.yml
+main: wave/src/main.py
+assets: wave/res
+strings: wave/locales

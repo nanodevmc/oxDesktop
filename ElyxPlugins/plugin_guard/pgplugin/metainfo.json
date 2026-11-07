@@ -1,0 +1,13 @@
+{
+  "name": "Plugin Guard",
+  "description": "{description}",
+  "id": "plugin_guard",
+  "version": "2.0",
+  "author": "@dekma0091 && @DefinitelyNotDekma",
+  "icon": "pixelcamera/14",
+  "min_version": "12.10.6",
+  "category": [
+    "privacy",
+    "tools"
+  ]
+}

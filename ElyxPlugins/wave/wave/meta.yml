@@ -1,0 +1,14 @@
+name: Wave
+description: '{description}'
+id: wave
+version: 1.0.0
+author: '@lyzos, @LuPlugins'
+app_version: '>=12.10.6'
+sdk_version: '>=1.4.3.2'
+elyx_version: '>=0.9.2b'
+icon: LuPlugins/0
+compiled: false
+pythonVer: 3.11
+category:
+- appearance
+- chats

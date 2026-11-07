@@ -550,6 +550,7 @@ def _scan_archive(path: str) -> Dict[str, List[str]]:
         members = [info for info in archive.infolist()
                    if not info.is_dir()
                    and info.filename.endswith(_SOURCE_MEMBER_SUFFIXES)]
+        all_names = set(archive.namelist())
         for index, info in enumerate(members):
             if budget <= 0:
                 _note_opaque(found, f"unscanned files ({len(members) - index})")
@@ -564,6 +565,14 @@ def _scan_archive(path: str) -> Dict[str, List[str]]:
             raw = raw[:limit]
             budget -= len(raw)
             if _is_bytecode(info.filename, raw):
+                fn = info.filename.replace("\\", "/")
+                parts = fn.split("/")
+                if len(parts) >= 2 and parts[-2] == "__pycache__":
+                    base_name = parts[-1].split(".")[0] + ".py"
+                    parent_dir = "/".join(parts[:-2])
+                    src_candidate = (parent_dir + "/" + base_name) if parent_dir else base_name
+                    if src_candidate in all_names:
+                        continue
                 _note_opaque(found, f"compiled bytecode ({info.filename})")
                 continue
             if truncated:

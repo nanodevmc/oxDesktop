@@ -582,6 +582,7 @@ class ArchivePlugin(BasePlugin):
         
         record = extera_host.Record(p_path, m)
         extera_host._records[record.id] = record
+        extera_host._unknown_allowed = True
         extera_host._install_plugin_importer()
         extera_host._activate(record)
 

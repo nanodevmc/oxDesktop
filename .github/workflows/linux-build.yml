@@ -203,6 +203,7 @@ jobs:
           mkdir -p screenshots
           sudo apt-get update && sudo apt-get install -y \
             xvfb \
+            ffmpeg \
             dbus-x11 \
             xdg-desktop-portal \
             xdg-desktop-portal-gtk \
@@ -277,6 +278,10 @@ jobs:
             echo 'Capturing Main window...'
             $PKG -many -workdir /tmp/prof_main --demo-mode --demo-view main --demo-screenshot '$SHOTS_DIR/oxdesktop.png' --demo-delay 3500 --demo-exit || true
           "
+
+          echo "Recording 15s intro animation video..."
+          python3 scripts/record_intro_video.py || true
+
           kill $XVFB_PID || true
           ls -la screenshots/
 
@@ -285,7 +290,9 @@ jobs:
         continue-on-error: true
         with:
           name: oxdesktop-screenshots-linux
-          path: screenshots/*.png
+          path: |
+            screenshots/*.png
+            screenshots/*.mp4
           if-no-files-found: ignore
           compression-level: 9
           retention-days: 7

@@ -11,16 +11,6 @@ _lock = threading.RLock()
 _target = None
 _failed = {}
 
-_VERSION = "7.3.3"
-try:
-    _v_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "version.txt")
-    if os.path.exists(_v_path):
-        with open(_v_path, "r", encoding="utf-8") as _vf:
-            _VERSION = _vf.read().strip()
-except Exception:
-    pass
-_USER_AGENT = f"oxDesktop/{_VERSION}"
-
 _NAME_RE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
 
@@ -60,11 +50,22 @@ def _wheel_score(filename: str) -> int:
     python, abi, platform = tags if len(tags) == 3 else ("", "", "")
     if platform == "any" and abi == "none":
         return 3 if "py3" in python else 1
-    cp_tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
-    if sys.platform == "win32" and (cp_tag in python or "cp311" in python) and ("win_amd64" in platform or "win32" in platform):
+    compatible = "cp311" in python or abi == "abi3"
+    if not compatible:
+        return -1
+    import platform as _platform
+    machine = _platform.machine().lower()
+    if machine in ("amd64", "x64"):
+        machine = "x86_64"
+    if machine == "aarch64":
+        machine = "arm64"
+    if sys.platform == "win32" and "win_amd64" in platform:
         return 4
-    if sys.platform.startswith("linux") and (cp_tag in python or "cp311" in python) \
-            and "manylinux" in platform and "x86_64" in platform:
+    if sys.platform.startswith("linux") and "manylinux" in platform \
+            and (machine in platform or (machine == "arm64" and "aarch64" in platform)):
+        return 4
+    if sys.platform == "darwin" and "macosx" in platform \
+            and (machine in platform or "universal2" in platform):
         return 4
     return -1
 
@@ -91,7 +92,7 @@ def _install_one(spec: str, depth: int = 0):
     if name in _failed:
         raise RuntimeError(_failed[name])
     url = f"https://pypi.org/pypi/{name}/json"
-    request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+    request = urllib.request.Request(url, headers={"User-Agent": "exDesktop"})
     with urllib.request.urlopen(request, timeout=20) as response:
         info = json.load(response)
     files = sorted(
@@ -104,13 +105,11 @@ def _install_one(spec: str, depth: int = 0):
         raise RuntimeError(_failed[name])
     wheel = files[0]
     request = urllib.request.Request(
-        wheel["url"], headers={"User-Agent": _USER_AGENT})
+        wheel["url"], headers={"User-Agent": "exDesktop"})
     with urllib.request.urlopen(request, timeout=60) as response:
         data = response.read()
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         for member in archive.namelist():
-            if member.startswith(("/", "\\")) or ".." in member:
-                continue
             path = os.path.normpath(os.path.join(_target, member))
             if not path.startswith(os.path.normpath(_target)):
                 continue
@@ -119,6 +118,17 @@ def _install_one(spec: str, depth: int = 0):
         spec_part, _, marker = requirement.partition(";")
         if _marker_ok(marker.strip()):
             _install_one(spec_part, depth + 1)
+
+
+def missing(requirements) -> list:
+    if not _target or not requirements:
+        return []
+    result = []
+    for spec in requirements:
+        match = _NAME_RE.match(str(spec or ""))
+        if match and not _installed(match.group(1)) and match.group(1) not in _failed:
+            result.append(str(spec))
+    return result
 
 
 def ensure(requirements) -> list:

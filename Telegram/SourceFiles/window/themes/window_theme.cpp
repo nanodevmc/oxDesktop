@@ -55,7 +55,7 @@ namespace {
 
 constexpr auto kThemeFileSizeLimit = 5 * 1024 * 1024;
 constexpr auto kBackgroundSizeLimit = 25 * 1024 * 1024;
-constexpr auto kNightThemeFile = ":/gui/night.tdesktop-theme"_cs;
+constexpr auto kNightThemeFile = ":/gui/aero-delta.tdesktop-theme"_cs;
 constexpr auto kDarkValueThreshold = 0.5;
 
 struct Applying {
@@ -565,12 +565,8 @@ void ChatBackground::initialRead() {
 		set(Data::ThemeWallPaper());
 	}
 	if (_themeObject.pathAbsolute.isEmpty()) {
-		if (nightMode()) {
-			ApplyDefaultWithPath(NightThemePath());
-			KeepApplied();
-		} else {
-			applyDefaultThemeAccentColorizer();
-		}
+		ApplyDefaultWithPath(NightThemePath());
+		KeepApplied();
 	}
 	if (_localStoredTileDayValue) {
 		_tileDayValue = *_localStoredTileDayValue;

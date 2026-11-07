@@ -378,6 +378,31 @@ class ChatActivity(_Instance):
         return _compat.Stub("Context")
 
 
+
+class ProfileActivity(ChatActivity):
+    def getClass(self):
+        import tl_runtime
+        return tl_runtime._ClassInfo("ProfileActivity")
+
+    def getUserId(self):
+        return self._dialog_id if self._dialog_id > 0 else 0
+
+    def getChatId(self):
+        return -self._dialog_id if self._dialog_id < 0 else 0
+
+
+class DialogsActivity(ChatActivity):
+    def getClass(self):
+        import tl_runtime
+        return tl_runtime._ClassInfo("DialogsActivity")
+
+    def getDialogsType(self):
+        return 0
+
+    def getFolderId(self):
+        return 0
+
+
 def current_fragment():
     try:
         dialog = int(_extera.current_peer() or 0)
@@ -638,3 +663,5 @@ def install(shims):
     messenger["MessagesStorage"] = MessagesStorage
     messenger["MediaController"] = MediaController
     shims.setdefault("org.telegram.ui", {})["ChatActivity"] = ChatActivity
+    shims["org.telegram.ui"]["ProfileActivity"] = ProfileActivity
+    shims["org.telegram.ui"]["DialogsActivity"] = DialogsActivity

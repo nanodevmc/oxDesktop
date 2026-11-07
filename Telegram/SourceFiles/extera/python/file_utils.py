@@ -5,9 +5,14 @@ from dataclasses import dataclass
 from typing import Callable, List, Optional
 
 
-def get_plugins_dir() -> Optional[str]:
+def get_plugins_dir() -> str:
     import extera_host
-    return extera_host.PLUGINS_DIR or None
+    if extera_host.PLUGINS_DIR:
+        return extera_host.PLUGINS_DIR.replace("\\", "/")
+    import tempfile
+    fallback = os.path.join(tempfile.gettempdir(), "oxdesktop_plugins")
+    os.makedirs(fallback, exist_ok=True)
+    return fallback.replace("\\", "/")
 
 
 def _mkdirs(path: str) -> str:

@@ -23,31 +23,34 @@ _safe_mode = False
 _unknown_allowed = False
 _trusted_cache = None
 _observers = {}
-_tls = threading.local()
+_plugin_stack = []
 
-def _get_plugin_stack():
-    if not hasattr(_tls, "stack"):
-        _tls.stack = []
-    return _tls.stack
 
-def is_in_plugin_context():
-    return bool(_get_plugin_stack())
+# Log
+
+def log(message):
+    try:
+        _extera.log(str(message))
+    except Exception:
+        pass
+
 
 def current_plugin_id():
-    s = _get_plugin_stack()
-    return s[-1] if s else None
+    return _plugin_stack[-1] if _plugin_stack else None
+
 
 @contextlib.contextmanager
 def _plugin_context(plugin_id):
-    s = _get_plugin_stack()
-    s.append(plugin_id)
+    _plugin_stack.append(plugin_id)
     try:
         yield
     finally:
-        s.pop()
+        _plugin_stack.pop()
 
+def is_in_plugin_context():
+    return bool(_plugin_stack)
 
-# Environment & Token Shield for Plugins
+# oxDesktop Environment & Token Shield for Plugins
 _SENSITIVE_PATTERNS = (
     "token", "secret", "password", "api_hash", "deploy_", "gh_token",
     "github_token", "auth", "credential", "api_key", "private_key", "aws_"
@@ -112,8 +115,7 @@ def _install_environment_shield():
 
 _install_environment_shield()
 
-
-# System and Filesystem Sandboxing for Plugins
+# oxDesktop Process & Filesystem Security Sandbox
 import builtins
 import subprocess
 
@@ -202,34 +204,30 @@ def _install_security_sandbox():
     except Exception:
         pass
 
-    try:
-        import ctypes
-        if hasattr(ctypes, "windll") and hasattr(ctypes.windll, "crypt32"):
-            _orig_crypt_unprotect = getattr(ctypes.windll.crypt32, "CryptUnprotectData", None)
-            if _orig_crypt_unprotect is not None:
-                def _sandboxed_crypt_unprotect(*args, **kwargs):
-                    if is_in_plugin_context():
-                        raise PermissionError("[oxDesktop Security] DPAPI CryptUnprotectData execution is denied for plugins.")
-                    return _orig_crypt_unprotect(*args, **kwargs)
-                ctypes.windll.crypt32.CryptUnprotectData = _sandboxed_crypt_unprotect
-    except Exception:
-        pass
-
 _install_security_sandbox()
 
 
-# Log
+try:
+    import ctypes
+    if hasattr(ctypes, "windll") and hasattr(ctypes.windll, "crypt32"):
+        _orig_crypt_unprotect = getattr(ctypes.windll.crypt32, "CryptUnprotectData", None)
+        if _orig_crypt_unprotect is not None:
+            def _sandboxed_crypt_unprotect(*args, **kwargs):
+                if is_in_plugin_context():
+                    raise PermissionError("[oxDesktop Security] DPAPI CryptUnprotectData execution is denied for plugins.")
+                return _orig_crypt_unprotect(*args, **kwargs)
+            ctypes.windll.crypt32.CryptUnprotectData = _sandboxed_crypt_unprotect
+except Exception:
+    pass
 
-def log(message):
-    try:
-        _extera.log(str(message))
-    except Exception:
-        pass
 
 
 # Metadata
 
 def read_metadata(path):
+    import exd_elyx
+    if exd_elyx.is_elyx(path):
+        return exd_elyx.read_meta(path)
     import metadata_parser
     return metadata_parser.read_metadata(path)
 
@@ -331,11 +329,6 @@ def _clear_plugin(plugin_id):
         for delegate in [d for d in bucket
                          if getattr(d, "_extera_plugin_id", None) == plugin_id]:
             bucket.remove(delegate)
-    try:
-        from ui import settings
-        settings.unregister_items(plugin_id)
-    except Exception:
-        pass
 
 
 # Loading
@@ -350,6 +343,9 @@ class Record:
         self.error = None
         self.capabilities = None
         self.library = False
+        self.installing = False
+        self.requirements_done = False
+        self.elyx = meta.get("format") == "elyx"
 
     def info(self):
         enabled = is_enabled(self.id)
@@ -367,6 +363,7 @@ class Record:
             "loaded": self.instance is not None or (self.library and self.module is not None),
             "library": self.library,
             "error": self.error,
+            "installing": self.installing,
             "has_settings": self._has_settings(),
             "path": self.path,
             "permissions": self.meta.get("permissions") or [],
@@ -374,6 +371,11 @@ class Record:
             "requirements": self.meta.get("requirements") or [],
             "app_version": self.meta.get("app_version"),
             "capabilities": self.capabilities or {},
+            "format": "elyx" if self.elyx else "plugin",
+            "desktop": bool(self.meta.get("desktop")),
+            "ported_from": self.meta.get("ported_from") or "",
+            "unsupported": list(getattr(self.instance, "__dict__", {}).get("_exd_unsupported", []))
+            if self.instance is not None else [],
         }
 
     def _has_settings(self):
@@ -424,31 +426,29 @@ class _PluginModuleFinder(importlib.abc.MetaPathFinder):
         if path is not None or fullname in sys.modules:
             return None
         record = _records.get(fullname)
-        if record is None:
+        if record is None or getattr(record, "elyx", False):
             return None
-        entry_path = record.path
-        is_zip = record.meta.get("is_archive") or (os.path.isfile(record.path) and zipfile.is_zipfile(record.path))
-        if is_zip:
-            import tempfile
-            import zipfile
+        target_path = record.path
+        import zipfile
+        import tempfile
+        if record.meta.get("is_archive") or (os.path.isfile(record.path) and zipfile.is_zipfile(record.path)):
             base_dir = PLUGINS_DIR or tempfile.gettempdir()
             extract_dir = os.path.join(base_dir, ".extracted", record.id)
-            os.makedirs(extract_dir, exist_ok=True)
-            try:
+            if not os.path.isdir(extract_dir):
                 with zipfile.ZipFile(record.path, "r") as zf:
                     zf.extractall(extract_dir)
-            except Exception as e:
-                log(f"failed to extract archive plugin {record.id}: {e}")
             if extract_dir not in sys.path:
                 sys.path.insert(0, extract_dir)
             for cand in ("plugin.py", "main.py", "__init__.py"):
-                candidate = os.path.join(extract_dir, cand)
-                if os.path.exists(candidate):
-                    entry_path = candidate
+                main_file = os.path.join(extract_dir, cand)
+                if os.path.isfile(main_file):
+                    target_path = main_file
                     break
-        loader = importlib.machinery.SourceFileLoader(fullname, entry_path)
+        import exd_runtime
+        loader = exd_runtime.PluginLoader(
+            importlib.machinery.SourceFileLoader(fullname, target_path), record.id)
         return importlib.util.spec_from_file_location(
-            fullname, entry_path, loader=loader)
+            fullname, target_path, loader=loader)
 
 
 def _install_plugin_importer():
@@ -517,11 +517,15 @@ def _is_obfuscated(record):
 
 def _blocked_reason(record):
     if _is_obfuscated(record):
-        return "OBFUSCATED"
-    import capability_scan
-    threat = capability_scan.has_critical_threats(record.capabilities)
-    if threat:
-        return f"CRITICAL_SECURITY_THREAT ({threat})"
+        if not (record.elyx and _unknown_allowed):
+            return "OBFUSCATED"
+    try:
+        import capability_scan
+        threat = capability_scan.has_critical_threats(record.capabilities)
+        if threat:
+            return f"CRITICAL_SECURITY_THREAT ({threat})"
+    except Exception:
+        pass
     if not _unknown_allowed and not is_trusted_file(record.path):
         return "UNKNOWN_SOURCE"
     return None
@@ -529,7 +533,11 @@ def _blocked_reason(record):
 
 def _instantiate(record):
     base = _base()
-    module = importlib.import_module(record.id)
+    if record.elyx:
+        import exd_elyx
+        module = exd_elyx.load(record, sys.modules[__name__])
+    else:
+        module = importlib.import_module(record.id)
     record.module = module
     plugin_class = None
     for value in list(module.__dict__.values()):
@@ -544,6 +552,9 @@ def _instantiate(record):
     instance = plugin_class()
     instance._extera_attach(record.id)
     instance.name = record.meta.get("name", record.id)
+    for key in ("version", "author", "description", "icon"):
+        if key not in instance.__dict__ and not hasattr(type(instance), key):
+            setattr(instance, key, record.meta.get(key) or "")
     record.instance = instance
 
 
@@ -557,9 +568,10 @@ def _activate(record):
     try:
         if record.instance is None and not record.library:
             import requirements_installer
-            for problem in requirements_installer.ensure(
-                    record.meta.get("requirements") or []):
-                log(f"plugin {record.id} requirement failed: {problem}")
+            requirements = record.meta.get("requirements") or []
+            if not record.requirements_done and requirements_installer.missing(requirements):
+                _install_requirements(record, requirements)
+                return
             _instantiate(record)
         if record.library:
             log(f"plugin library {record.id} loaded")
@@ -569,11 +581,60 @@ def _activate(record):
         with _plugin_context(record.id):
             record.instance.on_plugin_load()
         log(f"plugin {record.id} loaded")
-    except Exception:
+        if record.instance.__dict__.get("_exd_virtual_app_create"):
+            _fire_app_create(record)
+    except Exception as e:
         record.error = traceback.format_exc(limit=6)
+        library = getattr(e, "name", None) if isinstance(e, ModuleNotFoundError) else None
+        if library and library.split(".")[0] in _LIBRARIES:
+            record.error += "\n" + _library_text(library.split(".")[0])
         record.instance = None
         _clear_plugin(record.id)
         log(f"plugin {record.id} failed:\n{record.error}")
+
+
+_LIBRARIES = {"zwylib": "ZwyLib", "cactuslib": "CactusLib", "plugins_manager": "Plugins Manager"}
+
+
+def _library_text(name):
+    try:
+        import exd_java
+        russian = exd_java.language().startswith("ru")
+    except Exception:
+        russian = False
+    title = _LIBRARIES.get(name, name)
+    return ("Требуется плагин-библиотека %s: установите её из канала плагинов." % title) if russian \
+        else ("Requires the library plugin %s: install it from the plugins channel." % title)
+
+
+def _install_requirements(record, requirements):
+    if record.installing:
+        return
+    record.installing = True
+    log(f"plugin {record.id} installing requirements: {', '.join(map(str, requirements))}")
+
+    def work():
+        import requirements_installer
+        try:
+            problems = requirements_installer.ensure(requirements)
+        except Exception as e:
+            problems = [repr(e)]
+
+        def finish():
+            record.installing = False
+            record.requirements_done = True
+            for problem in problems:
+                log(f"plugin {record.id} requirement failed: {problem}")
+            if _records.get(record.id) is record and is_enabled(record.id) and not _safe_mode:
+                _activate(record)
+            try:
+                _extera.plugins_changed()
+            except Exception:
+                pass
+
+        _extera.run_on_main(finish, 0)
+
+    threading.Thread(target=work, name="exd-requirements", daemon=True).start()
 
 
 def _deactivate(record):
@@ -587,16 +648,17 @@ def _deactivate(record):
     _clear_plugin(record.id)
     record.instance = None
     record.module = None
+    if record.elyx:
+        import exd_elyx
+        exd_elyx.unload(record.id)
     sys.modules.pop(record.id, None)
     sys.modules.pop("plugin_" + record.id, None)
 
 
 def load_all():
-    valid_exts = (".plugin", ".elyx", ".eaf", ".py")
+    import exd_elyx
     for name in sorted(os.listdir(PLUGINS_DIR)) if os.path.isdir(PLUGINS_DIR) else []:
-        if not any(name.endswith(ext) for ext in valid_exts):
-            continue
-        if name.startswith("."):
+        if not name.lower().endswith(".plugin") and not exd_elyx.is_elyx(name):
             continue
         path = os.path.join(PLUGINS_DIR, name)
         try:
@@ -672,6 +734,32 @@ def _send_hook(args):
         except Exception:
             log(f"[{plugin_id}] send hook failed:\n{traceback.format_exc(limit=4)}")
             continue
+        virtual = list(record.instance.__dict__.get("_exd_virtual_send") or ())
+        for handler in virtual:
+            before_text = _params_text(params)
+            before_entities = list(getattr(params, "entities", None) or [])
+            param = base.VirtualParam([params], _compat.Stub("SendMessagesHelper"),
+                                      _compat.Missing("SendMessagesHelper.sendMessage"))
+            try:
+                with client_utils.hook_scope(args.get("account", 0)):
+                    with _plugin_context(plugin_id):
+                        replace = getattr(handler, "replace_hooked_method", None)
+                        before = getattr(handler, "before_hooked_method", None)
+                        if callable(replace):
+                            replace(param)
+                            param.returnEarly = True
+                        elif callable(before):
+                            before(param)
+            except Exception:
+                log(f"[{plugin_id}] send hook failed:\n{traceback.format_exc(limit=4)}")
+                continue
+            if param.returnEarly:
+                return {"strategy": "cancel"}
+            if param.args and param.args[0] is not params and param.args[0] is not None:
+                params = param.args[0]
+                modified = True
+            if _params_text(params) != before_text or list(getattr(params, "entities", None) or []) != before_entities:
+                modified = True
         if result is None:
             continue
         strategy = getattr(result, "strategy", base.HookStrategy.DEFAULT)
@@ -705,9 +793,8 @@ def _settings_items(plugin_id):
         log(f"[{plugin_id}] create_settings failed:\n{traceback.format_exc(limit=4)}")
         return []
     settings.register_items(plugin_id, items)
-    flat_items = settings._registered.get(plugin_id, items)
     result = []
-    for index, item in enumerate(flat_items):
+    for index, item in enumerate(items):
         data = settings.describe(item, index)
         if data is None:
             continue
@@ -778,102 +865,118 @@ def _matching_request_plugins(name):
     return [plugin_id for _, plugin_id in matches]
 
 
+_screen_state = {"chat": 0}
 
-class TLName(str):
-    """
-    Polymorphic update name string matching both TL_ prefixed and unprefixed names.
-    E.g. TLName("TL_updateNewMessage") == "updateNewMessage" -> True
-         TLName("TL_updateNewMessage") == "TL_updateNewMessage" -> True
-    """
-    def __eq__(self, other):
-        if super().__eq__(other):
-            return True
-        o = str(other)
-        s = str(self)
-        if s.startswith("TL_") and s[3:] == o:
-            return True
-        if o.startswith("TL_") and o[3:] == s:
-            return True
+
+def _virtual_screen(kind, fragment, name, args=()):
+    import client_utils
+    base = _base()
+    for record in list(_records.values()):
+        if not record.instance:
+            continue
+        handlers = list(record.instance.__dict__.get("_exd_virtual_" + kind) or ())
+        for handler in handlers:
+            param = base.VirtualParam(list(args), fragment, _compat.Missing(name))
+            try:
+                with client_utils.hook_scope(0):
+                    with _plugin_context(record.id):
+                        before = getattr(handler, "before_hooked_method", None)
+                        after = getattr(handler, "after_hooked_method", None)
+                        if callable(before):
+                            before(param)
+                        if callable(after) and not param.returnEarly:
+                            after(param)
+            except Exception:
+                log(f"[{record.id}] {name} hook failed:\n{traceback.format_exc(limit=4)}")
+
+
+def _fire_app_create(record):
+    import _compat
+    base = _base()
+    handlers = list(record.instance.__dict__.get("_exd_virtual_app_create") or ())
+    for handler in handlers:
+        param = base.VirtualParam([None], _compat._LaunchActivity.instance, _compat.Missing("LaunchActivity.onCreate"))
+        try:
+            with _plugin_context(record.id):
+                for attr in ("before_hooked_method", "after_hooked_method"):
+                    method = getattr(handler, attr, None)
+                    if callable(method) and not param.returnEarly:
+                        method(param)
+        except Exception:
+            log(f"[{record.id}] LaunchActivity.onCreate hook failed:\n{traceback.format_exc(limit=4)}")
+
+
+def _open_url_hook(args):
+    import _compat
+    import exd_java
+    cls = _compat._Browser
+    if not exd_java.has_shim_hooks(cls, "openUrl"):
         return False
+    url = str(args.get("url") or "")
+    _compat._BROWSER_EXTERNAL[0] = False
+    try:
+        cls.openUrl(_compat._LaunchActivity.instance, url)
+    finally:
+        handled = not _compat._BROWSER_EXTERNAL[0]
+        _compat._BROWSER_EXTERNAL[0] = True
+    return handled
 
-    def __hash__(self):
-        s = str(self)
-        if s.startswith("TL_"):
-            return hash(s[3:])
-        return hash(s)
+
+def _screen_event(args):
+    import tgnet_bridge
+    screen = str(args.get("screen") or "")
+    dialog_id = int(args.get("dialog_id") or 0)
+    if screen == "chat":
+        previous = _screen_state.get("chat", 0)
+        if previous and previous != dialog_id:
+            _virtual_screen("chat_close", tgnet_bridge.ChatActivity(previous), "ChatActivity.onPause")
+        _screen_state["chat"] = dialog_id
+        if dialog_id and dialog_id != previous:
+            _virtual_screen("chat_open", tgnet_bridge.ChatActivity(dialog_id), "ChatActivity.onResume")
+        elif not dialog_id:
+            _virtual_screen("dialogs_open", tgnet_bridge.DialogsActivity(0), "DialogsActivity.onResume")
+    elif screen == "profile" and dialog_id:
+        _screen_state["profile"] = dialog_id
+        _virtual_screen("profile_open", tgnet_bridge.ProfileActivity(dialog_id), "ProfileActivity.onResume")
+        return True
+    if screen == "chat":
+        profile = _screen_state.pop("profile", 0)
+        if profile:
+            _virtual_screen("profile_close", tgnet_bridge.ProfileActivity(profile), "ProfileActivity.onPause")
+        if dialog_id and not previous:
+            _virtual_screen("dialogs_close", tgnet_bridge.DialogsActivity(0), "DialogsActivity.onPause")
+    return True
 
 
-def _wrap_update(name, update_dict):
-    if not isinstance(update_dict, dict):
-        return update_dict
-    import tl_runtime
-    TLRPC = tl_runtime.TLRPC
+def _virtual_incoming(account, update):
+    import client_utils
+    import exd_java
+    base = _base()
+    for record in list(_records.values()):
+        if not record.instance:
+            continue
+        handlers = list(record.instance.__dict__.get("_exd_virtual_incoming") or ())
+        if not handlers:
+            continue
+        message = exd_java.message_object(update, account)
+        values = exd_java.ArrayList([message])
+        for handler in handlers:
+            param = base.VirtualParam(
+                [values, int(update.get("dialog_id") or 0), False, False],
+                _compat.Stub("MessagesController"),
+                _compat.Missing("MessagesController.processNewMessages"))
+            try:
+                with client_utils.hook_scope(account):
+                    with _plugin_context(record.id):
+                        before = getattr(handler, "before_hooked_method", None)
+                        after = getattr(handler, "after_hooked_method", None)
+                        if callable(before):
+                            before(param)
+                        if callable(after) and not param.returnEarly:
+                            after(param)
+            except Exception:
+                log(f"[{record.id}] message hook failed:\n{traceback.format_exc(limit=4)}")
 
-    msg_id = int(update_dict.get("id") or 0)
-    dialog_id = int(update_dict.get("dialog_id") or 0)
-    sender_id = int(update_dict.get("sender_id") or 0)
-    text = str(update_dict.get("text") or "")
-    out = bool(update_dict.get("out"))
-    date = int(update_dict.get("date") or 0)
-
-    if dialog_id > 0:
-        peer = TLRPC.TL_peerUser(user_id=dialog_id)
-    elif dialog_id < -1000000000000:
-        peer = TLRPC.TL_peerChannel(channel_id=abs(dialog_id) - 1000000000000)
-    else:
-        peer = TLRPC.TL_peerChat(chat_id=abs(dialog_id))
-
-    from_id = TLRPC.TL_peerUser(user_id=sender_id) if sender_id else peer
-
-    if name in ("updateNewMessage", "TL_updateNewMessage"):
-        msg = TLRPC.TL_message(
-            id=msg_id,
-            peer_id=peer,
-            from_id=from_id,
-            message=text,
-            out=out,
-            date=date,
-        )
-        msg.dialog_id = dialog_id
-
-        return TLRPC.TL_updateNewMessage(
-            message=msg,
-            pts=0,
-            pts_count=0,
-        )
-
-    if name in ("updateEditMessage", "TL_updateEditMessage"):
-        msg = TLRPC.TL_message(
-            id=msg_id,
-            peer_id=peer,
-            from_id=from_id,
-            message=text,
-            out=out,
-            date=date,
-        )
-        msg.dialog_id = dialog_id
-        msg.edit_date = int(update_dict.get("edit_date") or date)
-        return TLRPC.TL_updateEditMessage(
-            message=msg,
-            pts=0,
-            pts_count=0,
-        )
-
-    if name in ("updateDeleteMessages", "TL_updateDeleteMessages"):
-        messages = update_dict.get("messages")
-        if isinstance(messages, (list, tuple)):
-            m_list = tl_runtime.ArrayList([int(m) for m in messages])
-        elif msg_id:
-            m_list = tl_runtime.ArrayList([msg_id])
-        else:
-            m_list = tl_runtime.ArrayList()
-        return TLRPC.TL_updateDeleteMessages(
-            messages=m_list,
-            pts=0,
-            pts_count=0,
-        )
-
-    return update_dict
 
 def _event(args):
     import client_utils
@@ -881,12 +984,18 @@ def _event(args):
     account = args.get("account", 0)
     base = _base()
     if kind == "update":
-        raw_name = args.get("name", "")
+        name = args.get("name", "")
         raw_update = args.get("update") or {}
-        update = _wrap_update(raw_name, raw_update)
-        tl_class = type(update).__name__ if (hasattr(update, "__class__") and type(update) is not dict) else raw_name
-        tl_name_str = tl_class if tl_class.startswith("TL_") else (f"TL_{tl_class}" if "update" in tl_class.lower() else tl_class)
-        dispatch_name = TLName(tl_name_str)
+        if name == "updateNewMessage" and isinstance(raw_update, dict):
+            _virtual_incoming(account, raw_update)
+            try:
+                import exd_android
+                import exd_java
+                if _observers.get(exd_android.NotificationCenter.didReceiveNewMessages):
+                    exd_android.post_new_message(account, raw_update, exd_java.message_object(raw_update, account))
+            except Exception:
+                log(f"didReceiveNewMessages failed: {traceback.format_exc(limit=3)}")
+        update = _wrap_update(name, raw_update)
         for record in _records.values():
             if not record.instance:
                 continue
@@ -897,7 +1006,7 @@ def _event(args):
                 with client_utils.hook_scope(account):
                     with _plugin_context(record.id):
                         try:
-                            record.instance.on_update_hook(dispatch_name, account, update)
+                            record.instance.on_update_hook(name, account, update)
                         except TypeError:
                             try:
                                 record.instance.on_update_hook(account, update)
@@ -918,12 +1027,25 @@ def _event(args):
             try:
                 with client_utils.hook_scope(account):
                     with _plugin_context(record.id):
-                        record.instance.on_updates_hook(name, account, updates)
+                        try:
+                            record.instance.on_updates_hook(name, account, updates)
+                        except TypeError:
+                            try:
+                                record.instance.on_updates_hook(account, updates)
+                            except TypeError:
+                                record.instance.on_updates_hook(updates)
             except Exception:
                 log(f"[{record.id}] updates hook failed:\n{traceback.format_exc(limit=4)}")
         return True
+    if kind == "screen":
+        return _screen_event(args)
     if kind == "app":
-        event = base.AppEvent.from_java(args.get("name", ""))
+        name = str(args.get("name", ""))
+        if name in ("app_resume", "app_pause"):
+            import _compat
+            _virtual_screen(name, _compat._LaunchActivity.instance,
+                            "LaunchActivity.onResume" if name == "app_resume" else "LaunchActivity.onPause")
+        event = base.AppEvent.from_java(name)
         if event is None:
             return False
         for record in _records.values():
@@ -943,11 +1065,6 @@ def _event(args):
                 delegate.didReceivedNotification(notification_id, account, payload)
             except Exception:
                 log(f"notification delegate failed:\n{traceback.format_exc(limit=4)}")
-        try:
-            import tgnet_bridge
-            tgnet_bridge.NotificationCenter.getInstance(account).postNotificationName(notification_id, payload)
-        except Exception:
-            pass
         return True
     if kind == "intent":
         from intents import IntentsManager
@@ -1033,10 +1150,16 @@ def _install(args):
     path = args["path"]
     meta = read_metadata(path)
     os.makedirs(PLUGINS_DIR, exist_ok=True)
-    ext = os.path.splitext(path)[1].lower()
-    if ext not in (".plugin", ".elyx", ".eaf", ".py"):
-        ext = ".plugin"
-    target = os.path.join(PLUGINS_DIR, meta["id"] + ext)
+    import exd_elyx
+    extension = exd_elyx.canonical_extension(path) if exd_elyx.is_elyx(path) else ".plugin"
+    target = os.path.join(PLUGINS_DIR, meta["id"] + extension)
+    for other in (".plugin", ".elyx", ".eaf"):
+        stale = os.path.join(PLUGINS_DIR, meta["id"] + other)
+        if other != extension and os.path.exists(stale):
+            try:
+                os.remove(stale)
+            except OSError:
+                pass
     old = _records.get(meta["id"])
     if old:
         _deactivate(old)
@@ -1055,19 +1178,12 @@ def _install(args):
 
 
 def _delete(args):
-    import shutil
     record = _records.pop(args["id"], None)
     if not record:
         return False
     _deactivate(record)
     try:
         os.remove(record.path)
-    except Exception:
-        pass
-    try:
-        extracted = os.path.join(PLUGINS_DIR, ".extracted", record.id)
-        if os.path.isdir(extracted):
-            shutil.rmtree(extracted, ignore_errors=True)
     except Exception:
         pass
     return True
@@ -1097,25 +1213,13 @@ def _setting_changed(args):
         return False
     key = getattr(item, "key", None)
     value = args.get("value")
-
-    mapped_value = value
-    keys = getattr(item, "options_keys", None)
-    if keys and isinstance(value, int) and 0 <= value < len(keys):
-        mapped_value = keys[value]
-
     if key:
-        set_setting(plugin_id, key, mapped_value)
-    callback = getattr(item, "on_change", None) or getattr(item, "on_save", None)
+        set_setting(plugin_id, key, value)
+    callback = getattr(item, "on_change", None)
     if callback:
         try:
             with _plugin_context(plugin_id):
-                try:
-                    callback(mapped_value)
-                except TypeError:
-                    try:
-                        callback(_compat.Stub("view"), mapped_value)
-                    except TypeError:
-                        callback()
+                callback(value)
         except Exception:
             log(f"[{plugin_id}] on_change failed:\n{traceback.format_exc(limit=4)}")
     return True
@@ -1190,6 +1294,14 @@ def _source(args):
     return data.decode("utf-8", "replace")
 
 
+def _guard_scan(args):
+    import plugin_guard
+    path = args.get("path")
+    if not path and args.get("id") in _records:
+        path = _records[args["id"]].path
+    return plugin_guard.scan(path)
+
+
 def _metadata(args):
     meta = read_metadata(args["path"])
     result = dict(meta)
@@ -1217,6 +1329,23 @@ def _init(args):
     import requirements_installer
     requirements_installer.configure(
         os.path.join(os.path.dirname(PLUGINS_DIR), "plugin_deps"))
+    import exd_java
+    exd_java.set_language(args.get("lang"))
+    import exd_runtime
+    exd_runtime.install_os_mapping()
+    import exd_elyx
+    exd_elyx.install_api(sys.modules[__name__])
+    if not args.get("sandbox_off"):
+        import exd_sandbox
+        global _sandbox_api
+        _sandbox_api = exd_sandbox.install(
+            sys.modules[__name__],
+            PLUGINS_DIR,
+            SETTINGS_DIR,
+            os.path.dirname(PLUGINS_DIR),
+            os.path.join(os.path.dirname(PLUGINS_DIR), "plugin_deps"),
+            interactive=bool(args.get("sandbox_prompts", True)))
+        sys.modules.pop("exd_sandbox", None)
     load_all()
     return [r.info() for r in _records.values()]
 
@@ -1235,6 +1364,16 @@ def _set_safe_mode(args):
     return [r.info() for r in _records.values()]
 
 
+def _reload(args):
+    record = _records.get(args["id"])
+    if not record:
+        return False
+    _deactivate(record)
+    if is_enabled(record.id) and not _safe_mode:
+        _activate(record)
+    return record.info()
+
+
 def _shutdown(args):
     for record in list(_records.values()):
         _deactivate(record)
@@ -1244,6 +1383,7 @@ def _shutdown(args):
 _METHODS = {
     "init": _init,
     "shutdown": _shutdown,
+    "reload": _reload,
     "safe_mode": _set_safe_mode,
     "trust": _trust,
     "is_trusted": _is_trusted,
@@ -1256,18 +1396,106 @@ _METHODS = {
     "setting_changed": _setting_changed,
     "setting_click": _setting_click,
     "alert_click": _alert_click,
+    "open_url_hook": _open_url_hook,
     "menu_list": _menu_list,
     "menu_click": _menu_click,
     "install": _install,
     "delete": _delete,
     "set_enabled": _set_enabled,
     "metadata": _metadata,
+    "guard_scan": _guard_scan,
     "event": _event,
     "request_hook": _request_hook_dispatch,
     "request_callback": _request_callback,
     "view_click": _view_click,
     "text_changed": _text_changed,
 }
+
+
+_sandbox_api = None
+
+
+def _sandbox_grant(plugin_id, path):
+    if _sandbox_api is None or len(_sandbox_api) < 3:
+        return False
+    return _sandbox_api[2](plugin_id, path)
+
+
+def _file_picked(args):
+    import exd_picker
+    return exd_picker.picked(args.get("token"), args.get("paths") or [])
+
+
+def _permissions(args):
+    if _sandbox_api is None:
+        return {"net": [], "paths": []}
+    return _sandbox_api[0](str(args.get("id") or ""))
+
+
+def _revoke_permission(args):
+    if _sandbox_api is None:
+        return False
+    return _sandbox_api[1](str(args.get("id") or ""), str(args.get("kind") or ""),
+                           str(args.get("key") or ""))
+
+
+def _port_prepare(args):
+    import exd_porter
+    path = str(args.get("path") or "")
+    if not path and args.get("id") in _records:
+        path = _records[args["id"]].path
+    meta = read_metadata(path)
+    try:
+        import capability_scan
+        capabilities = capability_scan.scan(path)
+    except Exception:
+        capabilities = {}
+    result = exd_porter.prepare(path, meta, capabilities)
+    result["name"] = str(meta.get("name") or meta.get("id") or "")
+    return result
+
+
+def _port_check(args):
+    import exd_porter
+    prepared = args.get("prepared") or {}
+    need = exd_porter.needed(args.get("answer"), prepared)
+    if need:
+        return {
+            "code": "",
+            "report": "",
+            "need": need,
+            "errors": ["NEED: " + ", ".join(need)],
+            "fix": exd_porter.need_prompt(need),
+        }
+    code, report = exd_porter.extract(args.get("answer"))
+    code = exd_porter.autofix(code)
+    errors = exd_porter.check(code, args.get("prepared") or {})
+    if not errors and not exd_porter.has_function(code):
+        return {"code": "", "report": report, "parsed": exd_porter.parse_report(report), "nothing": True,
+                "errors": [], "fix": ""}
+    return {
+        "code": code,
+        "report": report,
+        "parsed": exd_porter.parse_report(report),
+        "errors": errors,
+        "fix": exd_porter.fix_prompt(errors) if errors else "",
+    }
+
+
+def _port_save(args):
+    import exd_porter
+    out_dir = os.path.join(os.path.dirname(PLUGINS_DIR), "ai_ports")
+    return exd_porter.save(str(args.get("code") or ""), args.get("prepared") or {}, out_dir)
+
+
+_METHODS.update({
+    "permissions": _permissions,
+    "revoke_permission": _revoke_permission,
+    "file_picked": _file_picked,
+    "port_prepare": _port_prepare,
+    "port_check": _port_check,
+    "port_save": _port_save,
+})
 
 
 def dispatch(method, payload):
@@ -1280,3 +1508,99 @@ def dispatch(method, payload):
         error = traceback.format_exc(limit=6)
         log(f"dispatch {method} failed:\n{error}")
         return json.dumps({"ok": False, "error": error}, ensure_ascii=False)
+
+def _wrap_update(name, update_dict):
+    if not isinstance(update_dict, dict):
+        return update_dict
+    try:
+        import tl_runtime
+        TLRPC = tl_runtime.TLRPC
+
+        msg_id = int(update_dict.get("id") or 0)
+        dialog_id = int(update_dict.get("dialog_id") or 0)
+        sender_id = int(update_dict.get("sender_id") or 0)
+        text = str(update_dict.get("text") or "")
+        out = bool(update_dict.get("out"))
+        date = int(update_dict.get("date") or 0)
+
+        if dialog_id > 0:
+            peer = TLRPC.TL_peerUser(user_id=dialog_id)
+        elif dialog_id < -1000000000000:
+            peer = TLRPC.TL_peerChannel(channel_id=abs(dialog_id) - 1000000000000)
+        else:
+            peer = TLRPC.TL_peerChat(chat_id=abs(dialog_id))
+
+        from_id = TLRPC.TL_peerUser(user_id=sender_id) if sender_id else peer
+
+        if name in ("updateNewMessage", "TL_updateNewMessage"):
+            msg = TLRPC.TL_message(
+                id=msg_id,
+                peer_id=peer,
+                from_id=from_id,
+                message=text,
+                out=out,
+                date=date,
+            )
+            msg.dialog_id = dialog_id
+
+            return TLRPC.TL_updateNewMessage(
+                message=msg,
+                pts=0,
+                pts_count=0,
+            )
+
+        if name in ("updateEditMessage", "TL_updateEditMessage"):
+            msg = TLRPC.TL_message(
+                id=msg_id,
+                peer_id=peer,
+                from_id=from_id,
+                message=text,
+                out=out,
+                date=date,
+            )
+            msg.dialog_id = dialog_id
+            msg.edit_date = int(update_dict.get("edit_date") or date)
+            return TLRPC.TL_updateEditMessage(
+                message=msg,
+                pts=0,
+                pts_count=0,
+            )
+
+        if name in ("updateDeleteMessages", "TL_updateDeleteMessages"):
+            messages = update_dict.get("messages")
+            if isinstance(messages, (list, tuple)):
+                m_list = tl_runtime.ArrayList([int(m) for m in messages])
+            elif msg_id:
+                m_list = tl_runtime.ArrayList([msg_id])
+            else:
+                m_list = tl_runtime.ArrayList()
+            return TLRPC.TL_updateDeleteMessages(
+                messages=m_list,
+                pts=0,
+                pts_count=0,
+            )
+    except Exception:
+        pass
+    return update_dict
+
+
+class TLName(str):
+    """Polymorphic update name string matching both TL_ prefixed and unprefixed names."""
+    def __eq__(self, other):
+        if not isinstance(other, str):
+            return False
+        s = str(self)
+        o = str(other)
+        if s == o:
+            return True
+        if s.startswith("TL_") and s[3:] == o:
+            return True
+        if o.startswith("TL_") and o[3:] == s:
+            return True
+        return False
+
+    def __hash__(self):
+        s = str(self)
+        if s.startswith("TL_"):
+            s = s[3:]
+        return hash(s)

@@ -231,6 +231,14 @@ style::colorizer ColorizerFrom(
 		&result.was.saturation,
 		&result.was.value);
 	switch (scheme.type) {
+	case EmbeddedType::AeroDelta:
+		result.keepContrast = base::flat_map<QLatin1String, Pair>{ {
+			{ qstr("activeButtonFg"), Pair{ cColor("da3018"), cColor("141517") } },
+			{ qstr("profileVerifiedCheckFg"), Pair{ cColor("da3018"), cColor("141517") } },
+			{ qstr("overviewCheckFgActive"), Pair{ cColor("da3018"), cColor("141517") } },
+		} };
+		result.lightnessMin = 64;
+		break;
 	case EmbeddedType::Default:
 		result.lightnessMax = 160;
 		break;
@@ -351,6 +359,17 @@ std::vector<EmbeddedScheme> EmbeddedThemes() {
 	};
 	return {
 		EmbeddedScheme{
+			EmbeddedType::AeroDelta,
+			qColor("da3018"),
+			qColor("ff4d33"),
+			qColor("141517"),
+			qColor("1b1c20"),
+			qColor("da3018"),
+			rpl::single(u"Aero Delta"_q),
+			":/gui/aero-delta.tdesktop-theme",
+			qColor("da3018")
+		},
+		EmbeddedScheme{
 			EmbeddedType::Default,
 			qColor("9bd494"),
 			qColor("eaffdc"),
@@ -402,6 +421,16 @@ std::vector<QColor> DefaultAccentColors(EmbeddedType type) {
 		return style::ColorFromHex(hex);
 	};
 	switch (type) {
+	case EmbeddedType::AeroDelta:
+		return {
+			qColor("da3018"),
+			qColor("ff4d33"),
+			qColor("e63d25"),
+			qColor("ff6b57"),
+			qColor("4e9c57"),
+			qColor("60a8e7"),
+			qColor("cbac67"),
+		};
 	case EmbeddedType::DayBlue:
 		return {
 			qColor("da3018"),
@@ -462,7 +491,7 @@ Fn<void(style::palette&)> PreparePaletteCallback(
 		const auto &embedded = EmbeddedThemes();
 		const auto i = ranges::find(
 			embedded,
-			dark ? EmbeddedType::Night : EmbeddedType::Default,
+			dark ? EmbeddedType::AeroDelta : EmbeddedType::Default,
 			&EmbeddedScheme::type);
 		Assert(i != end(embedded));
 		const auto colorizer = accent
@@ -751,6 +780,7 @@ bool AccentColors::setFromSerialized(const QByteArray &serialized) {
 		const auto color = Serialize::readColor(stream);
 		const auto uncheckedType = static_cast<EmbeddedType>(type);
 		switch (uncheckedType) {
+		case EmbeddedType::AeroDelta:
 		case EmbeddedType::Default:
 		case EmbeddedType::DayBlue:
 		case EmbeddedType::Night:

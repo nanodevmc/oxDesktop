@@ -477,13 +477,44 @@ void Step::paintCover(QPainter &p, int top) {
 
 	static const auto deltaGlyph = QImage(u":/gui/art/app_icon_glyph.png"_q)
 		.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-	constexpr auto kDeltaSize = 108;
+	constexpr auto kDeltaSize = 160;
 	const auto deltaLeft = (width() - kDeltaSize) / 2;
-	auto deltaTop = top + 72;
+	auto deltaTop = top + 36;
 	if (top < 0 && !_hasCover) {
 		deltaTop += top;
 	}
 	auto hq = PainterHighQualityEnabler(p);
+
+	// Aerodynamic air trail & sonic vapor cone behind the Delta stealth plane
+	const auto centerX = width() / 2.0;
+	const auto planeCenterY = deltaTop + kDeltaSize * 0.58;
+
+	QLinearGradient trailGrad(centerX, planeCenterY - 15, centerX, planeCenterY + 80);
+	trailGrad.setColorAt(0.0, QColor(255, 255, 255, 85));
+	trailGrad.setColorAt(0.4, QColor(255, 255, 255, 45));
+	trailGrad.setColorAt(1.0, QColor(255, 255, 255, 0));
+
+	QPainterPath airTrail;
+	airTrail.moveTo(centerX - 12, planeCenterY);
+	airTrail.lineTo(centerX - 68, planeCenterY + 75);
+	airTrail.lineTo(centerX - 38, planeCenterY + 75);
+	airTrail.lineTo(centerX, planeCenterY + 25);
+	airTrail.lineTo(centerX + 38, planeCenterY + 75);
+	airTrail.lineTo(centerX + 68, planeCenterY + 75);
+	airTrail.lineTo(centerX + 12, planeCenterY);
+	airTrail.closeSubpath();
+
+	p.setPen(Qt::NoPen);
+	p.setBrush(trailGrad);
+	p.drawPath(airTrail);
+
+	// Supersonic shockwave arcs
+	p.setPen(QPen(QColor(255, 255, 255, 40), 1.8));
+	p.setBrush(Qt::NoBrush);
+	p.drawArc(QRectF(centerX - 50, planeCenterY + 12, 100, 30), 0, 180 * 16);
+	p.setPen(QPen(QColor(255, 255, 255, 22), 1.2));
+	p.drawArc(QRectF(centerX - 75, planeCenterY + 30, 150, 40), 0, 180 * 16);
+
 	p.drawImage(QRect(deltaLeft, deltaTop, kDeltaSize, kDeltaSize), deltaGlyph);
 }
 

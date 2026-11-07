@@ -1,0 +1,7 @@
+id: zwylib
+name: ZwyLib
+description: "Zwylair's library with highly used things, used for other plugins. Documentation: https://zwylib-docs.vercel.app/"
+author: "@zwylair"
+version: "3.0.0"
+icon: zwyPluginsIcons/11
+app_version: ">=12.10.6"
