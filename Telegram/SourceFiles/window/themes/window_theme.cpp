@@ -561,6 +561,9 @@ void ChatBackground::initialRead() {
 	if (started()) {
 		return;
 	}
+	if (!Local::readBackground()) {
+		set(Data::ThemeWallPaper());
+	}
 	if (_themeObject.pathAbsolute.isEmpty()) {
 		if (nightMode()) {
 			ApplyDefaultWithPath(NightThemePath());
@@ -568,9 +571,6 @@ void ChatBackground::initialRead() {
 		} else {
 			applyDefaultThemeAccentColorizer();
 		}
-	}
-	if (!Local::readBackground()) {
-		set(Data::ThemeWallPaper());
 	}
 	if (_localStoredTileDayValue) {
 		_tileDayValue = *_localStoredTileDayValue;
@@ -1104,7 +1104,9 @@ bool ChatBackground::started() const {
 }
 
 void ChatBackground::saveForRevert() {
-	Expects(started());
+	if (!started()) {
+		return;
+	}
 
 	if (!Data::details::IsTestingThemeWallPaper(_paper)
 		&& !Data::details::IsTestingDefaultWallPaper(_paper)) {

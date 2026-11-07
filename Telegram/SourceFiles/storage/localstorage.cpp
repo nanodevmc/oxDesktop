@@ -1201,8 +1201,6 @@ void InitialLoadTheme() {
 		).arg(_themeKeyNight));
 	if (!key) {
 		Window::Theme::SetNightModeValue(true);
-		Window::Theme::ApplyDefaultWithPath(Window::Theme::NightThemePath());
-		Window::Theme::KeepApplied();
 		return;
 	} else if (const auto path = InitialLoadThemeUsingKey(key)) {
 		DEBUG_LOG(("Theme: loaded with result: %1").arg(*path));

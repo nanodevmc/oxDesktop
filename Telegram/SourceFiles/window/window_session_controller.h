@@ -377,6 +377,7 @@ private:
 	void joinVoiceChatFromLink(
 		not_null<PeerData*> peer,
 		const PeerByLinkInfo &info);
+	void openBotMenuApp(not_null<UserData*> bot);
 
 	void applyBoost(
 		not_null<ChannelData*> channel,
@@ -395,6 +396,7 @@ private:
 	QString _contactToken;
 	Fn<void(not_null<PeerData*>)> _contactTokenDone;
 	PeerData *_waitingDirectChannel = nullptr;
+	UserData *_waitingBotMenuApp = nullptr;
 
 	History *_showingRepliesHistory = nullptr;
 	MsgId _showingRepliesRootId = 0;
