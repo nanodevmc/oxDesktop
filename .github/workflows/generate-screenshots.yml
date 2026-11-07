@@ -168,13 +168,12 @@ jobs:
                     -ex "bt 25" \
                     -ex "frame 1" \
                     -ex "x/12i \$pc - 24" \
-                    -ex "print (char*)\$rdi" \
-                    -ex "print (char*)\$rsi" \
-                    -ex "print (char*)\$rdx" \
-                    -ex "print (char*)\$rcx" \
-                    -ex "print (char*)\$r8" \
-                    -ex "x/s \$rdi" \
-                    -ex "x/s \$rdx" \
+                    -ex "x/s \$pc - 12 + 0x5ee66df" \
+                    -ex "x/s \$pc - 5 + 0x5d0cbc4" \
+                    -ex "frame 2" \
+                    -ex "x/10i \$pc - 20" \
+                    -ex "frame 3" \
+                    -ex "x/10i \$pc - 20" \
                     -ex "quit" \
                     --args "$BIN" -many -workdir "/tmp/prof_dbg_$view" --demo-mode --demo-view "$view" --demo-delay 1500 --demo-exit || true
                 }
