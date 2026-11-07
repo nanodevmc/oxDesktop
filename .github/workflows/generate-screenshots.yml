@@ -179,4 +179,5 @@ jobs:
         with:
           name: oxdesktop-screenshots
           path: screenshots/*.png
+          compression-level: 9
           retention-days: 14

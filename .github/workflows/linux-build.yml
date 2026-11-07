@@ -194,7 +194,7 @@ jobs:
           exec "\$DIR/oxDesktop-bin" "\$@"
           SH
               chmod +x "$PKG/oxDesktop" "$PKG/oxDesktop-bin"
-              tar -C pkg -czf "oxDesktop-linux-x64.$VERSION.tar.gz" oxDesktop
+              GZIP="-9" tar -C pkg -czf "oxDesktop-linux-x64.$VERSION.tar.gz" oxDesktop
             '
           ls -la "oxDesktop-linux-x64.$VERSION.tar.gz"
 
@@ -287,6 +287,7 @@ jobs:
           name: oxdesktop-screenshots-linux
           path: screenshots/*.png
           if-no-files-found: ignore
+          compression-level: 9
           retention-days: 7
 
       - name: Upload artifact
@@ -294,6 +295,7 @@ jobs:
         with:
           name: oxDesktop-linux-x64
           path: oxDesktop-linux-x64.*.tar.gz
+          compression-level: 9
           retention-days: 7
 
 

@@ -330,6 +330,7 @@ jobs:
           path: |
             oxDesktop-portable-x64.*.zip
             tdesktop/out/Release/oxDesktop-setup-x64.*.exe
+          compression-level: 9
 
       - name: Attach to release
         if: github.event_name == 'release'
