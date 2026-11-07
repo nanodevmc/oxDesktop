@@ -26,6 +26,10 @@ jobs:
           sudo apt-get install -y \
             xvfb \
             dbus-x11 \
+            xdg-desktop-portal \
+            xdg-desktop-portal-gtk \
+            at-spi2-core \
+            fonts-dejavu-core \
             libxcb-cursor0 \
             libxcb-render-util0 \
             libxcb-shape0 \
@@ -111,11 +115,15 @@ jobs:
           mkdir -p screenshots
           export DISPLAY=:99
           export NO_AT_SPI=1
-          export QT_QPA_PLATFORMTHEME=generic
           export QT_QPA_PLATFORM=xcb
-          export XDG_CURRENT_DESKTOP=generic
-          export DESKTOP_SESSION=generic
-          export GNOME_DESKTOP_SESSION_ID=""
+          export LIBGL_ALWAYS_SOFTWARE=1
+          export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
+          export QT_XCB_GL_INTEGRATION=none
+          unset XDG_CURRENT_DESKTOP
+          unset DESKTOP_SESSION
+          unset XDG_SESSION_DESKTOP
+          unset GNOME_DESKTOP_SESSION_ID
+          export QT_QPA_PLATFORMTHEME=""
 
           Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset &
           XVFB_PID=$!
@@ -125,26 +133,48 @@ jobs:
           SHOTS_DIR="$PWD/screenshots"
 
           dbus-run-session bash -c "
+            if [ -x /usr/libexec/xdg-desktop-portal ]; then
+              /usr/libexec/xdg-desktop-portal &
+            elif [ -x /usr/lib/xdg-desktop-portal ]; then
+              /usr/lib/xdg-desktop-portal &
+            fi
+            if [ -x /usr/libexec/xdg-desktop-portal-gtk ]; then
+              /usr/libexec/xdg-desktop-portal-gtk &
+            elif [ -x /usr/lib/xdg-desktop-portal-gtk ]; then
+              /usr/lib/xdg-desktop-portal-gtk &
+            fi
+            sleep 2
+
+            export DISPLAY=:99
             export NO_AT_SPI=1
-            export QT_QPA_PLATFORMTHEME=generic
             export QT_QPA_PLATFORM=xcb
-            export XDG_CURRENT_DESKTOP=generic
-            export DESKTOP_SESSION=generic
-            export GNOME_DESKTOP_SESSION_ID=''
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
+            export QT_XCB_GL_INTEGRATION=none
+            unset XDG_CURRENT_DESKTOP
+            unset DESKTOP_SESSION
+            unset XDG_SESSION_DESKTOP
+            unset GNOME_DESKTOP_SESSION_ID
+            export QT_QPA_PLATFORMTHEME=''
+
             echo 'Capturing Settings view...'
-            $PKG --demo-mode --demo-view settings --demo-screenshot '$SHOTS_DIR/settings.png' --demo-delay 3500 --demo-exit || true
+            $PKG -many -workdir /tmp/prof_settings --demo-mode --demo-view settings --demo-screenshot '$SHOTS_DIR/settings.png' --demo-delay 3500 --demo-exit || true
             sleep 2
+
             echo 'Capturing Appearance view...'
-            $PKG --demo-mode --demo-view appearance --demo-screenshot '$SHOTS_DIR/appearance.png' --demo-delay 3500 --demo-exit || true
+            $PKG -many -workdir /tmp/prof_appearance --demo-mode --demo-view appearance --demo-screenshot '$SHOTS_DIR/appearance.png' --demo-delay 3500 --demo-exit || true
             sleep 2
+
             echo 'Capturing Chats view...'
-            $PKG --demo-mode --demo-view chats --demo-screenshot '$SHOTS_DIR/chats.png' --demo-delay 3500 --demo-exit || true
+            $PKG -many -workdir /tmp/prof_chats --demo-mode --demo-view chats --demo-screenshot '$SHOTS_DIR/chats.png' --demo-delay 3500 --demo-exit || true
             sleep 2
+
             echo 'Capturing Plugins view...'
-            $PKG --demo-mode --demo-view plugins --demo-screenshot '$SHOTS_DIR/plugins.png' --demo-delay 3500 --demo-exit || true
+            $PKG -many -workdir /tmp/prof_plugins --demo-mode --demo-view plugins --demo-screenshot '$SHOTS_DIR/plugins.png' --demo-delay 3500 --demo-exit || true
             sleep 2
+
             echo 'Capturing Main window...'
-            $PKG --demo-mode --demo-view main --demo-screenshot '$SHOTS_DIR/oxdesktop.png' --demo-delay 3500 --demo-exit || true
+            $PKG -many -workdir /tmp/prof_main --demo-mode --demo-view main --demo-screenshot '$SHOTS_DIR/oxdesktop.png' --demo-delay 3500 --demo-exit || true
           "
 
           kill $XVFB_PID || true
