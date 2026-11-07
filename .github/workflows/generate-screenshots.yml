@@ -25,9 +25,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             xvfb \
-            dbus-x11 \
-            xdg-desktop-portal \
-            xdg-desktop-portal-gtk \
             at-spi2-core \
             fonts-dejavu-core \
             libxcb-cursor0 \
@@ -45,6 +42,7 @@ jobs:
             libglx-mesa0 \
             libpulse0 \
             libasound2t64 \
+            gdb \
             curl \
             jq
 
@@ -123,67 +121,44 @@ jobs:
           export AUDIODEV=null
           export PULSE_SERVER=""
           export PIPEWIRE_REMOTE=""
+          export QT_QPA_PLATFORMTHEME=generic
+          export QT_STYLE_OVERRIDE=Fusion
           unset XDG_CURRENT_DESKTOP
           unset DESKTOP_SESSION
           unset XDG_SESSION_DESKTOP
           unset GNOME_DESKTOP_SESSION_ID
-          export QT_QPA_PLATFORMTHEME=""
 
           Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset &
           XVFB_PID=$!
-          sleep 3
+          sleep 2
 
           PKG="$PWD/app/oxDesktop/oxDesktop"
           SHOTS_DIR="$PWD/screenshots"
 
-          dbus-run-session bash -c "
-            if [ -x /usr/libexec/xdg-desktop-portal ]; then
-              /usr/libexec/xdg-desktop-portal &
-            elif [ -x /usr/lib/xdg-desktop-portal ]; then
-              /usr/lib/xdg-desktop-portal &
-            fi
-            if [ -x /usr/libexec/xdg-desktop-portal-gtk ]; then
-              /usr/libexec/xdg-desktop-portal-gtk &
-            elif [ -x /usr/lib/xdg-desktop-portal-gtk ]; then
-              /usr/lib/xdg-desktop-portal-gtk &
-            fi
-            sleep 2
+          capture_view() {
+            local view="$1"
+            local out="$2"
+            echo "=== Capturing view: $view -> $out ==="
+            timeout 15s $PKG -many -workdir "/tmp/prof_$view" --demo-mode --demo-view "$view" --demo-screenshot "$out" --demo-delay 3500 --demo-exit || {
+              local ec=$?
+              echo "Standard capture exited with code $ec"
+              if [ ! -f "$out" ]; then
+                echo "Fallback: attempting offscreen capture for $view..."
+                timeout 15s $PKG -platform offscreen -many -workdir "/tmp/prof_off_$view" --demo-mode --demo-view "$view" --demo-screenshot "$out" --demo-delay 3500 --demo-exit || {
+                  echo "Offscreen capture also exited with code $?"
+                  echo "Diagnostics: running under gdb..."
+                  gdb -batch -ex "set follow-fork-mode child" -ex "run" -ex "bt 25" -ex "quit" --args "$PKG" -many -workdir "/tmp/prof_dbg_$view" --demo-mode --demo-view "$view" --demo-delay 1500 --demo-exit || true
+                }
+              fi
+            }
+            sleep 1
+          }
 
-            export DISPLAY=:99
-            export NO_AT_SPI=1
-            export QT_QPA_PLATFORM=xcb
-            export LIBGL_ALWAYS_SOFTWARE=1
-            export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
-            export QT_XCB_GL_INTEGRATION=none
-            export ALSOFT_DRIVERS=dummy
-            export AUDIODEV=null
-            export PULSE_SERVER=''
-            export PIPEWIRE_REMOTE=''
-            unset XDG_CURRENT_DESKTOP
-            unset DESKTOP_SESSION
-            unset XDG_SESSION_DESKTOP
-            unset GNOME_DESKTOP_SESSION_ID
-            export QT_QPA_PLATFORMTHEME=''
-
-            echo 'Capturing Settings view...'
-            $PKG -many -workdir /tmp/prof_settings --demo-mode --demo-view settings --demo-screenshot '$SHOTS_DIR/settings.png' --demo-delay 3500 --demo-exit || true
-            sleep 2
-
-            echo 'Capturing Appearance view...'
-            $PKG -many -workdir /tmp/prof_appearance --demo-mode --demo-view appearance --demo-screenshot '$SHOTS_DIR/appearance.png' --demo-delay 3500 --demo-exit || true
-            sleep 2
-
-            echo 'Capturing Chats view...'
-            $PKG -many -workdir /tmp/prof_chats --demo-mode --demo-view chats --demo-screenshot '$SHOTS_DIR/chats.png' --demo-delay 3500 --demo-exit || true
-            sleep 2
-
-            echo 'Capturing Plugins view...'
-            $PKG -many -workdir /tmp/prof_plugins --demo-mode --demo-view plugins --demo-screenshot '$SHOTS_DIR/plugins.png' --demo-delay 3500 --demo-exit || true
-            sleep 2
-
-            echo 'Capturing Main window...'
-            $PKG -many -workdir /tmp/prof_main --demo-mode --demo-view main --demo-screenshot '$SHOTS_DIR/oxdesktop.png' --demo-delay 3500 --demo-exit || true
-          "
+          capture_view "settings" "$SHOTS_DIR/settings.png"
+          capture_view "appearance" "$SHOTS_DIR/appearance.png"
+          capture_view "chats" "$SHOTS_DIR/chats.png"
+          capture_view "plugins" "$SHOTS_DIR/plugins.png"
+          capture_view "main" "$SHOTS_DIR/oxdesktop.png"
 
           kill $XVFB_PID || true
           echo "Captured screenshots:"
