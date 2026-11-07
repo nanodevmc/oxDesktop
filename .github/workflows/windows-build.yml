@@ -17,6 +17,7 @@ on:
       - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/pull_request_template.md'
+      - '.github/workflows/generate-screenshots.yml'
   release:
     types: [published]
   workflow_dispatch:
@@ -52,9 +53,9 @@ jobs:
           path: |
             Libraries
             ThirdParty
-          key: win-libs-v2-${{ hashFiles('tdesktop/Telegram/build/prepare/prepare.py', 'tdesktop/Telegram/build/prepare/win.bat') }}
+          key: win-libs-v3-${{ hashFiles('tdesktop/Telegram/build/prepare/prepare.py', 'tdesktop/Telegram/build/prepare/win.bat') }}
           restore-keys: |
-            win-libs-
+            win-libs-v3-
 
       - name: Install ATL for Breakpad
         shell: pwsh
@@ -77,8 +78,8 @@ jobs:
           $header = Join-Path $toolset.FullName 'atlmfc\include\atlbase.h'
           "VCVARS64=$vsPath\VC\Auxiliary\Build\vcvars64.bat" >> $env:GITHUB_ENV
 
-          if ($env:LIBS_CACHE_HIT -eq 'true') {
-            Write-Host 'Exact ThirdParty cache hit; skipping ATL installation.'
+          if ($env:LIBS_CACHE_HIT -eq 'true' -and (Test-Path $header)) {
+            Write-Host 'Exact ThirdParty cache hit and ATL is present; skipping ATL installation.'
             exit 0
           }
 
@@ -99,7 +100,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           call "%VCVARS64%" -vcvars_ver=14.44
-          if /I "%LIBS_CACHE_HIT%"=="true" goto skipAtlValidation
+          if /I "%LIBS_CACHE_HIT%"=="true" if exist "%VCToolsInstallDir%atlmfc\include\atlbase.h" goto skipAtlValidation
           if not exist "%VCToolsInstallDir%atlmfc\include\atlbase.h" (echo ATL for selected toolset is missing & exit /b 1)
           echo %INCLUDE% | findstr /I /C:"%VCToolsInstallDir%atlmfc\include" >nul
           if errorlevel 1 (echo ATL include path is missing from INCLUDE & exit /b 1)
@@ -118,13 +119,13 @@ jobs:
           }
 
       - name: Save ThirdParty libraries
-        if: always() && steps.libs.outputs.cache-hit != 'true'
+        if: success() && steps.libs.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: |
             Libraries
             ThirdParty
-          key: win-libs-v2-${{ hashFiles('tdesktop/Telegram/build/prepare/prepare.py', 'tdesktop/Telegram/build/prepare/win.bat') }}
+          key: win-libs-v3-${{ hashFiles('tdesktop/Telegram/build/prepare/prepare.py', 'tdesktop/Telegram/build/prepare/win.bat') }}
 
       # Plugin engine links against an embedded Python 3.11, expected at
       # Libraries/win64/python311 with include/, libs/python311.lib and embed/.
