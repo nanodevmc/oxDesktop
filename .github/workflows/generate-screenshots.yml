@@ -130,6 +130,8 @@ jobs:
           export PIPEWIRE_REMOTE=""
           export QT_QPA_PLATFORMTHEME=""
           export QT_STYLE_OVERRIDE=Fusion
+          export QT_LOGGING_RULES="*.*=true"
+          export QT_ASSUME_STDERR_HAS_CONSOLE=1
           export GSETTINGS_BACKEND=memory
           export XDG_DATA_DIRS=/tmp/empty_xdg
           unset DBUS_SESSION_BUS_ADDRESS
@@ -163,7 +165,16 @@ jobs:
                     -ex "run" \
                     -ex "info registers" \
                     -ex "x/10i \$pc - 16" \
-                    -ex "bt 30" \
+                    -ex "bt 25" \
+                    -ex "frame 1" \
+                    -ex "x/12i \$pc - 24" \
+                    -ex "print (char*)\$rdi" \
+                    -ex "print (char*)\$rsi" \
+                    -ex "print (char*)\$rdx" \
+                    -ex "print (char*)\$rcx" \
+                    -ex "print (char*)\$r8" \
+                    -ex "x/s \$rdi" \
+                    -ex "x/s \$rdx" \
                     -ex "quit" \
                     --args "$BIN" -many -workdir "/tmp/prof_dbg_$view" --demo-mode --demo-view "$view" --demo-delay 1500 --demo-exit || true
                 }
