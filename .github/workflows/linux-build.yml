@@ -110,7 +110,8 @@ jobs:
             -e CCACHE_DIR=/var/cache/ccache \
             -e CCACHE_MAXSIZE=5G \
             -e CCACHE_COMPRESS=1 \
-            -e CCACHE_SLOPPINESS=pch_defines,time_macros \
+            -e CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_ctime,include_file_mtime \
+            -e CCACHE_COMPRESSLEVEL=3 \
             -e CCACHE_BASEDIR=/usr/src/tdesktop \
             "$IMAGE_TAG" \
             bash -c '/usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
@@ -210,12 +211,16 @@ jobs:
           SHOTS_DIR="$PWD/screenshots"
           echo "Capturing Settings view..."
           $PKG --demo-mode --demo-view settings --demo-screenshot "$SHOTS_DIR/settings.png" --demo-delay 3500 --demo-exit || true
+          sleep 2
           echo "Capturing Appearance view..."
           $PKG --demo-mode --demo-view appearance --demo-screenshot "$SHOTS_DIR/appearance.png" --demo-delay 3500 --demo-exit || true
+          sleep 2
           echo "Capturing Chats view..."
           $PKG --demo-mode --demo-view chats --demo-screenshot "$SHOTS_DIR/chats.png" --demo-delay 3500 --demo-exit || true
+          sleep 2
           echo "Capturing Plugins view..."
           $PKG --demo-mode --demo-view plugins --demo-screenshot "$SHOTS_DIR/plugins.png" --demo-delay 3500 --demo-exit || true
+          sleep 2
           echo "Capturing Main window..."
           $PKG --demo-mode --demo-view main --demo-screenshot "$SHOTS_DIR/oxdesktop.png" --demo-delay 3500 --demo-exit || true
           kill $XVFB_PID || true

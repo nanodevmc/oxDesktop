@@ -5,7 +5,6 @@
 #include "window/window_session_controller.h"
 #include "settings/sections/settings_extera.h"
 #include "extera/extera_full_player.h"
-#include "window/themes/window_theme.h"
 #include "base/call_delayed.h"
 
 #include <QtGui/QGuiApplication>
@@ -68,9 +67,6 @@ void SetAutoExit(bool exit) {
 }
 
 void Start(not_null<Window::Controller*> window) {
-	Window::Theme::SetNightModeValue(true);
-	Window::Theme::ApplyDefaultWithPath(Window::Theme::NightThemePath());
-	Window::Theme::KeepApplied();
 	const auto targetView = View().toLower();
 	const auto session = window->sessionController();
 

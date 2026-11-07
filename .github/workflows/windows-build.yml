@@ -29,6 +29,7 @@ jobs:
       SCCACHE_DIR: "${{ github.workspace }}\\.sccache"
       SCCACHE_CACHE_SIZE: "5G"
       SCCACHE_DIRECT: "true"
+      SCCACHE_IDLE_TIMEOUT: "0"
       CLEAR_QT_BUILD_TREE: "1"
     permissions:
       contents: write
@@ -160,10 +161,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .sccache
-          key: ${{ runner.os }}-sccache-${{ github.sha }}-${{ github.run_id }}
+          key: win64-sccache-v3-${{ github.sha }}-${{ github.run_id }}
           restore-keys: |
-            ${{ runner.os }}-sccache-${{ github.sha }}-
-            ${{ runner.os }}-sccache-
+            win64-sccache-v3-${{ github.sha }}-
+            win64-sccache-v3-
 
       - name: Check restored sccache size
         shell: pwsh
@@ -199,13 +200,25 @@ jobs:
         shell: cmd
         run: cd /d %GITHUB_WORKSPACE%\tdesktop && python tools\sync_version.py
 
+      - name: Restore Build cache
+        uses: actions/cache/restore@v4
+        with:
+          path: tdesktop/out
+          key: win64-build-v3-${{ github.sha }}-${{ github.run_id }}
+          restore-keys: |
+            win64-build-v3-${{ github.sha }}-
+            win64-build-v3-
+
       - name: Configure and build
+        id: build
         shell: cmd
         env:
           API_ID: ${{ secrets.TDESKTOP_API_ID }}
           API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
         run: |
           call "%VCVARS64%" -vcvars_ver=14.44
+          sccache --start-server
+          sccache --show-stats
           set "CREDS=-D TDESKTOP_API_ID=%API_ID% -D TDESKTOP_API_HASH=%API_HASH%"
           if "%API_ID%"=="" (
             echo No API secrets, using TEST ONLY credentials
@@ -218,6 +231,7 @@ jobs:
             -G "Ninja Multi-Config" ^
             -D CMAKE_C_COMPILER_LAUNCHER=sccache ^
             -D CMAKE_CXX_COMPILER_LAUNCHER=sccache ^
+            -D CMAKE_DISABLE_PRECOMPILED_HEADERS=ON ^
             -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
             -D CMAKE_POLICY_CMP0141=NEW
           cd ..\out
@@ -261,7 +275,14 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .sccache
-          key: ${{ runner.os }}-sccache-${{ github.sha }}-${{ github.run_id }}
+          key: win64-sccache-v3-${{ github.sha }}-${{ github.run_id }}
+
+      - name: Save Build cache
+        if: always() && steps.build.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: tdesktop/out
+          key: win64-build-v3-${{ github.sha }}-${{ github.run_id }}
 
       - name: Package
         shell: pwsh
