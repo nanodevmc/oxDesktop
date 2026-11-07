@@ -502,6 +502,10 @@ void SetupPluginIcon(
 				p.setOpacity(shown);
 				p.translate(rect.center());
 				p.scale(scale, scale);
+				const auto iconSize = std::max(size, int(st::exteraInstallIcon));
+				if (real.width() != iconSize && real.width() > 0) {
+					p.scale(iconSize / float64(real.width()), iconSize / float64(real.height()));
+				}
 				p.drawImage(
 					QPoint(-real.width() / 2, -real.height() / 2),
 					state->image);

@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/timer.h"
 #include "dialogs/ui/posts_search_intro.h"
 #include "mtproto/sender.h"
+#include <unordered_map>
 
 namespace Main {
 class Session;
@@ -56,6 +57,8 @@ private:
 	void setFloodStateFrom(const MTPDsearchPostsFlood &data);
 	void pushStateUpdate(const Entry &entry);
 	void maybePushPremiumUpdate();
+	void remember(const std::vector<not_null<HistoryItem*>> &page);
+	void forget(const std::vector<not_null<HistoryItem*>> &page);
 
 	const not_null<Main::Session*> _session;
 
@@ -64,6 +67,7 @@ private:
 	base::Timer _timer;
 	base::Timer _recheckTimer;
 	base::flat_map<QString, Entry> _entries;
+	std::unordered_map<const HistoryItem*, int> _cached;
 	std::optional<QString> _queryExact;
 	std::optional<QString> _query;
 	QString _queryPushed;
