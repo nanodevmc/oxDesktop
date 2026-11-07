@@ -1,0 +1,159 @@
+name: Generate Screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Source Run ID of oxDesktop-linux-x64 build (leave empty for latest successful)'
+        required: false
+        default: ''
+
+jobs:
+  screenshots:
+    name: Capture oxDesktop Screenshots
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system runtime & X11 dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            dbus-x11 \
+            libxcb-cursor0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-randr0 \
+            libxcb-xfixes0 \
+            libxcb-sync1 \
+            libxcb-icccm4 \
+            libxcb-keysyms1 \
+            libxcb-image0 \
+            libx11-xcb1 \
+            libxkbcommon-x11-0 \
+            libgl1-mesa-dri \
+            libglx-mesa0 \
+            libpulse0 \
+            libasound2t64 \
+            curl \
+            jq
+
+      - name: Download compiled oxDesktop Linux artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_RUN_ID: ${{ inputs.run_id }}
+        run: |
+          mkdir -p downloaded_pkg
+          TARGET_RUN_ID="$INPUT_RUN_ID"
+          if [ -z "$TARGET_RUN_ID" ]; then
+            echo "Searching for latest successful Linux Build run..."
+            TARGET_RUN_ID=$(gh run list --workflow="Linux Build" --status=success --limit=1 --json databaseId -q '.[0].databaseId')
+          fi
+          echo "Using run ID: $TARGET_RUN_ID"
+          export TARGET_RUN_ID
+          if ! gh run download "$TARGET_RUN_ID" --name oxDesktop-linux-x64 --dir downloaded_pkg; then
+            echo "gh run download failed, using GitHub API fallback..."
+            python3 - << 'PYEOF'
+          import os, json, urllib.request, zipfile
+
+          token = os.environ.get("GH_TOKEN")
+          run_id = os.environ.get("TARGET_RUN_ID")
+          repo = os.environ.get("GITHUB_REPOSITORY")
+
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json",
+              "User-Agent": "Screenshot-Downloader"
+          }
+
+          url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts"
+          req = urllib.request.Request(url, headers=headers)
+          with urllib.request.urlopen(req) as resp:
+              data = json.loads(resp.read().decode('utf-8'))
+              art = next(a for a in data['artifacts'] if a['name'] == 'oxDesktop-linux-x64')
+              dl_url = art['archive_download_url']
+
+          class NoAuth(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  r = super().redirect_request(req, fp, code, msg, headers, newurl)
+                  if r and "github.com" not in newurl:
+                      r.headers.pop("Authorization", None)
+                  return r
+
+          opener = urllib.request.build_opener(NoAuth())
+          req = urllib.request.Request(dl_url, headers=headers)
+          with opener.open(req) as resp:
+              with open("pkg.zip", "wb") as f:
+                  f.write(resp.read())
+
+          with zipfile.ZipFile("pkg.zip", "r") as z:
+              z.extractall("downloaded_pkg")
+          print("Successfully downloaded and extracted artifact!")
+          PYEOF
+          fi
+          ls -la downloaded_pkg/
+
+      - name: Extract package
+        run: |
+          mkdir -p app
+          tar -xzf downloaded_pkg/oxDesktop-linux-x64.*.tar.gz -C app/
+          chmod +x app/oxDesktop/oxDesktop app/oxDesktop/oxDesktop-bin
+          ls -la app/oxDesktop/
+
+      - name: Capture views under headless display
+        run: |
+          mkdir -p screenshots
+          export DISPLAY=:99
+          export NO_AT_SPI=1
+          export QT_QPA_PLATFORMTHEME=generic
+          export QT_QPA_PLATFORM=xcb
+          export XDG_CURRENT_DESKTOP=generic
+          export DESKTOP_SESSION=generic
+          export GNOME_DESKTOP_SESSION_ID=""
+
+          Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset &
+          XVFB_PID=$!
+          sleep 3
+
+          PKG="$PWD/app/oxDesktop/oxDesktop"
+          SHOTS_DIR="$PWD/screenshots"
+
+          dbus-run-session bash -c "
+            export NO_AT_SPI=1
+            export QT_QPA_PLATFORMTHEME=generic
+            export QT_QPA_PLATFORM=xcb
+            export XDG_CURRENT_DESKTOP=generic
+            export DESKTOP_SESSION=generic
+            export GNOME_DESKTOP_SESSION_ID=''
+            echo 'Capturing Settings view...'
+            $PKG --demo-mode --demo-view settings --demo-screenshot '$SHOTS_DIR/settings.png' --demo-delay 3500 --demo-exit || true
+            sleep 2
+            echo 'Capturing Appearance view...'
+            $PKG --demo-mode --demo-view appearance --demo-screenshot '$SHOTS_DIR/appearance.png' --demo-delay 3500 --demo-exit || true
+            sleep 2
+            echo 'Capturing Chats view...'
+            $PKG --demo-mode --demo-view chats --demo-screenshot '$SHOTS_DIR/chats.png' --demo-delay 3500 --demo-exit || true
+            sleep 2
+            echo 'Capturing Plugins view...'
+            $PKG --demo-mode --demo-view plugins --demo-screenshot '$SHOTS_DIR/plugins.png' --demo-delay 3500 --demo-exit || true
+            sleep 2
+            echo 'Capturing Main window...'
+            $PKG --demo-mode --demo-view main --demo-screenshot '$SHOTS_DIR/oxdesktop.png' --demo-delay 3500 --demo-exit || true
+          "
+
+          kill $XVFB_PID || true
+          echo "Captured screenshots:"
+          ls -la screenshots/
+
+      - name: Upload screenshots artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxdesktop-screenshots
+          path: screenshots/*.png
+          retention-days: 14

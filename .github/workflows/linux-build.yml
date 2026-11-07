@@ -200,29 +200,42 @@ jobs:
       - name: Generate Demo Screenshots
         run: |
           mkdir -p screenshots
-          sudo apt-get update && sudo apt-get install -y xvfb libxcb-cursor0 libx11-xcb1 libxkbcommon-x11-0
+          sudo apt-get update && sudo apt-get install -y xvfb dbus-x11 libxcb-cursor0 libx11-xcb1 libxkbcommon-x11-0
           export DISPLAY=:99
+          export NO_AT_SPI=1
+          export QT_QPA_PLATFORMTHEME=generic
           export QT_QPA_PLATFORM=xcb
+          export XDG_CURRENT_DESKTOP=generic
+          export DESKTOP_SESSION=generic
+          export GNOME_DESKTOP_SESSION_ID=""
           Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset &
           XVFB_PID=$!
-          sleep 2
+          sleep 3
           PKG="./pkg/oxDesktop/oxDesktop"
           chmod +x "$PKG" ./pkg/oxDesktop/oxDesktop-bin
           SHOTS_DIR="$PWD/screenshots"
-          echo "Capturing Settings view..."
-          $PKG --demo-mode --demo-view settings --demo-screenshot "$SHOTS_DIR/settings.png" --demo-delay 3500 --demo-exit || true
-          sleep 2
-          echo "Capturing Appearance view..."
-          $PKG --demo-mode --demo-view appearance --demo-screenshot "$SHOTS_DIR/appearance.png" --demo-delay 3500 --demo-exit || true
-          sleep 2
-          echo "Capturing Chats view..."
-          $PKG --demo-mode --demo-view chats --demo-screenshot "$SHOTS_DIR/chats.png" --demo-delay 3500 --demo-exit || true
-          sleep 2
-          echo "Capturing Plugins view..."
-          $PKG --demo-mode --demo-view plugins --demo-screenshot "$SHOTS_DIR/plugins.png" --demo-delay 3500 --demo-exit || true
-          sleep 2
-          echo "Capturing Main window..."
-          $PKG --demo-mode --demo-view main --demo-screenshot "$SHOTS_DIR/oxdesktop.png" --demo-delay 3500 --demo-exit || true
+          dbus-run-session bash -c "
+            export NO_AT_SPI=1
+            export QT_QPA_PLATFORMTHEME=generic
+            export QT_QPA_PLATFORM=xcb
+            export XDG_CURRENT_DESKTOP=generic
+            export DESKTOP_SESSION=generic
+            export GNOME_DESKTOP_SESSION_ID=''
+            echo 'Capturing Settings view...'
+            $PKG --demo-mode --demo-view settings --demo-screenshot '$SHOTS_DIR/settings.png' --demo-delay 3500 --demo-exit || true
+            sleep 2
+            echo 'Capturing Appearance view...'
+            $PKG --demo-mode --demo-view appearance --demo-screenshot '$SHOTS_DIR/appearance.png' --demo-delay 3500 --demo-exit || true
+            sleep 2
+            echo 'Capturing Chats view...'
+            $PKG --demo-mode --demo-view chats --demo-screenshot '$SHOTS_DIR/chats.png' --demo-delay 3500 --demo-exit || true
+            sleep 2
+            echo 'Capturing Plugins view...'
+            $PKG --demo-mode --demo-view plugins --demo-screenshot '$SHOTS_DIR/plugins.png' --demo-delay 3500 --demo-exit || true
+            sleep 2
+            echo 'Capturing Main window...'
+            $PKG --demo-mode --demo-view main --demo-screenshot '$SHOTS_DIR/oxdesktop.png' --demo-delay 3500 --demo-exit || true
+          "
           kill $XVFB_PID || true
           ls -la screenshots/
 
