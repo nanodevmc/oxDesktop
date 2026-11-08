@@ -9947,4 +9947,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_exd_amoled_pure_black" = "Pure AMOLED Black (#000000)";
 "lng_exd_amoled_pure_black_about" = "Use true pitch black background instead of dark gray for ultimate OLED contrast.";
 
+"lng_exd_plugin_share" = "Share File";
+"lng_exd_plugin_port" = "Port with AI";
+"lng_exd_plugin_reload" = "Reload";
+"lng_exd_plugin_perm_none" = "No permissions granted";
+"lng_exd_plugin_no_settings" = "The plugin has no settings.";
+"lng_exd_plugin_settings_off" = "Settings are available after the plugin is enabled.";
+"lng_exd_guard_run" = "Check Plugin";
+"lng_exd_plugin_reloaded" = "{name} reloaded";
+
 // Keys finished
