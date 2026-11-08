@@ -1017,6 +1017,7 @@ HistoryItem::HistoryItem(
 }
 
 HistoryItem::~HistoryItem() {
+	Extera::ForgetLocalPremiumEmoji(this);
 	_media = nullptr;
 	clearSavedMedia();
 	if (const auto reply = Get<HistoryMessageReply>()) {
@@ -4723,7 +4724,7 @@ void HistoryItem::setText(TextWithEntities textWithEntities) {
 	if (Extera::HasZalgo(textWithEntities.text)) {
 		Extera::FilterZalgo(textWithEntities);
 	}
-	Extera::ApplyLocalPremiumEmoji(textWithEntities);
+	Extera::ApplyLocalPremiumEmoji(this, textWithEntities);
 	detectTextLinks(textWithEntities);
 	setTextValue((_media && _media->consumeMessageText(textWithEntities))
 		? TextWithEntities()

@@ -94,6 +94,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/unixtime.h"
 #include "base/call_delayed.h"
 #include "base/random.h"
+#include "extera/extera_emoji.h"
 #include "spellcheck/spellcheck_highlight_syntax.h"
 
 namespace Data {
@@ -2277,6 +2278,17 @@ void Session::requestItemViewRefresh(not_null<const HistoryItem*> item) {
 		view->refreshInBlock();
 	}
 	_itemViewRefreshRequest.fire_copy(item);
+}
+
+void Session::exteraReapplyPremiumEmoji() {
+	auto items = std::vector<not_null<HistoryItem*>>();
+	items.reserve(_views.size());
+	for (const auto &[item, views] : _views) {
+		items.push_back(const_cast<HistoryItem*>(item.get()));
+	}
+	for (const auto item : items) {
+		Extera::ReapplyLocalPremiumEmoji(item);
+	}
 }
 
 rpl::producer<not_null<const HistoryItem*>> Session::itemViewRefreshRequest() const {

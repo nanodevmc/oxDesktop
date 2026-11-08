@@ -58,12 +58,37 @@
 #include <QtCore/QFile>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
+#include <QtGui/QCursor>
 #include <QtSvg/QSvgRenderer>
 #include <QtCore/QFileInfo>
 #include <QtCore/QJsonObject>
 
 namespace Extera::Plugins {
 namespace {
+
+enum class ThreatLevel {
+	Danger,
+	Attention,
+	Other,
+};
+
+struct Threat {
+	QString key;
+	ThreatLevel level = ThreatLevel::Other;
+	const style::icon *icon = nullptr;
+	const style::icon *chip = nullptr;
+	QString chipText;
+	QString title;
+	QString about;
+};
+
+[[nodiscard]] std::vector<Threat> CollectThreats(
+	const QJsonObject &capabilities);
+
+void ShowThreatsBox(
+	not_null<Window::SessionController*> controller,
+	const QString &path,
+	std::vector<Threat> threats);
 
 [[nodiscard]] QString Subtitle(const QJsonObject &info) {
 	auto parts = QStringList();
@@ -114,6 +139,25 @@ void FillSettings(
 	const auto items = Call(u"settings"_q, QJsonObject{
 		{ u"id"_q, id },
 	}).toArray();
+	if (items.isEmpty()) {
+		auto enabled = false;
+		for (const auto &entry : Call(u"list"_q).toArray()) {
+			const auto info = entry.toObject();
+			if (info.value(u"id"_q).toString() == id) {
+				enabled = info.value(u"enabled"_q).toBool();
+			}
+		}
+		Ui::AddSkip(container);
+		container->add(
+			object_ptr<Ui::FlatLabel>(
+				container,
+				(enabled
+					? tr::lng_exd_plugin_no_settings()
+					: tr::lng_exd_plugin_settings_off()),
+				st::exteraAbout),
+			st::exteraAboutPadding);
+		return;
+	}
 	const auto changed = [=](int index, QJsonValue value) {
 		Call(u"setting_changed"_q, QJsonObject{
 			{ u"id"_q, id },
@@ -321,6 +365,19 @@ void FillSettings(
 		}
 	}
 	Ui::AddSkip(container);
+}
+
+void FillPermissions(
+		not_null<Ui::VerticalLayout*> container,
+		not_null<Window::SessionController*> controller,
+		const QString &id) {
+	Ui::AddSkip(container);
+	container->add(
+		object_ptr<Ui::FlatLabel>(
+			container,
+			tr::lng_exd_plugin_perm_none(),
+			st::exteraAbout),
+		st::exteraAboutPadding);
 }
 
 [[nodiscard]] QStringList PinnedPlugins() {
@@ -786,11 +843,8 @@ void FillPluginsList(
 				buttons.push_back(button);
 				return button;
 			};
-			addAction(st::menuIconShare, [=] {
-				SharePluginFile(controller, path);
-			});
-			addAction(st::exteraIconOpenCode, [=] {
-				ShowPluginCode(controller, name, path);
+			addAction(st::menuIconSettings, [=] {
+				ShowPluginSettings(controller, id);
 			});
 			const auto isPinned = pinned.contains(id);
 			addAction(
@@ -799,11 +853,47 @@ void FillPluginsList(
 					SetPluginPinned(id, !isPinned);
 					notifyListChanged();
 				});
-			if (info.value(u"has_settings"_q).toBool()) {
-				addAction(st::menuIconSettings, [=] {
-					ShowPluginSettings(controller, id);
-				});
-			}
+			const auto developer = Bool(u"plugins_developer_mode"_q);
+			const auto menu = card->lifetime().make_state<
+				base::unique_qptr<Ui::PopupMenu>>();
+			const auto more = Ui::CreateChild<Ui::IconButton>(
+				actions,
+				st::exteraPluginAction);
+			more->setIconOverride(&st::exteraIconMore, &st::exteraIconMore);
+			more->setClickedCallback([=] {
+				*menu = base::make_unique_q<Ui::PopupMenu>(
+					more,
+					st::popupMenuWithIcons);
+				const auto raw = menu->get();
+				raw->addAction(tr::lng_exd_plugin_share(tr::now), [=] {
+					SharePluginFile(controller, path);
+				}, &st::menuIconShare);
+				raw->addAction(tr::lng_exd_plugin_view_code(tr::now), [=] {
+					ShowPluginCode(controller, name, path);
+				}, &st::exteraIconOpenCode);
+				raw->addAction(tr::lng_exd_guard_run(tr::now), [=] {
+					ShowThreatsBox(
+						controller,
+						path,
+						CollectThreats(info.value(u"capabilities"_q).toObject()));
+				}, &st::menuIconAntispam);
+				raw->addAction(tr::lng_exd_plugin_port(tr::now), [=] {
+					controller->showToast(tr::lng_exd_plugin_port(tr::now));
+				}, &st::menuIconTranslate);
+				if (developer) {
+					raw->addAction(tr::lng_exd_plugin_reload(tr::now), [=] {
+						crl::on_main(controller, [=] {
+							Call(u"reload"_q, QJsonObject{ { u"id"_q, id } });
+							notifyListChanged();
+							controller->showToast(tr::lng_exd_plugin_reloaded(
+								tr::now,
+								lt_name,
+								name));
+						});
+					}, &st::menuIconRestore);
+				}
+				raw->popup(QCursor::pos());
+			});
 			const auto remove = Ui::CreateChild<Ui::IconButton>(
 				actions,
 				st::exteraPluginAction);
@@ -830,6 +920,7 @@ void FillPluginsList(
 					left += button->width();
 				}
 				remove->moveToRight(0, 0, width);
+				more->moveToRight(remove->width(), 0, width);
 			}, actions->lifetime());
 			Ui::AddSkip(card, st::exteraPluginCardSkip);
 		}
@@ -845,27 +936,11 @@ namespace {
 
 // Threats
 
-enum class ThreatLevel {
-	Danger,
-	Attention,
-	Other,
-};
-
 enum class Chevron {
 	None,
 	Right,
 	Down,
 	Up,
-};
-
-struct Threat {
-	QString key;
-	ThreatLevel level = ThreatLevel::Other;
-	const style::icon *icon = nullptr;
-	const style::icon *chip = nullptr;
-	QString chipText;
-	QString title;
-	QString about;
 };
 
 [[nodiscard]] QColor ThreatColor(ThreatLevel level) {
