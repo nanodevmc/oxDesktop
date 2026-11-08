@@ -1,159 +1,65 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 600" width="500" height="600">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 540" width="400" height="540" style="background: transparent;">
   <defs>
-    <!-- Afterburner Shock Diamond Gradient -->
-    <linearGradient id="afterburnerCore" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="1.0" />
-      <stop offset="25%" stop-color="#ff7a28" stop-opacity="0.95" />
-      <stop offset="65%" stop-color="#da3018" stop-opacity="0.8" />
+    <linearGradient id="velocityBeam" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="25%" stop-color="#da3018" stop-opacity="0.85" />
+      <stop offset="70%" stop-color="#da3018" stop-opacity="0.35" />
       <stop offset="100%" stop-color="#da3018" stop-opacity="0.0" />
     </linearGradient>
-    <radialGradient id="machShockGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="60%" stop-color="#ffffff" stop-opacity="0" />
-      <stop offset="85%" stop-color="#ffffff" stop-opacity="0.9" />
-      <stop offset="95%" stop-color="#da3018" stop-opacity="0.7" />
-      <stop offset="100%" stop-color="#da3018" stop-opacity="0" />
+    <radialGradient id="impulseRing" cx="50%" cy="50%" r="50%">
+      <stop offset="70%" stop-color="#ffffff" stop-opacity="0.0" />
+      <stop offset="90%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="98%" stop-color="#da3018" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#da3018" stop-opacity="0.0" />
     </radialGradient>
   </defs>
 
   <style>
-    @keyframes stealthFlight {
-        0.0% { transform: translate(250.0px, 372.0px) rotate(0.0deg) scale(1.000, 1.000); opacity: 1.00; }
-        2.0% { transform: translate(250.0px, 371.2px) rotate(0.0deg) scale(1.003, 1.003); opacity: 1.00; }
-        4.0% { transform: translate(250.0px, 370.7px) rotate(0.0deg) scale(1.007, 1.007); opacity: 1.00; }
-        6.0% { transform: translate(250.0px, 370.5px) rotate(0.0deg) scale(1.010, 1.010); opacity: 1.00; }
-        8.0% { transform: translate(250.0px, 370.7px) rotate(0.0deg) scale(1.013, 1.013); opacity: 1.00; }
-       10.0% { transform: translate(250.0px, 371.2px) rotate(0.0deg) scale(1.017, 1.017); opacity: 1.00; }
-       12.0% { transform: translate(250.0px, 372.0px) rotate(-0.0deg) scale(1.020, 1.020); opacity: 1.00; }
-       14.0% { transform: translate(247.0px, 366.0px) rotate(-44.9deg) scale(1.001, 1.027); opacity: 1.00; }
-       16.0% { transform: translate(238.3px, 360.0px) rotate(-61.9deg) scale(0.941, 1.034); opacity: 1.00; }
-       18.0% { transform: translate(225.0px, 354.0px) rotate(-68.3deg) scale(0.873, 1.040); opacity: 1.00; }
-       20.0% { transform: translate(208.7px, 348.0px) rotate(-70.8deg) scale(0.830, 1.046); opacity: 1.00; }
-       22.0% { transform: translate(191.3px, 342.0px) rotate(-70.8deg) scale(0.834, 1.051); opacity: 1.00; }
-       24.0% { transform: translate(175.0px, 336.0px) rotate(-68.3deg) scale(0.885, 1.055); opacity: 1.00; }
-       26.0% { transform: translate(161.7px, 330.0px) rotate(-61.9deg) scale(0.963, 1.058); opacity: 1.00; }
-       28.0% { transform: translate(153.0px, 324.0px) rotate(-44.9deg) scale(1.032, 1.059); opacity: 1.00; }
-       30.0% { transform: translate(150.0px, 318.0px) rotate(-0.0deg) scale(1.060, 1.060); opacity: 1.00; }
-       32.0% { transform: translate(153.0px, 312.0px) rotate(44.9deg) scale(1.032, 1.059); opacity: 1.00; }
-       34.0% { transform: translate(161.7px, 306.0px) rotate(61.9deg) scale(0.963, 1.058); opacity: 1.00; }
-       36.0% { transform: translate(175.0px, 300.0px) rotate(68.3deg) scale(0.885, 1.055); opacity: 1.00; }
-       38.0% { transform: translate(191.3px, 294.0px) rotate(70.8deg) scale(0.834, 1.051); opacity: 1.00; }
-       40.0% { transform: translate(208.7px, 288.0px) rotate(70.8deg) scale(0.830, 1.046); opacity: 1.00; }
-       42.0% { transform: translate(225.0px, 282.0px) rotate(68.3deg) scale(0.873, 1.040); opacity: 1.00; }
-       44.0% { transform: translate(238.3px, 276.0px) rotate(61.9deg) scale(0.941, 1.034); opacity: 1.00; }
-       46.0% { transform: translate(247.0px, 270.0px) rotate(44.9deg) scale(1.001, 1.027); opacity: 1.00; }
-       48.0% { transform: translate(250.0px, 264.0px) rotate(0.0deg) scale(1.060, 1.060); opacity: 1.00; }
-       50.0% { transform: translate(252.9px, 257.6px) rotate(41.8deg) scale(1.044, 1.071); opacity: 1.00; }
-       52.0% { transform: translate(261.1px, 251.3px) rotate(59.0deg) scale(0.986, 1.082); opacity: 1.00; }
-       54.0% { transform: translate(273.6px, 244.9px) rotate(65.7deg) scale(0.923, 1.092); opacity: 1.00; }
-       56.0% { transform: translate(288.6px, 238.6px) rotate(67.9deg) scale(0.892, 1.100); opacity: 1.00; }
-       58.0% { transform: translate(304.1px, 232.2px) rotate(67.2deg) scale(0.912, 1.108); opacity: 1.00; }
-       60.0% { transform: translate(318.1px, 225.9px) rotate(63.1deg) scale(0.977, 1.114); opacity: 1.00; }
-       62.0% { transform: translate(328.6px, 219.5px) rotate(52.5deg) scale(1.057, 1.118); opacity: 1.00; }
-       64.0% { transform: translate(334.3px, 213.2px) rotate(24.4deg) scale(1.112, 1.120); opacity: 1.00; }
-       66.0% { transform: translate(334.3px, 206.8px) rotate(-24.4deg) scale(1.112, 1.120); opacity: 1.00; }
-       68.0% { transform: translate(328.6px, 200.5px) rotate(-52.5deg) scale(1.057, 1.118); opacity: 1.00; }
-       70.0% { transform: translate(318.1px, 194.1px) rotate(-63.1deg) scale(0.977, 1.114); opacity: 1.00; }
-       72.0% { transform: translate(304.1px, 187.8px) rotate(-67.2deg) scale(0.912, 1.108); opacity: 1.00; }
-       74.0% { transform: translate(288.6px, 181.4px) rotate(-67.9deg) scale(0.892, 1.100); opacity: 1.00; }
-       76.0% { transform: translate(273.6px, 175.1px) rotate(-65.7deg) scale(0.923, 1.092); opacity: 1.00; }
-       78.0% { transform: translate(261.1px, 168.7px) rotate(-59.0deg) scale(0.986, 1.082); opacity: 1.00; }
-       80.0% { transform: translate(252.9px, 162.4px) rotate(-41.8deg) scale(1.044, 1.071); opacity: 1.00; }
-       82.0% { transform: translate(250.0px, 156.0px) rotate(0.0deg) scale(1.120, 1.120); opacity: 1.00; }
-       84.0% { transform: translate(250.0px, 155.1px) rotate(0.0deg) scale(1.156, 1.156); opacity: 1.00; }
-       86.0% { transform: translate(250.0px, 152.4px) rotate(0.0deg) scale(1.191, 1.191); opacity: 0.99; }
-       88.0% { transform: translate(250.0px, 148.0px) rotate(0.0deg) scale(1.227, 1.227); opacity: 0.96; }
-       90.0% { transform: translate(250.0px, 141.8px) rotate(0.0deg) scale(1.262, 1.262); opacity: 0.91; }
-       92.0% { transform: translate(250.0px, 133.8px) rotate(0.0deg) scale(1.298, 1.298); opacity: 0.83; }
-       94.0% { transform: translate(250.0px, 124.0px) rotate(0.0deg) scale(1.333, 1.333); opacity: 0.70; }
-       96.0% { transform: translate(250.0px, 112.4px) rotate(0.0deg) scale(1.369, 1.369); opacity: 0.53; }
-       98.0% { transform: translate(250.0px, 99.1px) rotate(0.0deg) scale(1.404, 1.404); opacity: 0.30; }
-      100.0% { transform: translate(250.0px, 84.0px) rotate(0.0deg) scale(1.440, 1.440); opacity: 0.00; }
+    @keyframes supersonicSurge {
+      0.0%  { transform: translate(200.0px, 116.0px) scale(1.0); opacity: 1.0; }
+      12.0% { transform: translate(200.0px, 118.5px) scale(0.95); opacity: 1.0; }
+      28.0% { transform: translate(200.0px, 76.0px) scale(1.04); opacity: 1.0; }
+      45.0% { transform: translate(200.0px, -44.0px) scale(1.12); opacity: 0.9; }
+      60.0% { transform: translate(200.0px, -204.0px) scale(1.20); opacity: 0.0; }
+      100.0%{ transform: translate(200.0px, -204.0px) scale(1.20); opacity: 0.0; }
     }
 
-    @keyframes machShockFront {
-        0.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-        2.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-        4.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-        6.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-        8.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       10.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       12.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       14.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       16.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       18.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       20.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       22.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       24.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       26.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       28.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       30.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       32.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       34.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       36.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       38.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       40.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       42.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       44.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       46.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       48.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       50.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       52.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       54.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       56.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       58.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       60.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       62.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       64.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       66.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       68.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       70.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       72.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       74.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       76.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       78.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       80.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       82.0% { transform: translate(250px, 300px) scale(0.01); opacity: 0; }
-       84.0% { transform: translate(250.0px, 155.1px) scale(1.647); opacity: 0.84; }
-       86.0% { transform: translate(250.0px, 152.4px) scale(2.356); opacity: 0.74; }
-       88.0% { transform: translate(250.0px, 148.0px) scale(2.946); opacity: 0.63; }
-       90.0% { transform: translate(250.0px, 141.8px) scale(3.470); opacity: 0.53; }
-       92.0% { transform: translate(250.0px, 133.8px) scale(3.949); opacity: 0.42; }
-       94.0% { transform: translate(250.0px, 124.0px) scale(4.395); opacity: 0.32; }
-       96.0% { transform: translate(250.0px, 112.4px) scale(4.816); opacity: 0.21; }
-       98.0% { transform: translate(250.0px, 99.1px) scale(5.217); opacity: 0.11; }
-      100.0% { transform: translate(250.0px, 84.0px) scale(5.600); opacity: -0.00; }
+    @keyframes streakPulse {
+      0.0%  { opacity: 0.0; transform: scaleY(0.01); }
+      12.0% { opacity: 0.0; transform: scaleY(0.01); }
+      25.0% { opacity: 0.9; transform: scaleY(0.6); }
+      45.0% { opacity: 0.85; transform: scaleY(1.3); }
+      60.0% { opacity: 0.0; transform: scaleY(1.8); }
+      100.0%{ opacity: 0.0; transform: scaleY(0.01); }
     }
 
-    .craft-group {
+    @keyframes groundRing {
+      0.0%  { transform: translate(200.0px, 128.8px) scale(0.15, 0.05); opacity: 0.0; }
+      12.0% { transform: translate(200.0px, 128.8px) scale(0.65, 0.22); opacity: 0.9; }
+      40.0% { transform: translate(200.0px, 128.8px) scale(1.60, 0.55); opacity: 0.0; }
+      100.0%{ transform: translate(200.0px, 128.8px) scale(1.60, 0.55); opacity: 0.0; }
+    }
+
+    .craft {
+      animation: supersonicSurge 1.4s cubic-bezier(0.1, 0.0, 0.2, 1.0) infinite;
+    }
+    .streak {
+      transform-origin: 0px 48px;
+      animation: streakPulse 1.4s cubic-bezier(0.1, 0.0, 0.2, 1.0) infinite;
+    }
+    .ring {
       transform-origin: 0px 0px;
-      animation: stealthFlight 4.8s cubic-bezier(0.2, 0.0, 0.2, 1.0) infinite;
-    }
-
-    .mach-shock {
-      transform-origin: 0px 0px;
-      animation: machShockFront 4.8s cubic-bezier(0.2, 0.0, 0.2, 1.0) infinite;
+      animation: groundRing 1.4s cubic-bezier(0.1, 0.0, 0.2, 1.0) infinite;
     }
   </style>
 
-  <!-- Deep Aero Delta Canvas Background -->
-  <rect width="500" height="600" fill="#141517" rx="16" />
+  <!-- PURE TRANSPARENT OVERLAY: Ground Optical Mach Pulse Ring -->
+  <circle class="ring" r="60" fill="url(#impulseRing)" />
 
-  <!-- Supersonic Mach Shockfront -->
-  <circle class="mach-shock" r="50" fill="url(#machShockGlow)" />
-
-  <!-- Stealth Delta Aircraft with Afterburner & Shock Diamonds -->
-  <g class="craft-group">
-    <!-- Dual Exhaust Plumes -->
-    <polygon points="-16,42 0,115 -10,42" fill="url(#afterburnerCore)" />
-    <polygon points="10,42 0,115 16,42" fill="url(#afterburnerCore)" />
-    
-    <!-- Mach Diamond Shock Nodes -->
-    <polygon points="-13,56 -10,62 -13,68 -16,62" fill="#ffffff" opacity="0.95" />
-    <polygon points="-13,74 -11,79 -13,84 -15,79" fill="#ffffff" opacity="0.85" />
-    <polygon points="13,56 16,62 13,68 10,62" fill="#ffffff" opacity="0.95" />
-    <polygon points="13,74 15,79 13,84 11,79" fill="#ffffff" opacity="0.85" />
-
-    <!-- Delta Stealth Glyph Airframe -->
-    <image href="data:image/png;base64,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" x="-70" y="-70" width="140" height="140" />
+  <!-- Supersonic Craft Group Taking Off from Exact Resting Spot -->
+  <g class="craft">
+    <path class="streak" d="M -28,48 L -2,240 L 2,240 L 28,48 Z" fill="url(#velocityBeam)" />
+    <rect class="streak" x="-1.5" y="48" width="3" height="120" fill="#ffffff" opacity="0.9" />
+    <image href="data:image/png;base64,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" x="-80.0" y="-80.0" width="160.0" height="160.0" />
   </g>
 </svg>
