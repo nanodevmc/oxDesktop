@@ -574,77 +574,223 @@ void Step::startTakeoff(Fn<void()> onFinished) {
 		},
 		0.,
 		1.,
-		800);
+		1400);
 }
 
 void Step::paintTakeoff(QPainter &p, int top) {
 	static const auto deltaGlyph = QImage(u":/gui/art/app_icon_glyph.png"_q)
 		.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-	constexpr auto kDeltaSize = 160;
+	constexpr auto kDeltaSize = 160.0;
 	const auto centerX = width() / 2.0;
 	const auto startTop = top + 36.0;
+	const auto y0 = startTop + kDeltaSize * 0.58;
 	const auto t = _a_takeoff.value(1.0);
 
 	auto hq = PainterHighQualityEnabler(p);
 
-	// Physics trajectory: starts EXACTLY at (centerX, startTop)
-	float64 curY = startTop;
-	float64 curScale = 1.0;
+	// Bounded aerodynamic flight model strictly inside the application window
+	const auto deltaX1 = std::min(72.0, width() * 0.18);
+	const auto deltaX2 = std::min(58.0, width() * 0.15);
+
+	float64 curX = centerX;
+	float64 curY = y0;
+	float64 heading = 0.0; // degrees
+	float64 bank = 0.0;    // degrees (roll angle)
+	float64 scale = 1.0;
+	float64 alpha = 1.0;
+	float64 flamePwr = 0.0;
+	float64 vaporG = 0.0;
+	float64 boom = 0.0;
+
 	if (t < 0.12) {
-		// Initial ignition / subtle vibration
-		curScale = 1.0 + t * 0.08;
-		curY = startTop + std::sin(t / 0.12 * M_PI) * 1.5;
+		// Phase 0: Ignition / Spool-up (stationary at static resting position with micro-vibration)
+		const auto u = t / 0.12;
+		curX = centerX;
+		curY = y0 - std::sin(u * M_PI) * 1.5;
+		heading = 0.0;
+		bank = 0.0;
+		scale = 1.0 + 0.02 * u;
+		alpha = 1.0;
+		flamePwr = u;
+		vaporG = 0.0;
+		boom = 0.0;
+	} else if (t < 0.48) {
+		// Phase 1: Tactical climbing left sweep (sin^2 curve ensures zero velocity jumps)
+		const auto u = (t - 0.12) / 0.36;
+		const auto sinU = std::sin(M_PI * u);
+		curX = centerX - deltaX1 * (sinU * sinU);
+		curY = y0 - 32.0 * u;
+		const auto dx = -deltaX1 * M_PI * std::sin(2.0 * M_PI * u);
+		const auto dy = -32.0;
+		heading = std::atan2(dx, -dy) * (180.0 / M_PI);
+		bank = -38.0 * std::sin(2.0 * M_PI * u);
+		scale = 1.02 + 0.04 * sinU;
+		alpha = 1.0;
+		flamePwr = 1.0;
+		vaporG = std::max(0.0, std::sin(2.0 * M_PI * u)) * 0.6;
+		boom = 0.0;
+	} else if (t < 0.82) {
+		// Phase 2: Counter-bank climbing right sweep
+		const auto u = (t - 0.48) / 0.34;
+		const auto sinU = std::sin(M_PI * u);
+		curX = centerX + deltaX2 * (sinU * sinU);
+		curY = y0 - 32.0 - 32.0 * u;
+		const auto dx = deltaX2 * M_PI * std::sin(2.0 * M_PI * u);
+		const auto dy = -32.0;
+		heading = std::atan2(dx, -dy) * (180.0 / M_PI);
+		bank = 36.0 * std::sin(2.0 * M_PI * u);
+		scale = 1.06 + 0.06 * sinU;
+		alpha = 1.0;
+		flamePwr = 1.0;
+		vaporG = std::max(0.0, std::sin(2.0 * M_PI * u)) * 0.85;
+		boom = 0.0;
 	} else {
-		// Supersonic climb surge
-		const auto progress = (t - 0.12) / 0.88;
-		const auto surge = anim::easeInQuad(1.0, progress);
-		curScale = 1.0 + t * 0.35;
-		curY = startTop - surge * (startTop + kDeltaSize * curScale + 140.0);
+		// Phase 3: Wings level, center alignment, supersonic Mach breakout
+		const auto u = (t - 0.82) / 0.18;
+		const auto uEase = u * u;
+		curX = centerX;
+		curY = y0 - 64.0 - 24.0 * uEase;
+		heading = 0.0;
+		bank = 0.0;
+		scale = 1.12 + 0.32 * u;
+		alpha = std::max(0.0, 1.0 - u * u * u);
+		flamePwr = std::max(0.0, 1.0 - u);
+		vaporG = 0.0;
+		boom = u;
 	}
 
-	const auto curSize = kDeltaSize * curScale;
-	const auto curLeft = centerX - curSize / 2.0;
-	const auto nozzleY = curY + curSize * 0.58;
+	const auto curSize = kDeltaSize * scale;
+	const auto bankRad = bank * (M_PI / 180.0);
+	const auto bankCos = std::max(0.35, std::abs(std::cos(bankRad)));
+	const auto headRad = heading * (M_PI / 180.0);
+	const auto dirX = std::sin(headRad);
+	const auto dirY = -std::cos(headRad);
+	const auto normX = -dirY;
+	const auto normY = dirX;
 
-	// Afterburner flame and high-energy propulsion trail
-	const auto flameLen = 75.0 + t * 240.0;
-	QLinearGradient flameGrad(centerX, nozzleY - 10, centerX, nozzleY + flameLen);
-	flameGrad.setColorAt(0.0, QColor(255, 255, 255, 245)); // white-hot plasma nozzle
-	flameGrad.setColorAt(0.16, QColor(255, 92, 54, 220));   // intense orange flame
-	flameGrad.setColorAt(0.55, QColor(218, 48, 24, 185));  // Aero Delta signature crimson
-	flameGrad.setColorAt(1.0, QColor(218, 48, 24, 0));     // fading exhaust dissipation
+	// Dual exhaust nozzles
+	const auto nozzleDist = curSize * 0.36;
+	const auto nozzleSpread = curSize * 0.14 * bankCos;
+	const auto nzLeftX = curX - dirX * nozzleDist - normX * nozzleSpread;
+	const auto nzLeftY = curY - dirY * nozzleDist - normY * nozzleSpread;
+	const auto nzRightX = curX - dirX * nozzleDist + normX * nozzleSpread;
+	const auto nzRightY = curY - dirY * nozzleDist + normY * nozzleSpread;
 
-	QPainterPath plume;
-	const auto plumeHalfW = 12.0 + t * 20.0;
-	plume.moveTo(centerX - plumeHalfW * 0.45, nozzleY);
-	plume.lineTo(centerX - plumeHalfW * 2.2, nozzleY + flameLen * 0.82);
-	plume.lineTo(centerX - plumeHalfW * 0.7, nozzleY + flameLen * 0.96);
-	plume.lineTo(centerX, nozzleY + flameLen * 1.08);
-	plume.lineTo(centerX + plumeHalfW * 0.7, nozzleY + flameLen * 0.96);
-	plume.lineTo(centerX + plumeHalfW * 2.2, nozzleY + flameLen * 0.82);
-	plume.lineTo(centerX + plumeHalfW * 0.45, nozzleY);
-	plume.closeSubpath();
+	// 1. Twin afterburner plumes with supersonic Mach shock diamonds
+	if (flamePwr > 0.01) {
+		const auto flameLen = (40.0 + 105.0 * flamePwr) * scale;
+		const auto flameW = (6.0 + 4.5 * flamePwr) * scale * bankCos;
 
-	p.setPen(Qt::NoPen);
-	p.setBrush(flameGrad);
-	p.drawPath(plume);
+		const std::pair<float64, float64> nozzles[] = {
+			{ nzLeftX, nzLeftY },
+			{ nzRightX, nzRightY }
+		};
+		for (const auto &[nzX, nzY] : nozzles) {
+			// Outer plume: Aero Delta signature crimson
+			QLinearGradient flameGrad(nzX, nzY, nzX - dirX * flameLen, nzY - dirY * flameLen);
+			flameGrad.setColorAt(0.0, QColor(255, 255, 255, int(245 * flamePwr * alpha)));
+			flameGrad.setColorAt(0.18, QColor(255, 140, 50, int(220 * flamePwr * alpha)));
+			flameGrad.setColorAt(0.60, QColor(218, 48, 24, int(170 * flamePwr * alpha)));
+			flameGrad.setColorAt(1.0, QColor(218, 48, 24, 0));
 
-	// Concentric supersonic Mach shockwave arcs expanding behind the airframe
-	const auto shockAlpha = int(std::clamp((1.0 - t) * 1.6, 0.0, 1.0) * 190);
-	if (shockAlpha > 8) {
-		p.setBrush(Qt::NoBrush);
-		p.setPen(QPen(QColor(255, 255, 255, shockAlpha / 2), 2.2));
-		p.drawArc(QRectF(centerX - (50 + t * 95), nozzleY + 8 + t * 25, (100 + t * 190), (32 + t * 50)), 0, 180 * 16);
+			QPainterPath plume;
+			plume.moveTo(nzX - normX * flameW, nzY - normY * flameW);
+			plume.lineTo(nzX - dirX * flameLen, nzY - dirY * flameLen);
+			plume.lineTo(nzX + normX * flameW, nzY + normY * flameW);
+			plume.closeSubpath();
 
-		p.setPen(QPen(QColor(218, 48, 24, shockAlpha / 3), 1.6));
-		p.drawArc(QRectF(centerX - (75 + t * 145), nozzleY + 24 + t * 45, (150 + t * 290), (42 + t * 70)), 0, 180 * 16);
+			p.setPen(Qt::NoPen);
+			p.setBrush(flameGrad);
+			p.drawPath(plume);
+
+			// Pulsing Mach diamond shock nodes
+			for (const auto ds : { 0.20, 0.40, 0.60 }) {
+				const auto dmX = nzX - dirX * (flameLen * ds);
+				const auto dmY = nzY - dirY * (flameLen * ds);
+				const auto dmR = (3.2 - ds * 1.8) * scale * bankCos;
+
+				QPolygonF diamond;
+				diamond << QPointF(dmX - dirX * (dmR * 1.6), dmY - dirY * (dmR * 1.6))
+						<< QPointF(dmX + normX * dmR, dmY + normY * dmR)
+						<< QPointF(dmX + dirX * (dmR * 1.6), dmY + dirY * (dmR * 1.6))
+						<< QPointF(dmX - normX * dmR, dmY - normY * dmR);
+
+				p.setBrush(QColor(255, 255, 255, int(245 * flamePwr * alpha)));
+				p.drawPolygon(diamond);
+			}
+		}
 	}
 
-	// Delta stealth plane with fade out as it approaches the top edge
-	const auto planeAlpha = (t < 0.65) ? 1.0 : (1.0 - (t - 0.65) / 0.35);
-	p.setOpacity(planeAlpha);
-	p.drawImage(QRectF(curLeft, curY, curSize, curSize), deltaGlyph);
-	p.setOpacity(1.0);
+	// 2. Wingtip condensation vortices (trailing vapor ribbons)
+	if (alpha > 0.05) {
+		const auto wtY = curSize * 0.22;
+		const auto wtSpan = curSize * 0.44 * bankCos;
+		const auto wtLeftX = curX - dirX * wtY - normX * wtSpan;
+		const auto wtLeftY = curY - dirY * wtY - normY * wtSpan;
+		const auto wtRightX = curX - dirX * wtY + normX * wtSpan;
+		const auto wtRightY = curY - dirY * wtY + normY * wtSpan;
+
+		const auto ribbonLen = 50.0 * scale;
+		p.setPen(QPen(QColor(255, 255, 255, int(75 * alpha)), 1.8));
+		p.drawLine(QPointF(wtLeftX, wtLeftY), QPointF(wtLeftX - dirX * ribbonLen + normX * 8, wtLeftY - dirY * ribbonLen + normY * 8));
+		p.drawLine(QPointF(wtRightX, wtRightY), QPointF(wtRightX - dirX * ribbonLen - normX * 8, wtRightY - dirY * ribbonLen - normY * 8));
+	}
+
+	// 3. Transonic Prandtl-Glauert condensation veil (during high G pull-up)
+	if (vaporG > 0.05 && alpha > 0.1) {
+		const auto vgAlpha = int(vaporG * 110 * alpha);
+		const auto vgW = curSize * 0.65 * bankCos;
+		const auto vgH = curSize * 0.28;
+		p.setPen(QPen(QColor(255, 255, 255, int(vgAlpha * 0.7)), 1.2));
+		p.setBrush(QColor(255, 255, 255, vgAlpha));
+		p.drawEllipse(QRectF(curX - vgW / 2.0, curY - vgH / 2.0, vgW, vgH));
+	}
+
+	// 4. Delta stealth airframe with 3D perspective banking roll and shading
+	if (alpha > 0.005) {
+		p.save();
+		p.translate(curX, curY);
+		p.rotate(heading);
+		p.scale(bankCos, 1.0);
+		p.setOpacity(alpha);
+
+		p.drawImage(QRectF(-curSize / 2.0, -curSize / 2.0, curSize, curSize), deltaGlyph);
+
+		// 3D aerodynamic roll shadow on the down-banked wing
+		if (std::abs(bank) > 5.0) {
+			const auto shadowAlpha = int(std::min(1.0, std::abs(bank) / 45.0) * 85);
+			p.setPen(Qt::NoPen);
+			p.setBrush(QColor(0, 0, 0, shadowAlpha));
+			if (bank < 0) {
+				p.drawRect(QRectF(-curSize / 2.0, -curSize / 2.0, curSize / 2.0, curSize));
+			} else {
+				p.drawRect(QRectF(0, -curSize / 2.0, curSize / 2.0, curSize));
+			}
+		}
+		p.restore();
+	}
+
+	// 5. Supersonic Mach shockwave breakthrough (Phase 3 climax) - sharp refraction rings
+	if (boom > 0.01) {
+		const auto shockR = (18.0 + 240.0 * std::pow(boom, 0.65)) * scale;
+		const auto shockAlpha = int((1.0 - boom) * 220);
+
+		if (shockAlpha > 5) {
+			p.setBrush(Qt::NoBrush);
+			// Inner white shockfront
+			p.setPen(QPen(QColor(255, 255, 255, shockAlpha), 2.2));
+			p.drawEllipse(QPointF(curX, curY), shockR, shockR);
+
+			// Outer crimson aerodynamic expansion wave
+			p.setPen(QPen(QColor(218, 48, 24, int(shockAlpha * 0.75)), 1.8));
+			p.drawEllipse(QPointF(curX, curY), shockR * 1.14, shockR * 1.14);
+
+			// Anamorphic optical laser streak across shock plane
+			const auto flareW = shockR * 1.8;
+			p.setPen(QPen(QColor(255, 255, 255, int(shockAlpha * 0.85)), 2.0));
+			p.drawLine(QPointF(curX - flareW, curY), QPointF(curX + flareW, curY));
+		}
+	}
 }
 
 int Step::contentLeft() const {
