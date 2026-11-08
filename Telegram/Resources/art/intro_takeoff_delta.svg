@@ -12,7 +12,7 @@
 
     <radialGradient id="plasmaThrust" cx="50%" cy="0%" r="90%">
       <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
-      <stop offset="30%" stop-color="#38bdf8" stop-opacity="0.8" />
+      <stop offset="30%" stop-color="#38bdf8" stop-opacity="0.85" />
       <stop offset="70%" stop-color="#da3018" stop-opacity="0.4" />
       <stop offset="100%" stop-color="#da3018" stop-opacity="0" />
     </radialGradient>
@@ -20,77 +20,128 @@
     <radialGradient id="shockwaveGlow" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
       <stop offset="40%" stop-color="#60a5fa" stop-opacity="0.7" />
-      <stop offset="80%" stop-color="#da3018" stop-opacity="0.2" />
+      <stop offset="80%" stop-color="#38bdf8" stop-opacity="0.2" />
       <stop offset="100%" stop-color="#000000" stop-opacity="0" />
     </radialGradient>
   </defs>
 
   <style>
-    /* Continuous smooth flight with NOSE ALWAYS POINTING IN FLIGHT DIRECTION */
+    /* Continuous smooth flight with NOSE ALWAYS POINTING IN FLIGHT DIRECTION (4.80s) */
     @keyframes smoothFlight {
-      0% {
-        transform: translate(300px, 270px) rotate(0deg) scale(0.9);
-        opacity: 0;
-      }
-      6% {
-        transform: translate(300px, 260px) rotate(0deg) scale(0.95);
-        opacity: 1;
-      }
-      15% {
-        transform: translate(300px, 220px) rotate(0deg) scale(1.0);
-      }
-      25% {
-        transform: translate(360px, 180px) rotate(55deg) scale(1.02);
-      }
-      38% {
-        transform: translate(420px, 150px) rotate(15deg) scale(0.98);
-      }
-      50% {
-        transform: translate(360px, 115px) rotate(-75deg) scale(0.95);
-      }
-      62% {
-        transform: translate(230px, 125px) rotate(-100deg) scale(0.95);
-      }
-      72% {
-        transform: translate(175px, 185px) rotate(-155deg) scale(1.0);
-      }
-      82% {
-        transform: translate(215px, 255px) rotate(-90deg) scale(1.08);
-      }
-      88% {
-        transform: translate(275px, 265px) rotate(-25deg) scale(1.2);
-      }
-      92% {
-        transform: translate(300px, 250px) rotate(0deg) scale(1.6);
-        opacity: 1;
-      }
-      95% {
-        transform: translate(300px, 250px) rotate(0deg) scale(2.2);
-        opacity: 0;
-      }
-      100% {
-        transform: translate(300px, 250px) rotate(0deg) scale(2.4);
-        opacity: 0;
-      }
+        0.0% { transform: translate(298.7px, 390.0px) rotate(270.4deg) scale(0.850); opacity: 0.00; }
+        2.0% { transform: translate(268.7px, 388.3px) rotate(276.5deg) scale(0.851); opacity: 0.19; }
+        4.0% { transform: translate(239.4px, 383.4px) rotate(282.7deg) scale(0.853); opacity: 0.38; }
+        6.0% { transform: translate(211.4px, 375.5px) rotate(289.2deg) scale(0.856); opacity: 0.58; }
+        8.0% { transform: translate(185.5px, 364.8px) rotate(296.2deg) scale(0.860); opacity: 0.77; }
+       10.0% { transform: translate(162.2px, 351.5px) rotate(303.8deg) scale(0.864); opacity: 0.96; }
+       12.0% { transform: translate(142.0px, 335.8px) rotate(312.2deg) scale(0.870); opacity: 1.00; }
+       14.0% { transform: translate(125.3px, 318.2px) rotate(321.6deg) scale(0.876); opacity: 1.00; }
+       16.0% { transform: translate(112.7px, 299.1px) rotate(332.1deg) scale(0.883); opacity: 1.00; }
+       18.0% { transform: translate(104.3px, 278.8px) rotate(343.5deg) scale(0.891); opacity: 1.00; }
+       20.0% { transform: translate(100.3px, 257.9px) rotate(355.6deg) scale(0.900); opacity: 1.00; }
+       22.0% { transform: translate(100.9px, 236.8px) rotate(7.9deg) scale(0.909); opacity: 1.00; }
+       24.0% { transform: translate(106.0px, 216.0px) rotate(19.9deg) scale(0.919); opacity: 1.00; }
+       26.0% { transform: translate(115.5px, 196.0px) rotate(31.1deg) scale(0.930); opacity: 1.00; }
+       28.0% { transform: translate(129.1px, 177.2px) rotate(41.2deg) scale(0.941); opacity: 1.00; }
+       30.0% { transform: translate(146.7px, 160.1px) rotate(50.3deg) scale(0.953); opacity: 1.00; }
+       32.0% { transform: translate(167.7px, 145.0px) rotate(58.5deg) scale(0.966); opacity: 1.00; }
+       34.0% { transform: translate(191.8px, 132.3px) rotate(65.9deg) scale(0.979); opacity: 1.00; }
+       36.0% { transform: translate(218.3px, 122.2px) rotate(72.7deg) scale(0.993); opacity: 1.00; }
+       38.0% { transform: translate(246.6px, 115.1px) rotate(79.2deg) scale(1.008); opacity: 1.00; }
+       40.0% { transform: translate(276.2px, 111.0px) rotate(85.3deg) scale(1.023); opacity: 1.00; }
+       42.0% { transform: translate(306.3px, 110.1px) rotate(91.4deg) scale(1.039); opacity: 1.00; }
+       44.0% { transform: translate(336.2px, 112.3px) rotate(97.5deg) scale(1.056); opacity: 1.00; }
+       46.0% { transform: translate(365.4px, 117.7px) rotate(103.7deg) scale(1.073); opacity: 1.00; }
+       48.0% { transform: translate(393.0px, 126.1px) rotate(110.3deg) scale(1.091); opacity: 1.00; }
+       50.0% { transform: translate(418.6px, 137.3px) rotate(117.4deg) scale(1.109); opacity: 1.00; }
+       52.0% { transform: translate(441.4px, 151.0px) rotate(125.2deg) scale(1.128); opacity: 1.00; }
+       54.0% { transform: translate(461.1px, 167.0px) rotate(133.7deg) scale(1.148); opacity: 1.00; }
+       56.0% { transform: translate(477.0px, 184.9px) rotate(143.3deg) scale(1.168); opacity: 1.00; }
+       58.0% { transform: translate(489.0px, 204.2px) rotate(153.9deg) scale(1.189); opacity: 1.00; }
+       60.0% { transform: translate(496.7px, 224.6px) rotate(165.5deg) scale(1.210); opacity: 1.00; }
+       62.0% { transform: translate(499.9px, 245.6px) rotate(177.7deg) scale(1.232); opacity: 1.00; }
+       64.0% { transform: translate(498.6px, 266.7px) rotate(190.0deg) scale(1.254); opacity: 1.00; }
+       66.0% { transform: translate(492.7px, 287.4px) rotate(201.8deg) scale(1.277); opacity: 1.00; }
+       68.0% { transform: translate(479.2px, 306.2px) rotate(234.6deg) scale(1.301); opacity: 1.00; }
+       70.0% { transform: translate(450.7px, 317.9px) rotate(258.5deg) scale(1.325); opacity: 1.00; }
+       72.0% { transform: translate(413.8px, 320.2px) rotate(274.0deg) scale(1.350); opacity: 1.00; }
+       74.0% { transform: translate(375.7px, 313.3px) rotate(287.1deg) scale(1.375); opacity: 1.00; }
+       76.0% { transform: translate(342.7px, 299.1px) rotate(300.2deg) scale(1.401); opacity: 1.00; }
+       78.0% { transform: translate(318.6px, 281.2px) rotate(314.5deg) scale(1.427); opacity: 1.00; }
+       80.0% { transform: translate(305.0px, 264.1px) rotate(330.6deg) scale(1.454); opacity: 1.00; }
+       82.0% { transform: translate(300.3px, 252.5px) rotate(348.5deg) scale(1.481); opacity: 1.00; }
+       84.0% { transform: translate(300.0px, 250.0px) rotate(0.0deg) scale(1.532); opacity: 0.86; }
+       86.0% { transform: translate(300.0px, 250.0px) rotate(0.0deg) scale(1.628); opacity: 0.44; }
+       88.0% { transform: translate(300.0px, 250.0px) rotate(0.0deg) scale(1.724); opacity: 0.02; }
+       90.0% { transform: translate(300.0px, 250.0px) rotate(0.0deg) scale(1.820); opacity: 0.00; }
+       92.0% { transform: translate(300.0px, 250.0px) rotate(0.0deg) scale(1.916); opacity: 0.00; }
+       94.0% { transform: translate(300.0px, 250.0px) rotate(0.0deg) scale(2.012); opacity: 0.00; }
+       96.0% { transform: translate(300.0px, 250.0px) rotate(0.0deg) scale(2.108); opacity: 0.00; }
+       98.0% { transform: translate(300.0px, 250.0px) rotate(0.0deg) scale(2.204); opacity: 0.00; }
+      100.0% { transform: translate(300.0px, 250.0px) rotate(0.0deg) scale(2.300); opacity: 0.00; }
     }
 
-    /* Supersonic Mach Shockwave: detonates at 92%-98% */
+    /* Supersonic Mach Shockwave: detonates at 83.3% */
     @keyframes machShockwave {
-      0%, 90% {
+      0%, 82% {
         opacity: 0;
         transform: translate(300px, 250px) scale(0.05);
       }
-      92% {
+      83.3% {
         opacity: 1;
-        transform: translate(300px, 250px) scale(0.3);
+        transform: translate(300px, 250px) scale(0.2);
+      }
+      89% {
+        opacity: 0.95;
+        transform: translate(300px, 250px) scale(1.5);
       }
       95% {
-        opacity: 0.9;
-        transform: translate(300px, 250px) scale(1.7);
+        opacity: 0.35;
+        transform: translate(300px, 250px) scale(2.7);
       }
-      98% {
+      100% {
         opacity: 0;
-        transform: translate(300px, 250px) scale(3.0);
+        transform: translate(300px, 250px) scale(3.4);
+      }
+    }
+
+    /* Blinding Anamorphic Flare Streak */
+    @keyframes lensStreak {
+      0%, 82% {
+        opacity: 0;
+        transform: translate(300px, 250px) scaleX(0.01) scaleY(0.2);
+      }
+      83.3% {
+        opacity: 1;
+        transform: translate(300px, 250px) scaleX(1.8) scaleY(1.0);
+      }
+      87% {
+        opacity: 0.8;
+        transform: translate(300px, 250px) scaleX(2.8) scaleY(0.4);
+      }
+      93% {
+        opacity: 0.2;
+        transform: translate(300px, 250px) scaleX(3.4) scaleY(0.1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(300px, 250px) scaleX(3.6) scaleY(0.02);
+      }
+    }
+
+    /* Kinetic supersonic sparks */
+    @keyframes sparkBurst {
+      0%, 82% {
+        opacity: 0;
+        transform: translate(300px, 250px) scale(0.1);
+      }
+      83.3% {
+        opacity: 1;
+        transform: translate(300px, 250px) scale(0.4);
+      }
+      92% {
+        opacity: 0.8;
+        transform: translate(300px, 250px) scale(2.2);
       }
       100% {
         opacity: 0;
@@ -98,38 +149,23 @@
       }
     }
 
-    /* Blinding Anamorphic Flare Streak */
-    @keyframes lensStreak {
-      0%, 91% {
-        opacity: 0;
-        transform: translate(300px, 250px) scaleX(0.01) scaleY(0.2);
-      }
-      93% {
-        opacity: 1;
-        transform: translate(300px, 250px) scaleX(1.9) scaleY(1.0);
-      }
-      96% {
-        opacity: 0.6;
-        transform: translate(300px, 250px) scaleX(2.8) scaleY(0.3);
-      }
-      99%, 100% {
-        opacity: 0;
-        transform: translate(300px, 250px) scaleX(3.4) scaleY(0.05);
-      }
-    }
-
     .plane-container {
-      animation: smoothFlight 2.8s cubic-bezier(0.42, 0.0, 0.58, 1.0) infinite;
+      animation: smoothFlight 4.8s cubic-bezier(0.42, 0.0, 0.58, 1.0) infinite;
       transform-origin: 0 0;
     }
 
     .shock-ring {
-      animation: machShockwave 2.8s cubic-bezier(0.1, 0.8, 0.2, 1.0) infinite;
+      animation: machShockwave 4.8s cubic-bezier(0.1, 0.8, 0.2, 1.0) infinite;
       transform-origin: 0 0;
     }
 
     .streak-light {
-      animation: lensStreak 2.8s cubic-bezier(0.1, 0.9, 0.2, 1.0) infinite;
+      animation: lensStreak 4.8s cubic-bezier(0.1, 0.9, 0.2, 1.0) infinite;
+      transform-origin: 0 0;
+    }
+
+    .spark-group {
+      animation: sparkBurst 4.8s cubic-bezier(0.1, 0.8, 0.2, 1.0) infinite;
       transform-origin: 0 0;
     }
   </style>
@@ -138,23 +174,34 @@
 
   <!-- Supersonic Shockwave Rings -->
   <g class="shock-ring">
-    <circle r="130" fill="none" stroke="#60a5fa" stroke-width="3" filter="url(#mach-glow)" opacity="0.9" />
-    <circle r="90" fill="none" stroke="#ffffff" stroke-width="4.5" filter="url(#mach-glow)" opacity="0.95" />
-    <circle r="45" fill="url(#shockwaveGlow)" opacity="0.85" />
+    <circle r="140" fill="none" stroke="#60a5fa" stroke-width="3" filter="url(#mach-glow)" opacity="0.9" />
+    <circle r="95" fill="none" stroke="#ffffff" stroke-width="4.5" filter="url(#mach-glow)" opacity="0.95" />
+    <circle r="50" fill="url(#shockwaveGlow)" opacity="0.85" />
   </g>
 
   <!-- Anamorphic Mach Light Streaks -->
   <g class="streak-light">
-    <ellipse rx="240" ry="4" fill="#ffffff" filter="url(#mach-glow)" opacity="0.95" />
-    <ellipse rx="300" ry="1.5" fill="#38bdf8" opacity="0.8" />
-    <line x1="-130" y1="-30" x2="130" y2="30" stroke="#ffffff" stroke-width="2" filter="url(#mach-glow)" opacity="0.75" />
-    <line x1="-130" y1="30" x2="130" y2="-30" stroke="#da3018" stroke-width="1.5" opacity="0.6" />
+    <ellipse rx="260" ry="4" fill="#ffffff" filter="url(#mach-glow)" opacity="0.95" />
+    <ellipse rx="320" ry="1.5" fill="#38bdf8" opacity="0.8" />
+    <line x1="-140" y1="-35" x2="140" y2="35" stroke="#ffffff" stroke-width="2" filter="url(#mach-glow)" opacity="0.75" />
+    <line x1="-140" y1="35" x2="140" y2="-35" stroke="#38bdf8" stroke-width="1.5" opacity="0.6" />
+  </g>
+
+  <!-- Kinetic Supersonic Sparks -->
+  <g class="spark-group">
+    <line x1="0" y1="0" x2="45" y2="25" stroke="#ffffff" stroke-width="2" filter="url(#mach-glow)" />
+    <line x1="0" y1="0" x2="-45" y2="-25" stroke="#ffffff" stroke-width="2" filter="url(#mach-glow)" />
+    <line x1="0" y1="0" x2="30" y2="-40" stroke="#38bdf8" stroke-width="2" />
+    <line x1="0" y1="0" x2="-30" y2="40" stroke="#38bdf8" stroke-width="2" />
+    <line x1="0" y1="0" x2="50" y2="-15" stroke="#ffffff" stroke-width="1.5" />
+    <line x1="0" y1="0" x2="-50" y2="15" stroke="#ffffff" stroke-width="1.5" />
   </g>
 
   <!-- Moving Stealth Delta Craft -->
   <g class="plane-container">
-    <!-- Plasma exhaust flame attached to tail (behind the aircraft) -->
-    <path d="M -10,25 L 0,65 L 10,25 Z" fill="url(#plasmaThrust)" />
+    <!-- Plasmatic engine thrust flame behind tail -->
+    <path d="M -8,25 L 0,65 L 8,25 Z" fill="url(#plasmaThrust)" />
+    <path d="M -4,25 L 0,42 L 4,25 Z" fill="#ffffff" opacity="0.9" />
     <!-- Exact original emblem glyph directly embedded as base64 image (nose points UP) -->
     <image href="data:image/png;base64,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" x="-50" y="-50" width="100" height="100" />
   </g>
