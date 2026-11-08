@@ -17,6 +17,7 @@
 #include "ui/wrap/vertical_layout.h"
 #include "ui/painter.h"
 #include "ui/vertical_list.h"
+#include "ui/new_badges.h"
 #include "window/main_window.h"
 #include "styles/style_basic.h"
 #include "styles/style_boxes.h"
@@ -46,117 +47,72 @@ bool gAutoExit = false;
 	return emblem.scaled(size, size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 }
 
-[[nodiscard]] QImage DeltaStealthIcon(int size) {
+[[nodiscard]] QImage ChangelogAvatarIcon(int size) {
 	auto result = QImage(size, size, QImage::Format_ARGB32_Premultiplied);
 	result.fill(Qt::transparent);
 	auto p = QPainter(&result);
 	auto hq = PainterHighQualityEnabler(p);
-	auto grad = QLinearGradient(0, 0, 0, size);
-	grad.setColorAt(0., QColor(36, 40, 48));
-	grad.setColorAt(1., QColor(18, 20, 24));
-	p.setPen(QPen(QColor(218, 48, 24, 180), 1.5));
+
+	// Radiant rich gradient: Indigo to Cyan/Azure
+	auto grad = QLinearGradient(0, 0, size, size);
+	grad.setColorAt(0., QColor(30, 64, 175));
+	grad.setColorAt(0.55, QColor(37, 99, 235));
+	grad.setColorAt(1., QColor(6, 182, 212));
+	p.setPen(QPen(QColor(125, 211, 252, 160), 1.2));
 	p.setBrush(grad);
 	p.drawEllipse(QRectF(1, 1, size - 2, size - 2));
 
-	static const auto glyph = QImage(u":/gui/art/app_icon_glyph.png"_q)
-		.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-	const auto glyphSize = int(size * 0.62);
-	const auto glyphRect = QRect(
-		(size - glyphSize) / 2,
-		(size - glyphSize) / 2,
-		glyphSize,
-		glyphSize);
-	p.drawImage(glyphRect, glyph);
-	return result;
-}
+	// Document notebook plate
+	p.setPen(Qt::NoPen);
+	p.setBrush(QColor(255, 255, 255, 235));
+	const auto docW = int(size * 0.44);
+	const auto docH = int(size * 0.52);
+	const auto docX = (size - docW) / 2;
+	const auto docY = (size - docH) / 2;
+	const auto docRect = QRectF(docX, docY, docW, docH);
+	p.drawRoundedRect(docRect, 3.5, 3.5);
 
-void AddNeuralVaultPlate(not_null<Ui::GenericBox*> box) {
-	const auto vault = box->addRow(
-		object_ptr<Ui::FixedHeightWidget>(box, 70),
-		style::margins(16, 4, 16, 6));
-	vault->paintRequest() | rpl::on_next([=] {
-		auto p = QPainter(vault);
-		auto hq = PainterHighQualityEnabler(p);
-		const auto w = vault->width();
-		const auto h = vault->height();
-		const auto rect = QRectF(0, 0, w, h).adjusted(1, 1, -1, -1);
+	// 3 list items: colored bullet dots + text lines
+	const auto lineH = 2.0;
+	const auto dotR = 1.3;
+	const auto leftPad = docX + 3.5;
+	const auto textLeft = leftPad + 4.5;
+	const auto textW = docW - 10.5;
 
-		const auto active = NeuralVaultEnabled();
-
-		// Liquid Glass surface: dark obsidian with emerald/neon tinted acrylic feel
-		auto bgGrad = QLinearGradient(0, 0, w, h);
-		bgGrad.setColorAt(0., QColor(22, 28, 26, 235));
-		bgGrad.setColorAt(1., QColor(14, 18, 17, 245));
-		p.setPen(QPen(active ? QColor(52, 211, 153, 75) : QColor(255, 255, 255, 30), 1.2));
-		p.setBrush(bgGrad);
-		p.drawRoundedRect(rect, 8, 8);
-
-		// Subtle glass highlight reflection on top edge
-		p.setPen(QPen(QColor(255, 255, 255, 20), 1.0));
-		p.drawLine(QPointF(10, 2), QPointF(w - 10, 2));
-
-		// Glowing neon status indicator dot
+	for (int i = 0; i < 3; ++i) {
+		const auto rowY = docY + 5.0 + i * 5.8;
 		p.setPen(Qt::NoPen);
-		p.setBrush(active ? QColor(52, 211, 153, 40) : QColor(140, 150, 155, 30));
-		p.drawEllipse(QRectF(15, 13, 16, 16));
-		p.setBrush(active ? QColor(52, 211, 153) : QColor(140, 150, 155));
-		p.drawEllipse(QRectF(19, 17, 8, 8));
+		p.setBrush(i == 0 ? QColor(239, 68, 68) : (i == 1 ? QColor(16, 185, 129) : QColor(37, 99, 235)));
+		p.drawEllipse(QPointF(leftPad + dotR, rowY + lineH / 2.0), dotR, dotR);
 
-		// Title
-		p.setPen(Qt::white);
-		p.setFont(st::semiboldFont);
-		const auto title = u"Нейро-контекст (Neural Vault)"_q;
-		p.drawText(39, 23, title);
+		p.setBrush(QColor(100, 116, 139, 210));
+		const auto currLineW = (i == 2) ? (textW * 0.65) : textW;
+		p.drawRoundedRect(QRectF(textLeft, rowY, currLineW, lineH), 1.0, 1.0);
+	}
 
-		// Elegant neon BETA badge [БЕТА] with green-neon outline
-		const auto titleW = st::semiboldFont->width(title);
-		const auto badgeX = 39 + titleW + 8;
-		const auto badgeRect = QRectF(badgeX, 11, 48, 17);
-		auto badgeGrad = QLinearGradient(badgeX, 11, badgeX + 48, 28);
-		badgeGrad.setColorAt(0., QColor(52, 211, 153, 40));
-		badgeGrad.setColorAt(1., QColor(16, 185, 129, 18));
-		p.setPen(QPen(QColor(52, 211, 153, 200), 1.0));
-		p.setBrush(badgeGrad);
-		p.drawRoundedRect(badgeRect, 4, 4);
+	// Golden sparkle badge on top-right corner of document
+	p.setPen(Qt::NoPen);
+	p.setBrush(QColor(251, 191, 36));
+	const auto sparkCx = docX + docW - 2.0;
+	const auto sparkCy = docY + 2.0;
+	QPolygonF star;
+	const auto sR = 3.2;
+	star << QPointF(sparkCx, sparkCy - sR)
+	     << QPointF(sparkCx + sR * 0.35, sparkCy - sR * 0.35)
+	     << QPointF(sparkCx + sR, sparkCy)
+	     << QPointF(sparkCx + sR * 0.35, sparkCy + sR * 0.35)
+	     << QPointF(sparkCx, sparkCy + sR)
+	     << QPointF(sparkCx - sR * 0.35, sparkCy + sR * 0.35)
+	     << QPointF(sparkCx - sR, sparkCy)
+	     << QPointF(sparkCx - sR * 0.35, sparkCy - sR * 0.35);
+	p.drawPolygon(star);
 
-		p.setPen(QColor(52, 211, 153));
-		auto badgeFont = p.font();
-		badgeFont.setPixelSize(10);
-		badgeFont.setBold(true);
-		badgeFont.setLetterSpacing(QFont::AbsoluteSpacing, 0.8);
-		p.setFont(badgeFont);
-		p.drawText(badgeRect, Qt::AlignCenter, u"БЕТА"_q);
-
-		// Status chip on the right (Whisper Q4)
-		const auto statusW = 86;
-		const auto statusRect = QRectF(w - statusW - 14, 11, statusW, 20);
-		p.setPen(QPen(active ? QColor(52, 211, 153, 90) : QColor(255, 255, 255, 40), 1.0));
-		p.setBrush(active ? QColor(20, 36, 30, 210) : QColor(30, 32, 34, 210));
-		p.drawRoundedRect(statusRect, 10, 10);
-		p.setPen(active ? QColor(52, 211, 153) : QColor(180, 185, 190));
-		auto statusFont = p.font();
-		statusFont.setPixelSize(11);
-		statusFont.setBold(true);
-		statusFont.setLetterSpacing(QFont::AbsoluteSpacing, 0.0);
-		p.setFont(statusFont);
-		p.drawText(statusRect, Qt::AlignCenter, u"Whisper Q4"_q);
-
-		// Subtitle: Local offline transcription & Private semantic search
-		p.setPen(QColor(160, 175, 170));
-		p.setFont(st::normalFont);
-		auto subFont = p.font();
-		subFont.setPixelSize(11);
-		p.setFont(subFont);
-		const auto subRect = QRectF(39, 34, w - 53, 30);
-		p.drawText(
-			subRect,
-			Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop,
-			u"Локальная оффлайн-расшифровка голосовых сообщений (Whisper Q4) • Приватный семантический поиск"_q);
-	}, vault->lifetime());
+	return result;
 }
 
 void ShowDemoSettings(not_null<Window::Controller*> window) {
 	window->show(Box([=](not_null<Ui::GenericBox*> box) {
+		box->setStyle(st::exteraPlayerBox);
 		box->setTitle(u"Настройки oxDesktop"_q);
 		box->setWidth(st::boxWideWidth);
 		box->setNoContentMargin(true);
@@ -192,21 +148,24 @@ void ShowDemoSettings(not_null<Window::Controller*> window) {
 			p.drawText(86, 55, u"Официальная сборка • @oxDesktop"_q);
 		}, header->lifetime());
 
-		AddNeuralVaultPlate(box);
-
 		auto container = box->verticalLayout();
 		Ui::AddDivider(container);
+
+		const auto vaultBtn = Settings::AddButtonWithLabel(
+			container,
+			rpl::single(u"Нейро-контекст (Neural Vault)"_q),
+			rpl::single(u"Whisper Q4"_q),
+			st::settingsButtonNoIcon);
+		Ui::NewBadge::AddTagBadgeAfterButtonText(
+			vaultBtn,
+			Ui::NewBadge::Tag::Beta,
+			rpl::single(u"Нейро-контекст (Neural Vault)"_q),
+			st::settingsButtonNoIcon);
 
 		Settings::AddButtonWithLabel(
 			container,
 			rpl::single(u"Встроенный обход блокировок (TgWsProxy)"_q),
 			rpl::single(u"Активен (v1.11.4)"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Локальный Whisper & Семантический поиск"_q),
-			rpl::single(u"[БЕТА] Активен"_q),
 			st::settingsButtonNoIcon);
 
 		Settings::AddButtonWithLabel(
@@ -226,11 +185,14 @@ void ShowDemoSettings(not_null<Window::Controller*> window) {
 			rpl::single(u"Проверка обновлений oxDesktop"_q),
 			rpl::single(u"Версия актуальна"_q),
 			st::settingsButtonNoIcon);
+
+		Ui::AddSkip(container, 8);
 	}));
 }
 
 void ShowDemoAppearance(not_null<Window::Controller*> window) {
 	window->show(Box([=](not_null<Ui::GenericBox*> box) {
+		box->setStyle(st::exteraPlayerBox);
 		box->setTitle(u"Внешний вид oxDesktop"_q);
 		box->setWidth(st::boxWideWidth);
 		box->setNoContentMargin(true);
@@ -308,39 +270,25 @@ void ShowDemoAppearance(not_null<Window::Controller*> window) {
 			rpl::single(u"Размытие фона и прозрачность"_q),
 			rpl::single(u"Акрил (Liquid Glass)"_q),
 			st::settingsButtonNoIcon);
+
+		Ui::AddSkip(container, 8);
 	}));
 }
 
 void ShowDemoPlugins(not_null<Window::Controller*> window) {
 	window->show(Box([=](not_null<Ui::GenericBox*> box) {
+		box->setStyle(st::exteraPlayerBox);
 		box->setTitle(u"Менеджер плагинов oxDesktop"_q);
 		box->setWidth(st::boxWideWidth);
 		box->setNoContentMargin(true);
 		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 
-		const auto engine = box->addRow(
-			object_ptr<Ui::FixedHeightWidget>(box, 52),
-			style::margins(16, 6, 16, 6));
-		engine->paintRequest() | rpl::on_next([=] {
-			auto p = QPainter(engine);
-			auto hq = PainterHighQualityEnabler(p);
-			const auto rect = QRectF(0, 0, engine->width(), engine->height()).adjusted(1, 1, -1, -1);
-			auto grad = QLinearGradient(0, 0, engine->width(), engine->height());
-			grad.setColorAt(0., QColor(24, 28, 25, 230));
-			grad.setColorAt(1., QColor(15, 16, 18, 240));
-			p.setPen(QPen(QColor(46, 204, 113, 110), 1.2));
-			p.setBrush(grad);
-			p.drawRoundedRect(rect, 8, 8);
-
-			p.setPen(QColor(46, 204, 113));
-			p.setFont(st::semiboldFont);
-			p.drawText(16, 23, u"● Движок плагинов активен"_q);
-			p.setPen(QColor(180, 190, 185));
-			p.setFont(st::normalFont);
-			p.drawText(16, 41, u"Среда расширений oxDesktop • Python 3.11"_q);
-		}, engine->lifetime());
-
-		AddNeuralVaultPlate(box);
+		box->addRow(
+			object_ptr<Ui::FlatLabel>(
+				box,
+				rpl::single(u"Плагины расширяют возможности oxDesktop: автоматизация рутины, новые функции для чатов, сторонние сервисы и кастомизация интерфейса."_q),
+				st::boxLabel),
+			style::margins(16, 6, 16, 10));
 
 		auto container = box->verticalLayout();
 		Ui::AddDivider(container);
@@ -357,10 +305,15 @@ void ShowDemoPlugins(not_null<Window::Controller*> window) {
 			rpl::single(u"Изоляция активна"_q),
 			st::settingsButtonNoIcon);
 
-		Settings::AddButtonWithLabel(
+		const auto vaultBtn = Settings::AddButtonWithLabel(
 			container,
-			rpl::single(u"Локальный Whisper & Семантический поиск"_q),
-			rpl::single(u"[БЕТА] Whisper Q4"_q),
+			rpl::single(u"Нейро-контекст (Neural Vault)"_q),
+			rpl::single(u"Whisper Q4"_q),
+			st::settingsButtonNoIcon);
+		Ui::NewBadge::AddTagBadgeAfterButtonText(
+			vaultBtn,
+			Ui::NewBadge::Tag::Beta,
+			rpl::single(u"Нейро-контекст (Neural Vault)"_q),
 			st::settingsButtonNoIcon);
 
 		Settings::AddButtonWithLabel(
@@ -368,11 +321,14 @@ void ShowDemoPlugins(not_null<Window::Controller*> window) {
 			rpl::single(u"Синхронизация текстов песен"_q),
 			rpl::single(u"Включена (Genius / Spotify)"_q),
 			st::settingsButtonNoIcon);
+
+		Ui::AddSkip(container, 8);
 	}));
 }
 
 void ShowDemoChats(not_null<Window::Controller*> window) {
 	window->show(Box([=](not_null<Ui::GenericBox*> box) {
+		box->setStyle(st::exteraPlayerBox);
 		box->setTitle(u"Чаты и сообщения oxDesktop"_q);
 		box->setWidth(st::boxWideWidth);
 		box->setNoContentMargin(true);
@@ -395,7 +351,7 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 				QString name;
 				QString text;
 				QString time;
-				bool stealth;
+				bool changelog;
 			} chats[] = {
 				{ u"oxDesktop"_q, u"Официальный релиз oxDesktop v7.3.3"_q, u"18:42"_q, false },
 				{ u"oxDesktop | Changelog"_q, u"История версий, патч-ноуты и обновления расширений"_q, u"17:15"_q, true },
@@ -410,7 +366,7 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 				}
 
 				const auto avRect = QRect(16, y + (rowH - 44) / 2, 44, 44);
-				p.drawImage(avRect, chats[i].stealth ? DeltaStealthIcon(44) : DeltaEmblemIcon(44));
+				p.drawImage(avRect, chats[i].changelog ? ChangelogAvatarIcon(44) : DeltaEmblemIcon(44));
 
 				p.setPen(Qt::white);
 				p.setFont(st::semiboldFont);
@@ -443,7 +399,7 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 
 		Settings::AddButtonWithLabel(
 			container,
-			rpl::single(u"Не отмечать сообщения прочитанными"_q),
+			rpl::single(u"Нечиталка"_q),
 			rpl::single(u"Включено"_q),
 			st::settingsButtonNoIcon);
 
@@ -452,6 +408,8 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 			rpl::single(u"Быстрые реакции по двойному клику"_q),
 			rpl::single(u"❤️"_q),
 			st::settingsButtonNoIcon);
+
+		Ui::AddSkip(container, 8);
 	}));
 }
 
