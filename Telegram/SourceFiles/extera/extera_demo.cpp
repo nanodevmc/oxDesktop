@@ -397,7 +397,7 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 				QString time;
 				bool stealth;
 			} chats[] = {
-				{ u"oxDesktop"_q, u"Официальный релиз oxDesktop v7.3.3 • Тема Aero Delta"_q, u"18:42"_q, false },
+				{ u"oxDesktop"_q, u"Официальный релиз oxDesktop v7.3.3"_q, u"18:42"_q, false },
 				{ u"oxDesktop | Changelog"_q, u"История версий, патч-ноуты и обновления расширений"_q, u"17:15"_q, true },
 			};
 
