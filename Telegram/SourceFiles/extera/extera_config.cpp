@@ -174,6 +174,7 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"custom_font_family"_q, QString() },
 		{ u"custom_font_path"_q, QString() },
 		{ u"amoled_pure_black"_q, false },
+		{ u"neural_vault_enabled"_q, true },
 	};
 	return result;
 }
@@ -365,6 +366,14 @@ int RecentStickersLimit(int serverLimit) {
 	return Bool(u"unlimited_recent_stickers"_q)
 		? std::max(serverLimit, 200)
 		: serverLimit;
+}
+
+bool NeuralVaultEnabled() {
+	return Bool(u"neural_vault_enabled"_q);
+}
+
+void SetNeuralVaultEnabled(bool enabled) {
+	Config::Instance().setBool(u"neural_vault_enabled"_q, enabled);
 }
 
 } // namespace Extera
