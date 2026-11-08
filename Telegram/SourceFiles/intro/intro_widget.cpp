@@ -41,6 +41,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_connecting_widget.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
+#include "window/themes/window_theme.h"
 #include "window/section_widget.h"
 #include "base/platform/base_platform_info.h"
 #include "api/api_text_entities.h"
@@ -123,6 +124,14 @@ Widget::Widget(
 
 	setupStep();
 	fixOrder();
+
+	if (!Window::Theme::IsNightMode()
+		|| st::windowBg->c == QColor(255, 255, 255)
+		|| st::windowBg->c == QColor(0x17, 0x21, 0x2b)
+		|| st::windowBg->c == QColor(0x24, 0x2c, 0x34)) {
+		Window::Theme::ApplyDefaultWithPath(Window::Theme::NightThemePath());
+		Window::Theme::KeepApplied();
+	}
 
 	if (_account->mtp().isTestMode()) {
 		_testModeLabel.create(
@@ -811,7 +820,16 @@ void Widget::paintEvent(QPaintEvent *e) {
 		_showAnimation->paintContents(p);
 		return;
 	}
-	p.fillRect(e->rect(), st::windowBg);
+	const auto bg = (st::introBg->c.isValid() && st::introBg->c.alpha() > 0 && st::introBg->c != QColor(255, 255, 255))
+		? st::introBg->c
+		: st::windowBg->c;
+	const auto isBlueTint = (bg.blue() > bg.red() + 15)
+		|| (bg == QColor(0x24, 0x2c, 0x34))
+		|| (bg == QColor(0x17, 0x21, 0x2b))
+		|| (bg == QColor(0x0e, 0x16, 0x21))
+		|| (bg == QColor(255, 255, 255));
+	const auto finalBg = isBlueTint ? QColor(0x14, 0x15, 0x17) : bg;
+	p.fillRect(e->rect(), finalBg);
 }
 
 void Widget::resizeEvent(QResizeEvent *e) {

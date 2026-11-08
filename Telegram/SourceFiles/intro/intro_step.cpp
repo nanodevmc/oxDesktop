@@ -264,6 +264,16 @@ void Step::createSession(
 
 void Step::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
+	const auto bg = (st::introBg->c.isValid() && st::introBg->c.alpha() > 0 && st::introBg->c != QColor(255, 255, 255))
+		? st::introBg->c
+		: st::windowBg->c;
+	const auto isBlueTint = (bg.blue() > bg.red() + 15)
+		|| (bg == QColor(0x24, 0x2c, 0x34))
+		|| (bg == QColor(0x17, 0x21, 0x2b))
+		|| (bg == QColor(0x0e, 0x16, 0x21))
+		|| (bg == QColor(255, 255, 255));
+	const auto finalBg = isBlueTint ? QColor(0x14, 0x15, 0x17) : bg;
+	p.fillRect(e->rect(), finalBg);
 	paintAnimated(p, e->rect());
 }
 
@@ -430,8 +440,14 @@ void Step::prepareCoverMask() {
 	auto maskIntsPerLineAdded = (mask.bytesPerLine() >> 2) - maskWidth;
 	Assert(maskIntsPerLineAdded >= 0);
 	auto realHeight = static_cast<float64>(maskHeight - 1);
+	const auto rawTop = st::introCoverTopBg->c;
+	const auto rawBottom = st::introCoverBottomBg->c;
+	const auto isTopBlue = (rawTop.blue() > rawTop.red() + 15) || (rawTop == QColor(0x12, 0x4a, 0x82));
+	const auto isBottomBlue = (rawBottom.blue() > rawBottom.red() + 15) || (rawBottom == QColor(0x23, 0x65, 0x9f));
+	const auto topColor = isTopBlue ? QColor(0x10, 0x11, 0x14) : rawTop;
+	const auto bottomColor = isBottomBlue ? QColor(0x14, 0x15, 0x17) : rawBottom;
 	for (auto y = 0; y != maskHeight; ++y) {
-		auto color = anim::color(st::introCoverTopBg, st::introCoverBottomBg, y / realHeight);
+		auto color = anim::color(topColor, bottomColor, y / realHeight);
 		auto colorInt = anim::getPremultiplied(color);
 		for (auto x = 0; x != maskWidth; ++x) {
 			*maskInts++ = colorInt;
@@ -472,8 +488,10 @@ void Step::paintCover(QPainter &p, int top) {
 		auto rightShown = int(base::SafeRound(shown * rightFull));
 		right = rightShown - st::introCoverRight.width();
 	}
-	st::introCoverLeft.paint(p, left, coverHeight - st::introCoverLeft.height(), width());
-	st::introCoverRight.paint(p, width() - right - st::introCoverRight.width(), coverHeight - st::introCoverRight.height(), width());
+	if (st::introCoverIconsFg->c != QColor(0x3b, 0x7c, 0xbd) && st::introCoverIconsFg->c.blue() <= st::introCoverIconsFg->c.red() + 15) {
+		st::introCoverLeft.paint(p, left, coverHeight - st::introCoverLeft.height(), width());
+		st::introCoverRight.paint(p, width() - right - st::introCoverRight.width(), coverHeight - st::introCoverRight.height(), width());
+	}
 
 	static const auto deltaGlyph = QImage(u":/gui/art/app_icon_glyph.png"_q)
 		.convertToFormat(QImage::Format_ARGB32_Premultiplied);

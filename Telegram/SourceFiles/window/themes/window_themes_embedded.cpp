@@ -26,7 +26,7 @@ namespace {
 
 constexpr auto kMaxAccentColors = 3;
 constexpr auto kDayBaseFile = ":/gui/day-custom-base.tdesktop-theme"_cs;
-constexpr auto kNightBaseFile = ":/gui/night-custom-base.tdesktop-theme"_cs;
+constexpr auto kNightBaseFile = ":/gui/aero-delta.tdesktop-theme"_cs;
 
 const auto kColorizeIgnoredKeys = base::flat_set<QLatin1String>{ {
 	qstr("boxTextFgGood"),
