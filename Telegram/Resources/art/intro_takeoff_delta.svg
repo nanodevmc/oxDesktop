@@ -1,262 +1,161 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 600 500" width="600" height="500">
   <defs>
-    <!-- Background Gradients -->
-    <linearGradient id="headerGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#b81d09"/>
-      <stop offset="100%" stop-color="#d42813"/>
-    </linearGradient>
+    <filter id="mach-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur1" />
+      <feGaussianBlur stdDeviation="8" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
 
-    <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#141518"/>
-      <stop offset="100%" stop-color="#0f1012"/>
-    </linearGradient>
-
-    <linearGradient id="vaporGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.9)"/>
-      <stop offset="35%" stop-color="rgba(255,255,255,0.45)"/>
-      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
-    </linearGradient>
-
-    <radialGradient id="blastGrad" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="20%" stop-color="#ff855e"/>
-      <stop offset="55%" stop-color="#da3018"/>
-      <stop offset="100%" stop-color="rgba(20,21,24,0)"/>
+    <radialGradient id="plasmaThrust" cx="50%" cy="0%" r="90%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="30%" stop-color="#38bdf8" stop-opacity="0.8" />
+      <stop offset="70%" stop-color="#da3018" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#da3018" stop-opacity="0" />
     </radialGradient>
 
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-
-    <filter id="bigGlow" x="-100%" y="-100%" width="300%" height="300%">
-      <feGaussianBlur stdDeviation="16" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
+    <radialGradient id="shockwaveGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="40%" stop-color="#60a5fa" stop-opacity="0.7" />
+      <stop offset="80%" stop-color="#da3018" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
   </defs>
 
   <style>
-    text {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      user-select: none;
-    }
-
-    /* 1. Intro Screen fades out after takeoff */
-    .screen-intro {
-      animation: introFade 0.6s ease 4.8s forwards;
-    }
-    @keyframes introFade {
-      0% { opacity: 1; }
-      100% { opacity: 0; pointer-events: none; }
-    }
-
-    /* 2. Plane Flight Trajectory (Up -> Right -> Down -> Zoom) */
-    .plane-flight-container {
-      animation: deltaTakeoff 5.5s cubic-bezier(0.4, 0, 0.2, 1) 0.8s forwards;
-    }
-    @keyframes deltaTakeoff {
+    /* Continuous smooth flight with NOSE ALWAYS POINTING IN FLIGHT DIRECTION */
+    @keyframes smoothFlight {
       0% {
-        transform: translate(400px, 120px) rotate(0deg) scale(1);
+        transform: translate(300px, 270px) rotate(0deg) scale(0.9);
+        opacity: 0;
+      }
+      6% {
+        transform: translate(300px, 260px) rotate(0deg) scale(0.95);
         opacity: 1;
       }
-      18% {
-        transform: translate(400px, -90px) rotate(0deg) scale(0.85);
-      }
-      35% {
-        transform: translate(680px, 60px) rotate(65deg) scale(0.95);
-      }
-      52% {
-        transform: translate(520px, 340px) rotate(145deg) scale(1.3);
-      }
-      68% {
-        transform: translate(400px, 290px) rotate(0deg) scale(2.8);
-      }
-      88% {
-        transform: translate(400px, 280px) rotate(0deg) scale(18);
-        opacity: 1;
-        filter: drop-shadow(0 0 35px #ffffff);
-      }
-      96% {
-        transform: translate(400px, 280px) rotate(0deg) scale(26);
-        opacity: 0.9;
-      }
-      100% {
-        transform: translate(400px, 280px) rotate(0deg) scale(32);
-        opacity: 0;
-      }
-    }
-
-    /* 3. Mach Shockwave Rings */
-    .shockwave-rings {
-      opacity: 0;
-      animation: shockwaveExpand 0.9s ease-out 5.6s forwards;
-    }
-    @keyframes shockwaveExpand {
-      0% {
-        opacity: 0;
-        transform: translate(400px, 280px) scale(0.2);
-      }
-      30% {
-        opacity: 1;
-      }
-      100% {
-        opacity: 0;
-        transform: translate(400px, 280px) scale(5);
-      }
-    }
-
-    /* 4. Screen Explosion Burst */
-    .screen-explosion {
-      opacity: 0;
-      animation: screenBurst 1.1s cubic-bezier(0.1, 0.9, 0.2, 1) 5.9s forwards;
-    }
-    @keyframes screenBurst {
-      0% {
-        opacity: 0;
-        transform: scale(0.2);
+      15% {
+        transform: translate(300px, 220px) rotate(0deg) scale(1.0);
       }
       25% {
+        transform: translate(360px, 180px) rotate(55deg) scale(1.02);
+      }
+      38% {
+        transform: translate(420px, 150px) rotate(15deg) scale(0.98);
+      }
+      50% {
+        transform: translate(360px, 115px) rotate(-75deg) scale(0.95);
+      }
+      62% {
+        transform: translate(230px, 125px) rotate(-100deg) scale(0.95);
+      }
+      72% {
+        transform: translate(175px, 185px) rotate(-155deg) scale(1.0);
+      }
+      82% {
+        transform: translate(215px, 255px) rotate(-90deg) scale(1.08);
+      }
+      88% {
+        transform: translate(275px, 265px) rotate(-25deg) scale(1.2);
+      }
+      92% {
+        transform: translate(300px, 250px) rotate(0deg) scale(1.6);
         opacity: 1;
-        transform: scale(2.4);
+      }
+      95% {
+        transform: translate(300px, 250px) rotate(0deg) scale(2.2);
+        opacity: 0;
       }
       100% {
+        transform: translate(300px, 250px) rotate(0deg) scale(2.4);
         opacity: 0;
-        transform: scale(3.8);
       }
     }
 
-    /* 5. Main Desktop App Reveal */
-    .screen-main-app {
-      opacity: 0;
-      transform: scale(0.96);
-      animation: appReveal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 6.6s forwards;
-    }
-    @keyframes appReveal {
-      0% {
+    /* Supersonic Mach Shockwave: detonates at 92%-98% */
+    @keyframes machShockwave {
+      0%, 90% {
         opacity: 0;
-        transform: scale(0.96);
+        transform: translate(300px, 250px) scale(0.05);
+      }
+      92% {
+        opacity: 1;
+        transform: translate(300px, 250px) scale(0.3);
+      }
+      95% {
+        opacity: 0.9;
+        transform: translate(300px, 250px) scale(1.7);
+      }
+      98% {
+        opacity: 0;
+        transform: translate(300px, 250px) scale(3.0);
       }
       100% {
-        opacity: 1;
-        transform: scale(1);
+        opacity: 0;
+        transform: translate(300px, 250px) scale(3.2);
       }
     }
 
-    /* Idle hover before takeoff */
-    @keyframes initialHover {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-4px); }
+    /* Blinding Anamorphic Flare Streak */
+    @keyframes lensStreak {
+      0%, 91% {
+        opacity: 0;
+        transform: translate(300px, 250px) scaleX(0.01) scaleY(0.2);
+      }
+      93% {
+        opacity: 1;
+        transform: translate(300px, 250px) scaleX(1.9) scaleY(1.0);
+      }
+      96% {
+        opacity: 0.6;
+        transform: translate(300px, 250px) scaleX(2.8) scaleY(0.3);
+      }
+      99%, 100% {
+        opacity: 0;
+        transform: translate(300px, 250px) scaleX(3.4) scaleY(0.05);
+      }
     }
-    .idle-hover {
-      animation: initialHover 1.2s ease-in-out infinite;
+
+    .plane-container {
+      animation: smoothFlight 2.8s cubic-bezier(0.42, 0.0, 0.58, 1.0) infinite;
+      transform-origin: 0 0;
+    }
+
+    .shock-ring {
+      animation: machShockwave 2.8s cubic-bezier(0.1, 0.8, 0.2, 1.0) infinite;
+      transform-origin: 0 0;
+    }
+
+    .streak-light {
+      animation: lensStreak 2.8s cubic-bezier(0.1, 0.9, 0.2, 1.0) infinite;
+      transform-origin: 0 0;
     }
   </style>
 
-  <!-- ========================================== -->
-  <!-- SCREEN 1: INTRO SCREEN (oxDesktop Aero Delta) -->
-  <!-- ========================================== -->
-  <g class="screen-intro">
-    <rect x="0" y="0" width="800" height="600" fill="url(#bodyGrad)"/>
-    <path d="M 0 0 L 800 0 L 800 230 C 650 215, 550 250, 400 250 C 250 250, 150 215, 0 230 Z" fill="url(#headerGrad)"/>
-    <path d="M 40 220 C 60 190, 110 195, 130 220 Z" fill="rgba(255,255,255,0.06)"/>
-    <path d="M 680 210 C 700 180, 760 185, 780 215 Z" fill="rgba(255,255,255,0.06)"/>
+  <!-- PURE TRANSPARENT BACKGROUND (No box, no overlay) -->
 
-    <text x="400" y="340" text-anchor="middle" font-size="30" font-weight="700" fill="#ffffff" letter-spacing="0.5">oxDesktop</text>
-    <text x="400" y="375" text-anchor="middle" font-size="14" fill="#9e9ea6">
-      Unofficial Windows client based on Telegram Desktop.
-    </text>
-    <text x="400" y="398" text-anchor="middle" font-size="14" fill="#9e9ea6">
-      Maintained independently.
-    </text>
+  <!-- Supersonic Shockwave Rings -->
+  <g class="shock-ring">
+    <circle r="130" fill="none" stroke="#60a5fa" stroke-width="3" filter="url(#mach-glow)" opacity="0.9" />
+    <circle r="90" fill="none" stroke="#ffffff" stroke-width="4.5" filter="url(#mach-glow)" opacity="0.95" />
+    <circle r="45" fill="url(#shockwaveGlow)" opacity="0.85" />
   </g>
 
-  <!-- ========================================== -->
-  <!-- JET / STEALTH EMBLEM & AIR TRAIL CONTAINER -->
-  <!-- ========================================== -->
-  <g class="plane-flight-container" transform="translate(400, 120)">
-    <g class="air-exhaust">
-      <polygon points="-12,18 -72,110 -36,110 0,35 36,110 72,110 12,18" fill="url(#vaporGrad)" />
-      <ellipse cx="0" cy="40" rx="52" ry="15" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2"/>
-      <ellipse cx="0" cy="70" rx="80" ry="20" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-    </g>
-
-    <g class="idle-hover" filter="url(#glow)">
-      <polygon points="0,-64 78,48 40,38 0,56 -40,38 -78,48" fill="#ffffff"/>
-      <polygon points="0,-64 36,40 0,52" fill="#e2e4e8"/>
-      <polygon points="0,-64 0,52 -36,40" fill="#f8f9fa"/>
-      <polygon points="0,-64 4,32 0,44 -4,32" fill="#d21e08"/>
-    </g>
+  <!-- Anamorphic Mach Light Streaks -->
+  <g class="streak-light">
+    <ellipse rx="240" ry="4" fill="#ffffff" filter="url(#mach-glow)" opacity="0.95" />
+    <ellipse rx="300" ry="1.5" fill="#38bdf8" opacity="0.8" />
+    <line x1="-130" y1="-30" x2="130" y2="30" stroke="#ffffff" stroke-width="2" filter="url(#mach-glow)" opacity="0.75" />
+    <line x1="-130" y1="30" x2="130" y2="-30" stroke="#da3018" stroke-width="1.5" opacity="0.6" />
   </g>
 
-  <!-- Mach Shockwave Rings on Hyper-Zoom -->
-  <g class="shockwave-rings" style="pointer-events:none;">
-    <circle cx="0" cy="0" r="45" fill="none" stroke="#ff7859" stroke-width="14" filter="url(#bigGlow)"/>
-    <circle cx="0" cy="0" r="95" fill="none" stroke="#ffffff" stroke-width="7" filter="url(#glow)"/>
-    <circle cx="0" cy="0" r="150" fill="none" stroke="#da3018" stroke-width="4"/>
-  </g>
-
-  <!-- Screen Explosion Burst -->
-  <circle class="screen-explosion" cx="400" cy="280" r="280" fill="url(#blastGrad)" style="pointer-events:none;"/>
-
-  <!-- ========================================== -->
-  <!-- SCREEN 2: MAIN APP / NEXT SCREEN (AERO DELTA) -->
-  <!-- ========================================== -->
-  <g class="screen-main-app" style="pointer-events:none;">
-    <rect x="0" y="0" width="800" height="600" fill="#131417"/>
-
-    <!-- Left Sidebar: Channels & Chats -->
-    <rect x="0" y="0" width="270" height="600" fill="#181a1f" stroke="#262830" stroke-width="1"/>
-
-    <rect x="16" y="16" width="238" height="38" rx="8" fill="#22242b"/>
-    <text x="32" y="40" font-size="13" fill="#848995">Поиск</text>
-
-    <!-- Chat Item 1: oxDesktop Official -->
-    <g transform="translate(12, 70)">
-      <rect x="0" y="0" width="246" height="56" rx="8" fill="#282224" stroke="rgba(218,48,24,0.45)" stroke-width="1"/>
-      <rect x="10" y="8" width="40" height="40" rx="20" fill="#da3018"/>
-      <polygon points="30,16 42,38 30,34 18,38" fill="#ffffff"/>
-      <text x="60" y="26" font-size="14" font-weight="600" fill="#ffffff">oxDesktop Official</text>
-      <text x="210" y="24" font-size="11" fill="#ff6b57">18:42</text>
-      <text x="60" y="44" font-size="12" fill="#b0b5be">oxDesktop</text>
-    </g>
-
-    <!-- Chat Item 2: Telegram Notifications -->
-    <g transform="translate(12, 134)">
-      <rect x="0" y="0" width="246" height="56" rx="8" fill="transparent"/>
-      <rect x="10" y="8" width="40" height="40" rx="20" fill="#da3018"/>
-      <polygon points="30,16 42,38 30,34 18,38" fill="#ffffff"/>
-      <text x="60" y="26" font-size="14" font-weight="600" fill="#ffffff">Telegram</text>
-      <text x="210" y="24" font-size="11" fill="#757984">16:41</text>
-      <text x="60" y="44" font-size="12" fill="#757984">Уведомление</text>
-    </g>
-
-    <!-- Chat Item 3: NanoDev -->
-    <g transform="translate(12, 198)">
-      <rect x="0" y="0" width="246" height="56" rx="8" fill="transparent"/>
-      <circle cx="30" cy="28" r="20" fill="#2ecc71"/>
-      <text x="30" y="34" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">ND</text>
-      <text x="60" y="26" font-size="14" font-weight="600" fill="#ffffff">NanoDev</text>
-      <text x="210" y="24" font-size="11" fill="#757984">14:20</text>
-      <text x="60" y="44" font-size="12" fill="#757984">Диалог</text>
-    </g>
-
-    <!-- Main Chat Window Area -->
-    <g transform="translate(270, 0)">
-      <!-- Top Chat Bar -->
-      <rect x="0" y="0" width="530" height="58" fill="#181a1f" stroke="#262830" stroke-width="1"/>
-      <text x="24" y="36" font-size="16" font-weight="700" fill="#ffffff">oxDesktop Official</text>
-
-      <!-- Bottom Chat Input Bar -->
-      <rect x="20" y="525" width="490" height="50" rx="10" fill="#1e2026" stroke="#2c2f38" stroke-width="1"/>
-      <text x="40" y="556" font-size="14" fill="#6d7280">Написать сообщение...</text>
-      <circle cx="485" cy="550" r="16" fill="#da3018"/>
-      <polygon points="480,544 492,550 480,556" fill="#ffffff"/>
-    </g>
+  <!-- Moving Stealth Delta Craft -->
+  <g class="plane-container">
+    <!-- Plasma exhaust flame attached to tail (behind the aircraft) -->
+    <path d="M -10,25 L 0,65 L 10,25 Z" fill="url(#plasmaThrust)" />
+    <!-- Exact original emblem glyph directly embedded as base64 image (nose points UP) -->
+    <image href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAJpklEQVR42u3dQWsTbRQF4BtxZRRCoLtC///PEtwJIdCm27gwgRKbjmmnycw9z7MScWHz8XnOe2YyUwUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABU1c9fv/c+Bcj0xUcAAAoAEGB/cFwBNtudJQAUAABAAQDanf5Pf+/x6bmsAKAAAEHh/5ISAAoAEBb+j0/PSgAoAEBS+FsCQAEAgh1XAEABAMJO/1YAUACAwPB/uQIoAaAAACEnf0sAKABAaPif3gugBIACAAAoAEDX6b9cCgAFAMgL/9e+EqgEgAIAhJz8lQBQAICw8D/3YCAlABQAAEABALpN/1YAUACA0Ov+5X4AUACAvPB/6yVBSgAoAEDIyV8JAAUAKK8KBhQAIOz0bwUABQBoHv5DK4ASAAoAEHLyVwJAAQDCw18JAAUAKDcDAgoAEHL6twKAAgA0Df//XQGUAFAAgJCTvxIACgDQOPwvuRdACQAFAABQAIA5T/9WAFAAANf9lQBQAICU8L/0uQBKACgAQMjJXwkABQAoTwcEFABw+g87/VsBQAEA4R8a/koAKAAg/Cv7MoASAAoACH9LAKAAAG4GBBQAcPq3AgAKAAj/fiuAEgAKAAh/SwCgAIDwT7oXQAkABQAAUADA6d8KACgAIPzL/QCAAgDCv91zAZQAUABA+FsCAAUAAFAAwOm/Oj8e2AoACgAI/3IpAFAAQPgHvSRICQAFAIS/JQBQAACvCgYUAHD6twIACgAI/34rgBIACgAIf0sAoACA8E+6F0AJAAUAAFAAwOnfCgAoACD8y/0AgAIAwl8JAAUAEP7V4sFASgAoAACAAgBO/1YAQAEA4V/uBwAFABD+7V4SpASAAgDC3xIAKACAVwWDAgA4/VsBQAEA4U+/FUAJAAUAhL8lABQAEP7CP+leACUAFAAAUADA6R8rACgAIPwp9wOAAgDCHyUAFAAQ/lSLBwMpASgAAIACAE7/WAFAAQDhT7kfABQAEP60e0mQEoACAMIfSwAoAABeFQwKADj9YwUABQCEP/1WACUABQCEP5YAUABA+JN0L4ASgAIAACgA4PRPuRQACgAIf6rxVwKVABQAEP5YAkABAOFP0oOBlAAUAABAAQCnf6wAoACA8KfcDwAKAAh/2r0kSAlAAQDhjyUAFAAArwoGBQCc/rECgAIAwp9+K4ASgAIAwh9LACgAIPxRAkABACg3A4ICAE7/WAFAAQDhT48VQAlAAQDhjyUAFAAQ/iTdC6AEoAAAAAoAOP1jBQAFAIQ/5X4AUAAQ/tDuuQBKAAoACH8sAaAAAHg6ICgAOP2DFQAUAIQ/KAGgACD8oXpcBlACUAAQ/mAJAAUAwM2AoADg9A9WAFAAEP7QbwVQAlAAEP5gCQAFAOEPSfcCKAEoAACAAoDTP1gBQAFA+EO5HwAUAIQ/tHsugBKAAoDwB0sAKAAA7/Hj+zcfAigAOP2TFPxzDn8rAAoAwh9CT/1KAAoAwh8CTv1KAAoAwh9c61cCGNVXHwEg+MECAE7/CH8rAAoACH9c61cCUABA+OPUrwSgACD8walfCUABAHDqBwUAp39w6rcCoAAg/MGpXwlAAUD4g1O/EoACgPAHp34lgPIkQEDwAxYAnP4R/lgBUAAQ/jO1OPBJ/Ovh/m7xcH/ns1ECUACgX/i/9mv+hv/x1+vV0mcD5R4AJhBaVoBxw//095I/33Mn/vVquXB6/ThlCgsATHjyT10Dhub+9Wq5EGBgAcAK0OLUP/RnEz7nS6/zWwOc/rEAQMvwT1oD3nuTnzADCwBWgJbB330NGOPu/mMJsAYoTFgAoF34d1wDxv5qn3ADCwBWgJbB32UN+Mzv9FsDFCQsANA2/Oe8BlzrgT7CDiwAWAHahv+c1oBbPMnPtwQUIiwAEPE436muAbd8jK9nBoAFACLCd0prwJSe328NAAsArkdH/Ny3/jtN8eU9qUuABQQLAIQVnlusAVN/a59vCYAFACtAzM95rb/rnF7Zm3IqdvrHAgDhBecz14A5Bb81ACwACMnIn2vsn2Gu4Z9wSnb6xwIAwn/0NaBD8PuWAFgAEJiT/W7/FP8bdQv/js8McPrHAgBKzGhrQNfgtwaABQBin2kw9POmhL8TNFgACH0/QOrDjM6tAWnB3+FbAsoLFgAQ/h/6HJLDX6AS/W+Aj4CxzGEFEP4MmcMSoKxQLgGA4MclASiXABCywp/ep2ynfywAIPixBoAFAKEr/Ol+6nb6RwEA4Y/wBd8CoHwjQPBTvb8poIBgAQDhjzUAFAAQ/igBoAAQFsrCn4QSoGygAIDwxxIACgC5AS38SSkBCgYKAAh/LAGgACCsQakABQCFAgQ2KAB0DG3hT1IJUCZQAED4YwkABQDhD0oAKAA0D3HhT2IJUB5QAFAawBIACgA5gS78SS0BCgMKAIoCWAJAASAj3IU/ySVASUABAAAUADJWAKd/klcAp38UAJQCcD8AQF/7A58EqTbb3X6z3fl/AMgrAD4FlAAFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAa/gATrg9oWrII9gAAAABJRU5ErkJggg==" x="-50" y="-50" width="100" height="100" />
   </g>
 </svg>

@@ -85,3 +85,9 @@ docs/tiktok/*
 
 builds/
 BUILD_LOG.md
+
+# Agent folders and logs
+.agents/
+.agents/*
+*.personal.md
+TODO.md
