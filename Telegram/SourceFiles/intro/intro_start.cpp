@@ -31,8 +31,14 @@ StartWidget::StartWidget(
 }
 
 void StartWidget::submit() {
-	account().destroyStaleAuthorizationKeys();
-	goNext<QrWidget>();
+	if (_submitting) {
+		return;
+	}
+	_submitting = true;
+	startTakeoff([this] {
+		account().destroyStaleAuthorizationKeys();
+		goNext<QrWidget>();
+	});
 }
 
 rpl::producer<QString> StartWidget::nextButtonText() const {
@@ -44,6 +50,8 @@ rpl::producer<> StartWidget::nextButtonFocusRequests() const {
 }
 
 void StartWidget::activate() {
+	_submitting = false;
+	setPlaneVisible(true);
 	Step::activate();
 	setInnerFocus();
 }

@@ -336,6 +336,9 @@ bool Step::paintAnimated(QPainter &p, QRect clip) {
 		if (hasCover()) {
 			paintCover(p, 0);
 		}
+		if (_takingOff) {
+			paintTakeoff(p, 0);
+		}
 		if (_coverAnimation.title) {
 			showFinished();
 		}
@@ -356,6 +359,9 @@ bool Step::paintAnimated(QPainter &p, QRect clip) {
 	auto coverTop = (hasCover() ? anim::interpolate(-st::introCoverHeight, 0, showCoverMethod) : anim::interpolate(0, -st::introCoverHeight, hideCoverMethod));
 
 	paintCover(p, coverTop);
+	if (_takingOff) {
+		paintTakeoff(p, coverTop);
+	}
 
 	auto positionReady = hasCover() ? showCoverMethod : hideCoverMethod;
 	_coverAnimation.title->paintFrame(p, positionReady, departingAlpha, arrivingAlpha);
@@ -493,6 +499,10 @@ void Step::paintCover(QPainter &p, int top) {
 		st::introCoverRight.paint(p, width() - right - st::introCoverRight.width(), coverHeight - st::introCoverRight.height(), width());
 	}
 
+	if (!_planeVisible) {
+		return;
+	}
+
 	static const auto deltaGlyph = QImage(u":/gui/art/app_icon_glyph.png"_q)
 		.convertToFormat(QImage::Format_ARGB32_Premultiplied);
 	constexpr auto kDeltaSize = 160;
@@ -534,6 +544,107 @@ void Step::paintCover(QPainter &p, int top) {
 	p.drawArc(QRectF(centerX - 75, planeCenterY + 30, 150, 40), 0, 180 * 16);
 
 	p.drawImage(QRect(deltaLeft, deltaTop, kDeltaSize, kDeltaSize), deltaGlyph);
+}
+
+void Step::setPlaneVisible(bool visible) {
+	if (_planeVisible != visible) {
+		_planeVisible = visible;
+		update();
+	}
+}
+
+void Step::startTakeoff(Fn<void()> onFinished) {
+	if (_takingOff) {
+		return;
+	}
+	_planeVisible = false;
+	_takingOff = true;
+	_takeoffFinished = std::move(onFinished);
+	_a_takeoff.start(
+		[this] {
+			update();
+			if (!_a_takeoff.animating() && _takingOff) {
+				_takingOff = false;
+				crl::on_main(this, [this] {
+					if (const auto onFinished = base::take(_takeoffFinished)) {
+						onFinished();
+					}
+				});
+			}
+		},
+		0.,
+		1.,
+		800);
+}
+
+void Step::paintTakeoff(QPainter &p, int top) {
+	static const auto deltaGlyph = QImage(u":/gui/art/app_icon_glyph.png"_q)
+		.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+	constexpr auto kDeltaSize = 160;
+	const auto centerX = width() / 2.0;
+	const auto startTop = top + 36.0;
+	const auto t = _a_takeoff.value(1.0);
+
+	auto hq = PainterHighQualityEnabler(p);
+
+	// Physics trajectory: starts EXACTLY at (centerX, startTop)
+	float64 curY = startTop;
+	float64 curScale = 1.0;
+	if (t < 0.12) {
+		// Initial ignition / subtle vibration
+		curScale = 1.0 + t * 0.08;
+		curY = startTop + std::sin(t / 0.12 * M_PI) * 1.5;
+	} else {
+		// Supersonic climb surge
+		const auto progress = (t - 0.12) / 0.88;
+		const auto surge = anim::easeInQuad(1.0, progress);
+		curScale = 1.0 + t * 0.35;
+		curY = startTop - surge * (startTop + kDeltaSize * curScale + 140.0);
+	}
+
+	const auto curSize = kDeltaSize * curScale;
+	const auto curLeft = centerX - curSize / 2.0;
+	const auto nozzleY = curY + curSize * 0.58;
+
+	// Afterburner flame and high-energy propulsion trail
+	const auto flameLen = 75.0 + t * 240.0;
+	QLinearGradient flameGrad(centerX, nozzleY - 10, centerX, nozzleY + flameLen);
+	flameGrad.setColorAt(0.0, QColor(255, 255, 255, 245)); // white-hot plasma nozzle
+	flameGrad.setColorAt(0.16, QColor(255, 92, 54, 220));   // intense orange flame
+	flameGrad.setColorAt(0.55, QColor(218, 48, 24, 185));  // Aero Delta signature crimson
+	flameGrad.setColorAt(1.0, QColor(218, 48, 24, 0));     // fading exhaust dissipation
+
+	QPainterPath plume;
+	const auto plumeHalfW = 12.0 + t * 20.0;
+	plume.moveTo(centerX - plumeHalfW * 0.45, nozzleY);
+	plume.lineTo(centerX - plumeHalfW * 2.2, nozzleY + flameLen * 0.82);
+	plume.lineTo(centerX - plumeHalfW * 0.7, nozzleY + flameLen * 0.96);
+	plume.lineTo(centerX, nozzleY + flameLen * 1.08);
+	plume.lineTo(centerX + plumeHalfW * 0.7, nozzleY + flameLen * 0.96);
+	plume.lineTo(centerX + plumeHalfW * 2.2, nozzleY + flameLen * 0.82);
+	plume.lineTo(centerX + plumeHalfW * 0.45, nozzleY);
+	plume.closeSubpath();
+
+	p.setPen(Qt::NoPen);
+	p.setBrush(flameGrad);
+	p.drawPath(plume);
+
+	// Concentric supersonic Mach shockwave arcs expanding behind the airframe
+	const auto shockAlpha = int(std::clamp((1.0 - t) * 1.6, 0.0, 1.0) * 190);
+	if (shockAlpha > 8) {
+		p.setBrush(Qt::NoBrush);
+		p.setPen(QPen(QColor(255, 255, 255, shockAlpha / 2), 2.2));
+		p.drawArc(QRectF(centerX - (50 + t * 95), nozzleY + 8 + t * 25, (100 + t * 190), (32 + t * 50)), 0, 180 * 16);
+
+		p.setPen(QPen(QColor(218, 48, 24, shockAlpha / 3), 1.6));
+		p.drawArc(QRectF(centerX - (75 + t * 145), nozzleY + 24 + t * 45, (150 + t * 290), (42 + t * 70)), 0, 180 * 16);
+	}
+
+	// Delta stealth plane with fade out as it approaches the top edge
+	const auto planeAlpha = (t < 0.65) ? 1.0 : (1.0 - (t - 0.65) / 0.35);
+	p.setOpacity(planeAlpha);
+	p.drawImage(QRectF(curLeft, curY, curSize, curSize), deltaGlyph);
+	p.setOpacity(1.0);
 }
 
 int Step::contentLeft() const {

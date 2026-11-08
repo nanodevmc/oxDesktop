@@ -87,6 +87,11 @@ public:
 
 	[[nodiscard]] bool hasCover() const;
 	[[nodiscard]] virtual bool hasBack() const;
+	void startTakeoff(Fn<void()> onFinished);
+	[[nodiscard]] bool planeVisible() const {
+		return _planeVisible;
+	}
+	void setPlaneVisible(bool visible);
 	virtual void activate();
 	virtual void cancelled();
 	virtual void finished();
@@ -203,12 +208,17 @@ private:
 
 	void prepareCoverMask();
 	void paintCover(QPainter &p, int top);
+	void paintTakeoff(QPainter &p, int top);
 
 	const not_null<Main::Account*> _account;
 	const not_null<Data*> _data;
 	mutable std::optional<MTP::Sender> _api;
 
 	bool _hasCover = false;
+	bool _planeVisible = true;
+	bool _takingOff = false;
+	Ui::Animations::Simple _a_takeoff;
+	Fn<void()> _takeoffFinished;
 	Fn<void(Step *step, StackAction action, Animate animate)> _goCallback;
 	Fn<Step*()> _stepBelowCallback;
 	Fn<void()> _showResetCallback;

@@ -33,6 +33,7 @@ public:
 
 private:
 	rpl::event_stream<> _nextButtonFocusRequests;
+	bool _submitting = false;
 
 };
 
