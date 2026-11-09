@@ -9338,6 +9338,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_badge_developer" = "{name} is the developer of oxDesktop.";
 "lng_extera_badge_resource" = "{name} is an official oxDesktop resource.";
 "lng_extera_port" = "oxDesktop";
+"lng_extera_monet" = "Monet colors from system accent";
 "lng_extera_port_developer" = "Developer";
 "lng_extera_translate_messages" = "Translate Messages";
 "lng_extera_translate_button" = "Show Translate Button";

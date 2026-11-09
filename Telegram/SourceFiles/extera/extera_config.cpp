@@ -24,6 +24,7 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"upload_boost"_q, false },
 		{ u"relative_last_seen"_q, false },
 		{ u"hide_phone"_q, true },
+		{ u"monet_colors"_q, false },
 		{ u"show_id_dc"_q, 1 },
 		{ u"hide_archive"_q, false },
 

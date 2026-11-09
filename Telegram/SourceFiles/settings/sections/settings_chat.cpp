@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_chat.h"
+#include "extera/extera_config.h"
+#include "ui/effects/animations.h"
 
 #include "settings/settings_common_session.h"
 
@@ -94,6 +96,33 @@ constexpr auto kCustomColorButtonParts = 7;
 [[nodiscard]] bool IsSystemAccentColorSupported() {
 	return Window::Theme::SystemAccentColor().has_value();
 }
+
+void CrossfadeWindow(QWidget *any) {
+	const auto window = any ? any->window() : nullptr;
+	if (!window || !window->isVisible()) {
+		return;
+	}
+	const auto shot = Ui::GrabWidget(window);
+	const auto overlay = Ui::CreateChild<Ui::RpWidget>(window);
+	overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
+	overlay->setGeometry(window->rect());
+	overlay->show();
+	overlay->raise();
+	const auto fade = overlay->lifetime().make_state<Ui::Animations::Simple>();
+	overlay->paintRequest(
+	) | rpl::on_next([=] {
+		auto p = QPainter(overlay);
+		p.setOpacity(fade->value(0.));
+		p.drawPixmap(0, 0, shot);
+	}, overlay->lifetime());
+	fade->start([=] {
+		overlay->update();
+		if (!fade->animating()) {
+			overlay->deleteLater();
+		}
+	}, 1., 0., 460, anim::easeOutCubic);
+}
+
 
 class ColorsPalette final {
 public:
@@ -2110,6 +2139,22 @@ void SetupDefaultThemes(
 		st::settingsCheckboxPadding);
 	systemAccentWrap->setDuration(0);
 
+	const auto monet = container->add(
+		object_ptr<Ui::Checkbox>(
+			container,
+			tr::lng_extera_monet(tr::now),
+			Extera::Bool(u"monet_colors"_q),
+			st::settingsCheckbox),
+		st::settingsCheckboxPadding);
+	monet->checkedChanges(
+	) | rpl::on_next([=](bool checked) {
+		if (Extera::Bool(u"monet_colors"_q) == checked) {
+			return;
+		}
+		CrossfadeWindow(container);
+		Extera::Config::Instance().setBool(u"monet_colors"_q, checked);
+	}, monet->lifetime());
+
 	const auto chosen = [] {
 		const auto &object = Background()->themeObject();
 		if (object.cloud.id) {
@@ -2148,6 +2193,7 @@ void SetupDefaultThemes(
 	const auto schemeClicked = [=](
 			const Scheme &scheme,
 			Qt::KeyboardModifiers modifiers) {
+		CrossfadeWindow(block);
 		apply(scheme);
 	};
 
@@ -2225,6 +2271,9 @@ void SetupDefaultThemes(
 	systemAccentWrap->entity()->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
 		auto &settings = Core::App().settings();
+		if (settings.systemAccentColorEnabled() != checked) {
+			CrossfadeWindow(container);
+		}
 		if (settings.systemAccentColorEnabled() == checked) {
 			return;
 		}

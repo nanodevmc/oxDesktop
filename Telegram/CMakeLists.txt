@@ -2486,6 +2486,8 @@ PRIVATE
     window/window_unlock_passcode_box.h
     window/themes/window_theme.cpp
     window/themes/window_theme.h
+    window/themes/window_theme_monet.cpp
+    window/themes/window_theme_monet.h
     window/themes/window_theme_editor.cpp
     window/themes/window_theme_editor.h
     window/themes/window_theme_editor_block.cpp
