@@ -223,7 +223,6 @@ Most strings follow Telegram Desktop translations. oxDesktop strings are availab
 | Project | Use in oxDesktop |
 |:--|:--|
 | [Telegram Desktop](https://github.com/telegramdesktop/tdesktop) | Client sources |
-| [NanoDev](https://github.com/nanodevmc) | Lead developer & oxDesktop maintainer |
 | [exteraGram](https://github.com/exteraSquad/exteraGram) | Features and plugin format |
 | [AyuGram Desktop](https://github.com/AyuGram/AyuGramDesktop) | Desktop implementation references |
 | [tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy) | Built-in WebSocket proxy, MIT License |

@@ -223,7 +223,6 @@ cmake --build out --config Release --target Telegram
 | Проект | Что используется в oxDesktop |
 |:--|:--|
 | [Telegram Desktop](https://github.com/telegramdesktop/tdesktop) | Исходный код клиента |
-| [NanoDev](https://github.com/nanodevmc) | Ведущий разработчик и мейнтейнер oxDesktop |
 | [exteraGram](https://github.com/exteraSquad/exteraGram) | Функции и формат плагинов |
 | [AyuGram Desktop](https://github.com/AyuGram/AyuGramDesktop) | Примеры реализации для компьютера |
 | [tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy) | Встроенный WebSocket-прокси, лицензия MIT |
