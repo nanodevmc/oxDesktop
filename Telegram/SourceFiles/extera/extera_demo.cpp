@@ -47,69 +47,6 @@ bool gAutoExit = false;
 	return emblem.scaled(size, size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 }
 
-[[nodiscard]] QImage ChangelogAvatarIcon(int size) {
-	auto result = QImage(size, size, QImage::Format_ARGB32_Premultiplied);
-	result.fill(Qt::transparent);
-	auto p = QPainter(&result);
-	auto hq = PainterHighQualityEnabler(p);
-
-	// Radiant rich gradient: Indigo to Cyan/Azure
-	auto grad = QLinearGradient(0, 0, size, size);
-	grad.setColorAt(0., QColor(30, 64, 175));
-	grad.setColorAt(0.55, QColor(37, 99, 235));
-	grad.setColorAt(1., QColor(6, 182, 212));
-	p.setPen(QPen(QColor(125, 211, 252, 160), 1.2));
-	p.setBrush(grad);
-	p.drawEllipse(QRectF(1, 1, size - 2, size - 2));
-
-	// Document notebook plate
-	p.setPen(Qt::NoPen);
-	p.setBrush(QColor(255, 255, 255, 235));
-	const auto docW = int(size * 0.44);
-	const auto docH = int(size * 0.52);
-	const auto docX = (size - docW) / 2;
-	const auto docY = (size - docH) / 2;
-	const auto docRect = QRectF(docX, docY, docW, docH);
-	p.drawRoundedRect(docRect, 3.5, 3.5);
-
-	// 3 list items: colored bullet dots + text lines
-	const auto lineH = 2.0;
-	const auto dotR = 1.3;
-	const auto leftPad = docX + 3.5;
-	const auto textLeft = leftPad + 4.5;
-	const auto textW = docW - 10.5;
-
-	for (int i = 0; i < 3; ++i) {
-		const auto rowY = docY + 5.0 + i * 5.8;
-		p.setPen(Qt::NoPen);
-		p.setBrush(i == 0 ? QColor(239, 68, 68) : (i == 1 ? QColor(16, 185, 129) : QColor(37, 99, 235)));
-		p.drawEllipse(QPointF(leftPad + dotR, rowY + lineH / 2.0), dotR, dotR);
-
-		p.setBrush(QColor(100, 116, 139, 210));
-		const auto currLineW = (i == 2) ? (textW * 0.65) : textW;
-		p.drawRoundedRect(QRectF(textLeft, rowY, currLineW, lineH), 1.0, 1.0);
-	}
-
-	// Golden sparkle badge on top-right corner of document
-	p.setPen(Qt::NoPen);
-	p.setBrush(QColor(251, 191, 36));
-	const auto sparkCx = docX + docW - 2.0;
-	const auto sparkCy = docY + 2.0;
-	QPolygonF star;
-	const auto sR = 3.2;
-	star << QPointF(sparkCx, sparkCy - sR)
-	     << QPointF(sparkCx + sR * 0.35, sparkCy - sR * 0.35)
-	     << QPointF(sparkCx + sR, sparkCy)
-	     << QPointF(sparkCx + sR * 0.35, sparkCy + sR * 0.35)
-	     << QPointF(sparkCx, sparkCy + sR)
-	     << QPointF(sparkCx - sR * 0.35, sparkCy + sR * 0.35)
-	     << QPointF(sparkCx - sR, sparkCy)
-	     << QPointF(sparkCx - sR * 0.35, sparkCy - sR * 0.35);
-	p.drawPolygon(star);
-
-	return result;
-}
-
 void ShowDemoSettings(not_null<Window::Controller*> window) {
 	window->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setStyle(st::exteraPlayerBox);
@@ -348,10 +285,9 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 				QString name;
 				QString text;
 				QString time;
-				bool changelog;
 			} chats[] = {
-				{ u"oxDesktop"_q, u"Официальный релиз oxDesktop v7.3.3"_q, u"18:42"_q, false },
-				{ u"oxDesktop | Changelog"_q, u"История версий, патч-ноуты и обновления расширений"_q, u"17:15"_q, true },
+				{ u"oxDesktop"_q, u"Официальный релиз oxDesktop v7.3.3"_q, u"18:42"_q },
+				{ u"oxDesktop | Changelog"_q, u"История версий, патч-ноуты и обновления расширений"_q, u"17:15"_q },
 			};
 
 			const auto rowH = (h - 8) / 2;
@@ -363,7 +299,7 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 				}
 
 				const auto avRect = QRect(16, y + (rowH - 44) / 2, 44, 44);
-				p.drawImage(avRect, chats[i].changelog ? ChangelogAvatarIcon(44) : DeltaEmblemIcon(44));
+				p.drawImage(avRect, DeltaEmblemIcon(44));
 
 				p.setPen(Qt::white);
 				p.setFont(st::semiboldFont);
