@@ -323,13 +323,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
           "BUILD_VERSION=$packageVersion" >> $env:GITHUB_ENV
 
-      - name: Upload build artifact
+      - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: oxDesktop-windows-x64
-          path: |
-            oxDesktop-portable-x64.*.zip
-            tdesktop/out/Release/oxDesktop-setup-x64.*.exe
+          name: oxDesktop-windows-installer
+          path: tdesktop/out/Release/oxDesktop-setup-x64.*.exe
+          compression-level: 9
+
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxDesktop-windows-portable
+          path: oxDesktop-portable-x64.*.zip
           compression-level: 9
 
       - name: Attach to release

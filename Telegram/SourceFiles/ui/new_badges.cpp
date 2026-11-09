@@ -137,9 +137,9 @@ not_null<Ui::RpWidget*> CreateTagBadge(
 	return CreateLiquidPillBadge(
 		parent,
 		rpl::single(u"NEW"_q),
-		QColor(0, 160, 255, 34),
-		QColor(0, 210, 255, 95),
-		QColor(56, 189, 248),
+		QColor(255, 255, 255, 14),
+		QColor(255, 110, 64, 80),
+		QColor(255, 171, 145),
 		3.5f);
 }
 
@@ -149,9 +149,9 @@ not_null<Ui::RpWidget*> CreateLiquidBetaBadge(
 	return CreateLiquidPillBadge(
 		parent,
 		text ? std::move(text) : rpl::single(u"BETA"_q),
-		QColor(0, 160, 255, 30),
-		QColor(0, 210, 255, 90),
-		QColor(56, 189, 248),
+		QColor(255, 255, 255, 14),
+		QColor(255, 110, 64, 80),
+		QColor(255, 171, 145),
 		3.5f);
 }
 

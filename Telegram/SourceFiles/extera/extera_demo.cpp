@@ -283,13 +283,6 @@ void ShowDemoPlugins(not_null<Window::Controller*> window) {
 		box->setNoContentMargin(true);
 		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 
-		box->addRow(
-			object_ptr<Ui::FlatLabel>(
-				box,
-				rpl::single(u"Плагины расширяют возможности oxDesktop: автоматизация рутины, новые функции для чатов, сторонние сервисы и кастомизация интерфейса."_q),
-				st::boxLabel),
-			style::margins(16, 6, 16, 10));
-
 		auto container = box->verticalLayout();
 		Ui::AddDivider(container);
 
@@ -321,6 +314,10 @@ void ShowDemoPlugins(not_null<Window::Controller*> window) {
 			rpl::single(u"Синхронизация текстов песен"_q),
 			rpl::single(u"Включена (Genius / Spotify)"_q),
 			st::settingsButtonNoIcon);
+
+		Ui::AddDividerText(
+			container,
+			rpl::single(u"Подключайте расширения и скрипты для автоматизации чатов и кастомизации oxDesktop."_q));
 
 		Ui::AddSkip(container, 8);
 	}));
