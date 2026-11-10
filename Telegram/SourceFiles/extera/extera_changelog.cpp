@@ -19,6 +19,7 @@
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
+#include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/main_window.h"
 #include "window/window_controller.h"
@@ -27,6 +28,7 @@
 #include "styles/style_layers.h"
 #include "styles/style_settings.h"
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QFile>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
@@ -41,15 +43,29 @@ namespace {
 constexpr auto kMaxReleases = 20;
 constexpr auto kShowDelay = 2500;
 
-struct Release {
+struct SubBlock {
+	QString category;
+	QString header;
+	std::vector<QString> items;
+};
+
+struct LanguageBlock {
+	QString lang;
+	QString title;
+	std::vector<SubBlock> subblocks;
+	std::vector<QString> miscItems;
+};
+
+struct StructuredRelease {
 	QString version;
 	QDate date;
-	QString body;
+	QString rawBody;
+	std::vector<LanguageBlock> languages;
 };
 
 struct State {
 	QNetworkAccessManager *manager = nullptr;
-	std::vector<Release> releases;
+	std::vector<StructuredRelease> releases;
 	std::vector<Fn<void()>> waiting;
 	bool loading = false;
 	bool failed = false;
@@ -69,12 +85,210 @@ State &Instance() {
 	return AppVersion * 100 + Extera::Update::Build();
 }
 
+[[nodiscard]] TextWithEntities FormatItem(const QString &item) {
+	auto result = TextWithEntities();
+	result.append(QString::fromUtf8("\xE2\x80\xA2 "));
+
+	auto index = 0;
+	while (index < item.size()) {
+		const auto linkStart = item.indexOf('[', index);
+		if (linkStart < 0) {
+			result.append(item.mid(index));
+			break;
+		}
+		if (linkStart > index) {
+			result.append(item.mid(index, linkStart - index));
+		}
+		const auto labelEnd = item.indexOf(u"]("_q, linkStart + 1);
+		if (labelEnd < 0) {
+			result.append(item.mid(linkStart));
+			break;
+		}
+		const auto urlEnd = item.indexOf(')', labelEnd + 2);
+		if (urlEnd < 0) {
+			result.append(item.mid(linkStart));
+			break;
+		}
+		const auto label = item.mid(linkStart + 1, labelEnd - linkStart - 1);
+		const auto url = item.mid(labelEnd + 2, urlEnd - labelEnd - 2);
+		result.append(Ui::Text::Link(label, url));
+		index = urlEnd + 1;
+	}
+	return result;
+}
+
+[[nodiscard]] std::vector<StructuredRelease> ParseReleasesFromText(
+		const QString &text) {
+	auto result = std::vector<StructuredRelease>();
+	auto normalized = text;
+	normalized.remove('\r');
+	const auto lines = normalized.split('\n');
+
+	auto currentRelease = (StructuredRelease*)nullptr;
+	auto currentLang = (LanguageBlock*)nullptr;
+	auto currentSub = (SubBlock*)nullptr;
+
+	auto ensureRelease = [&](const QString &ver, const QString &dateStr) {
+		result.push_back({
+			.version = ver,
+			.date = QDate::fromString(dateStr, u"dd.MM.yy"_q),
+			.rawBody = QString(),
+			.languages = {},
+		});
+		currentRelease = &result.back();
+		currentLang = nullptr;
+		currentSub = nullptr;
+	};
+
+	auto ensureLang = [&](const QString &code, const QString &title) {
+		if (!currentRelease) {
+			ensureRelease(u"7.3.3"_q, QString());
+		}
+		for (auto &l : currentRelease->languages) {
+			if (l.lang.compare(code, Qt::CaseInsensitive) == 0) {
+				currentLang = &l;
+				currentSub = nullptr;
+				return;
+			}
+		}
+		currentRelease->languages.push_back({
+			.lang = code.toLower(),
+			.title = title,
+			.subblocks = {},
+			.miscItems = {},
+		});
+		currentLang = &currentRelease->languages.back();
+		currentSub = nullptr;
+	};
+
+	auto ensureSub = [&](const QString &category, const QString &header) {
+		if (!currentLang) {
+			const auto isRu = category == u"Added"_q
+				? header.contains(QString::fromUtf8("\xD0\x94\xD0\xBE\xD0\xB1\xD0\xB0\xD0\xB2"))
+				: (header.contains(QString::fromUtf8("\xD0\x98\xD1\x81\xD0\xBF\xD1\x80\xD0\xB0\xD0\xB2"))
+					|| header.contains(QString::fromUtf8("\xD0\x9E\xD0\xB1\xD0\xBD\xD0\xBE\xD0\xB2")));
+			ensureLang(
+				isRu ? u"ru"_q : u"en"_q,
+				isRu ? QString::fromUtf8("\xD0\xA0\xD1\x83\xD1\x81\xD1\x81\xD0\xBA\xD0\xB8\xD0\xB9") : u"English"_q);
+		}
+		for (auto &s : currentLang->subblocks) {
+			if (s.category == category) {
+				currentSub = &s;
+				return;
+			}
+		}
+		currentLang->subblocks.push_back({
+			.category = category,
+			.header = header,
+			.items = {},
+		});
+		currentSub = &currentLang->subblocks.back();
+	};
+
+	for (auto line : lines) {
+		line = line.trimmed();
+		if (line.isEmpty()) {
+			continue;
+		}
+		if (line.startsWith(u"<!--"_q) && !line.startsWith(u"<!-- ru"_q)) {
+			continue;
+		}
+		if (line.startsWith(u"<!-- ru"_q)
+			|| line.startsWith(u"# Что нового"_q, Qt::CaseInsensitive)
+			|| line.compare(u"Ru:"_q, Qt::CaseInsensitive) == 0
+			|| line.compare(u"Ru"_q, Qt::CaseInsensitive) == 0) {
+			ensureLang(u"ru"_q, QString::fromUtf8("\xD0\xA0\xD1\x83\xD1\x81\xD1\x81\xD0\xBA\xD0\xB8\xD0\xB9"));
+			continue;
+		}
+		if (line.compare(u"En:"_q, Qt::CaseInsensitive) == 0
+			|| line.compare(u"En"_q, Qt::CaseInsensitive) == 0) {
+			ensureLang(u"en"_q, u"English"_q);
+			continue;
+		}
+		if (line.startsWith('#')) {
+			auto rest = line.mid(line.indexOf(' ') + 1).trimmed();
+			if (rest.startsWith(u"oxDesktop"_q, Qt::CaseInsensitive)) {
+				rest = rest.mid(9).trimmed();
+			}
+			if (!rest.isEmpty() && rest[0].isDigit()) {
+				ensureRelease(rest, QString());
+				continue;
+			}
+		}
+		if (line[0].isDigit()) {
+			const auto paren = line.indexOf('(');
+			auto ver = (paren > 0) ? line.left(paren).trimmed() : line;
+			auto dateStr = QString();
+			if (paren > 0) {
+				const auto closeParen = line.indexOf(')', paren);
+				if (closeParen > paren) {
+					dateStr = line.mid(paren + 1, closeParen - paren - 1).trimmed();
+				}
+			}
+			if (ver.contains('.')) {
+				ensureRelease(ver, dateStr);
+				continue;
+			}
+		}
+		const auto clean = line.endsWith(':') ? line.left(line.size() - 1).trimmed() : line;
+		if (clean.compare(u"Added"_q, Qt::CaseInsensitive) == 0
+			|| clean.compare(QString::fromUtf8("\xD0\x94\xD0\xBE\xD0\xB1\xD0\xB0\xD0\xB2\xD0\xBB\xD0\xB5\xD0\xBD\xD0\xBE"), Qt::CaseInsensitive) == 0) {
+			ensureSub(u"Added"_q, line);
+			continue;
+		}
+		if (clean.compare(u"Fixes"_q, Qt::CaseInsensitive) == 0
+			|| clean.compare(QString::fromUtf8("\xD0\x98\xD1\x81\xD0\xBF\xD1\x80\xD0\xB0\xD0\xB2\xD0\xBB\xD0\xB5\xD0\xBD\xD0\xBE"), Qt::CaseInsensitive) == 0
+			|| clean.compare(QString::fromUtf8("\xD0\x98\xD1\x81\xD0\xBF\xD1\x80\xD0\xB0\xD0\xB2\xD0\xBB\xD0\xB5\xD0\xBD\xD0\xB8\xD1\x8F"), Qt::CaseInsensitive) == 0) {
+			ensureSub(u"Fixes"_q, line);
+			continue;
+		}
+		if (clean.compare(u"Updated"_q, Qt::CaseInsensitive) == 0
+			|| clean.compare(QString::fromUtf8("\xD0\x9E\xD0\xB1\xD0\xBD\xD0\xBE\xD0\xB2\xD0\xBB\xD0\xB5\xD0\xBD\xD0\xBE"), Qt::CaseInsensitive) == 0) {
+			ensureSub(u"Updated"_q, line);
+			continue;
+		}
+		if (line.startsWith(u"- "_q) || line.startsWith(u"* "_q)) {
+			const auto item = line.mid(2).trimmed();
+			if (currentSub) {
+				currentSub->items.push_back(item);
+			} else if (currentLang) {
+				currentLang->miscItems.push_back(item);
+			}
+			continue;
+		}
+	}
+	return result;
+}
+
+void ApplyFallback() {
+	auto &state = Instance();
+	if (!state.releases.empty()) {
+		return;
+	}
+	auto file = QFile(u":/gui/changelog.txt"_q);
+	if (!file.open(QIODevice::ReadOnly)) {
+		file.setFileName(cWorkingDir() + u"changelog.txt"_q);
+		if (!file.open(QIODevice::ReadOnly)) {
+			file.setFileName(
+				QCoreApplication::applicationDirPath() + u"/changelog.txt"_q);
+			file.open(QIODevice::ReadOnly);
+		}
+	}
+	if (file.isOpen()) {
+		const auto content = QString::fromUtf8(file.readAll());
+		file.close();
+		if (!content.isEmpty()) {
+			state.releases = ParseReleasesFromText(content);
+		}
+	}
+}
+
 bool Apply(const QByteArray &bytes) {
 	const auto document = QJsonDocument::fromJson(bytes);
 	if (!document.isArray()) {
 		return false;
 	}
-	auto releases = std::vector<Release>();
+	auto releases = std::vector<StructuredRelease>();
 	for (const auto &entry : document.array()) {
 		const auto object = entry.toObject();
 		if (object.value(u"draft"_q).toBool()) {
@@ -84,13 +298,30 @@ bool Apply(const QByteArray &bytes) {
 		if (version.startsWith('v')) {
 			version = version.mid(1);
 		}
-		releases.push_back({
-			.version = version,
-			.date = QDateTime::fromString(
-				object.value(u"published_at"_q).toString(),
-				Qt::ISODate).toLocalTime().date(),
-			.body = object.value(u"body"_q).toString(),
-		});
+		const auto body = object.value(u"body"_q).toString();
+		const auto date = QDateTime::fromString(
+			object.value(u"published_at"_q).toString(),
+			Qt::ISODate).toLocalTime().date();
+
+		auto parsed = ParseReleasesFromText(body);
+		if (!parsed.empty()) {
+			for (auto &rel : parsed) {
+				if (rel.version.isEmpty()) {
+					rel.version = version;
+				}
+				if (!rel.date.isValid()) {
+					rel.date = date;
+				}
+				releases.push_back(std::move(rel));
+			}
+		} else {
+			releases.push_back({
+				.version = version,
+				.date = date,
+				.rawBody = body,
+				.languages = {},
+			});
+		}
 		if (int(releases.size()) >= kMaxReleases) {
 			break;
 		}
@@ -100,28 +331,6 @@ bool Apply(const QByteArray &bytes) {
 	}
 	Instance().releases = std::move(releases);
 	return true;
-}
-
-void ApplyFallback() {
-	auto &state = Instance();
-	if (!state.releases.empty()) {
-		return;
-	}
-	state.releases.push_back({
-		.version = u"7.3.3"_q,
-		.date = QDate::currentDate(),
-		.body = u"<!-- ru --># Что нового в oxDesktop 7.3.3\n"
-			u"- Фирменная тема в цветах аватарки Aero Delta по умолчанию.\n"
-			u"- Встроенный обход (TgWsProxy): отдельная кнопка и реактивный статус в разделе «Прокси».\n"
-			u"- Следование тексту песни: синхронизация не сбрасывается при закрытии и сворачивании плеера.\n"
-			u"- Фирменная аватарка для Telegram Notifications (ID 777000): всегда отображает актуальный логотип oxDesktop.\n"
-			u"- Официальные бейджи поддержки: предпросмотр в стиле Liquid Glass и интеграция с профилями.\n"
-			u"- Инлайн-калькулятор и конвертер величин: степени, корни, логарифмы, валюты и Stars.\n"
-			u"- Теневые черновики (Shadow Drafts): локальное сохранение редакций текста и откат по Ctrl+Shift+Z.\n"
-			u"- Быстрый HUD-переключатель чатов (Ctrl+Shift+K или Ctrl+P).\n"
-			u"- Прямой поиск пользователей и каналов по цифровому ID.\n"
-			u"- Выбор кастомного шрифта (TTF / OTF / WOFF2) в настройках оформления.\n"_q,
-	});
 }
 
 void Finish(bool ok) {
@@ -158,81 +367,146 @@ void Load(Fn<void()> done) {
 		reply->deleteLater();
 		if (reply->error() != QNetworkReply::NoError) {
 			Finish(false);
-			return;
-		}
-		const auto bytes = reply->readAll();
-		const auto ok = Apply(bytes);
-		if (ok) {
-			auto file = QFile(CachePath());
-			if (file.open(QIODevice::WriteOnly)) {
-				file.write(bytes);
+		} else {
+			const auto bytes = reply->readAll();
+			const auto ok = Apply(bytes);
+			if (ok) {
+				auto file = QFile(CachePath());
+				if (file.open(QIODevice::WriteOnly)) {
+					file.write(bytes);
+				}
 			}
+			Finish(ok);
 		}
-		Finish(ok);
 	});
 }
 
-[[nodiscard]] QString LocalizedBody(const QString &body) {
-	const auto marker = u"<!-- ru -->"_q;
-	const auto index = body.indexOf(marker);
-	if (index < 0) {
-		return body;
+void FillReleaseContent(
+		not_null<Ui::VerticalLayout*> content,
+		const StructuredRelease &release,
+		bool isUpdate) {
+	auto title = Ui::Text::Bold(u"oxDesktop "_q + release.version);
+	if (release.date.isValid()) {
+		title.append(QString::fromUtf8("  \xC2\xB7  ")).append(
+			QLocale().toString(release.date, QLocale::LongFormat));
 	}
-	return Lang::Id().startsWith(u"ru"_q)
-		? body.mid(index + marker.size())
-		: body.mid(0, index);
-}
+	content->add(
+		object_ptr<Ui::FlatLabel>(
+			content,
+			rpl::single(title),
+			st::boxLabel),
+		st::boxRowPadding);
+	Ui::AddSkip(content, st::settingsCheckboxesSkip);
 
-[[nodiscard]] bool SkippedSection(const QString &title) {
-	return title.startsWith(u"Installation"_q, Qt::CaseInsensitive)
-		|| title.startsWith(
-			QString::fromUtf8("\xD0\xA3\xD1\x81\xD1\x82\xD0\xB0\xD0\xBD\xD0\xBE\xD0\xB2\xD0\xBA\xD0\xB0"),
-			Qt::CaseInsensitive);
-}
+	if (release.languages.empty()) {
+		return;
+	}
 
-[[nodiscard]] TextWithEntities Format(const QString &body) {
-	auto result = TextWithEntities();
-	auto skip = false;
-	auto gap = false;
-	auto normalized = body;
-	normalized.remove('\r');
-	for (auto line : normalized.split('\n')) {
-		line = line.trimmed();
-		if (line.startsWith(u"<!--"_q)) {
-			continue;
+	const auto hasMultipleLangs = (release.languages.size() > 1);
+	const auto isClientRussian = Lang::Id().startsWith(u"ru"_q);
+
+	for (const auto &lang : release.languages) {
+		const auto isRussian = (lang.lang == u"ru"_q);
+		const auto isDefaultLang = hasMultipleLangs
+			? (isRussian == isClientRussian)
+			: true;
+
+		const auto langPrefix = isRussian
+			? QString::fromUtf8("\xF0\x9F\x87\xB7\xF0\x9F\x87\xBA  ")
+			: QString::fromUtf8("\xF0\x9F\x87\xAC\xF0\x9F\x87\xA7  ");
+		const auto langTitle = langPrefix + lang.title;
+
+		const auto langBtn = hasMultipleLangs
+			? content->add(
+				object_ptr<Ui::SettingsButton>(
+					content,
+					rpl::single(langTitle + (isDefaultLang ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q)),
+					st::settingsButtonNoIcon))
+			: nullptr;
+
+		auto langWrap = content->add(
+			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+				content,
+				object_ptr<Ui::VerticalLayout>(content)));
+		const auto langInner = langWrap->entity();
+
+		if (langBtn) {
+			langBtn->setClickedCallback([=] {
+				const auto toggled = !langWrap->toggled();
+				langWrap->toggle(toggled, anim::type::normal);
+			});
+
+			langWrap->toggledValue(
+			) | rpl::on_next([=](bool toggled) {
+				langBtn->setText(langTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q));
+			}, langBtn->lifetime());
 		}
-		if (line.startsWith('#')) {
-			const auto title = line.mid(line.indexOf(' ') + 1).trimmed();
-			skip = SkippedSection(title);
-			if (skip) {
+
+		langWrap->toggle(isDefaultLang, anim::type::instant);
+
+		for (const auto &sub : lang.subblocks) {
+			if (sub.items.empty()) {
 				continue;
 			}
-			if (!result.empty()) {
-				result.append(u"\n\n"_q);
+			const auto isAdded = (sub.category == u"Added"_q);
+			const auto isFixes = (sub.category == u"Fixes"_q);
+			const auto countStr = u" ("_q + QString::number(sub.items.size()) + u")"_q;
+			const auto icon = isAdded
+				? QString::fromUtf8("\xE2\x9C\xA6 ")
+				: isFixes
+				? QString::fromUtf8("\xE2\x9C\x94 ")
+				: QString::fromUtf8("\xE2\x9A\xA1 ");
+
+			const auto baseTitle = icon
+				+ (sub.header.endsWith(':') ? sub.header.left(sub.header.size() - 1) : sub.header)
+				+ countStr;
+
+			const auto subBtn = langInner->add(
+				object_ptr<Ui::SettingsButton>(
+					langInner,
+					rpl::single(baseTitle + u"  \xE2\x96\xBE"_q),
+					st::settingsButtonNoIcon));
+
+			auto subWrap = langInner->add(
+				object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+					langInner,
+					object_ptr<Ui::VerticalLayout>(langInner)));
+			const auto subInner = subWrap->entity();
+
+			subBtn->setClickedCallback([=] {
+				const auto toggled = !subWrap->toggled();
+				subWrap->toggle(toggled, anim::type::normal);
+			});
+
+			subWrap->toggledValue(
+			) | rpl::on_next([=](bool toggled) {
+				subBtn->setText(baseTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q));
+			}, subBtn->lifetime());
+
+			subWrap->toggle(true, anim::type::instant);
+
+			for (const auto &item : sub.items) {
+				const auto label = subInner->add(
+					object_ptr<Ui::FlatLabel>(
+						subInner,
+						rpl::single(FormatItem(item)),
+						st::boxLabel),
+					st::boxRowPadding);
+				label->setSelectable(true);
 			}
-			result.append(Ui::Text::Bold(title));
-			gap = false;
-			continue;
+			Ui::AddSkip(subInner, st::settingsCheckboxesSkip);
 		}
-		if (skip) {
-			continue;
+
+		for (const auto &item : lang.miscItems) {
+			const auto label = langInner->add(
+				object_ptr<Ui::FlatLabel>(
+					langInner,
+					rpl::single(FormatItem(item)),
+					st::boxLabel),
+				st::boxRowPadding);
+			label->setSelectable(true);
 		}
-		if (line.isEmpty()) {
-			gap = !result.empty();
-			continue;
-		}
-		line.remove('`');
-		line.remove(u"**"_q);
-		if (line.startsWith(u"- "_q) || line.startsWith(u"* "_q)) {
-			line = QString::fromUtf8("\xE2\x80\xA2 ") + line.mid(2);
-		}
-		if (!result.empty()) {
-			result.append(gap ? u"\n\n"_q : u"\n"_q);
-		}
-		result.append(line);
-		gap = false;
 	}
-	return result;
 }
 
 void Fill(
@@ -251,37 +525,16 @@ void Fill(
 			st::boxRowPadding);
 		return;
 	}
+
 	auto first = true;
 	for (const auto &release : state.releases) {
-		const auto text = Format(LocalizedBody(release.body));
-		if (text.empty()) {
-			continue;
-		}
 		if (!first) {
 			Ui::AddSkip(content);
 			Ui::AddDivider(content);
 			Ui::AddSkip(content);
 		}
 		first = false;
-		auto title = Ui::Text::Bold(u"oxDesktop "_q + release.version);
-		if (release.date.isValid()) {
-			title.append(QString::fromUtf8("  \xC2\xB7  ")).append(
-				QLocale().toString(release.date, QLocale::LongFormat));
-		}
-		content->add(
-			object_ptr<Ui::FlatLabel>(
-				content,
-				rpl::single(title),
-				st::boxLabel),
-			st::boxRowPadding);
-		Ui::AddSkip(content, st::settingsCheckboxesSkip);
-		const auto label = content->add(
-			object_ptr<Ui::FlatLabel>(
-				content,
-				rpl::single(text),
-				st::boxLabel),
-			st::boxRowPadding);
-		label->setSelectable(true);
+		FillReleaseContent(content, release, false);
 	}
 }
 
@@ -289,12 +542,15 @@ void Fill(
 	constexpr auto kLimit = 3500;
 	auto result = TextWithEntities();
 	for (const auto &release : Instance().releases) {
-		const auto text = Format(LocalizedBody(release.body));
-		if (text.empty()) {
-			continue;
-		}
 		auto part = Ui::Text::Bold(u"oxDesktop "_q + release.version);
-		part.append(QChar('\n')).append(text);
+		for (const auto &lang : release.languages) {
+			for (const auto &sub : lang.subblocks) {
+				part.append(u"\n\n"_q + sub.header);
+				for (const auto &item : sub.items) {
+					part.append(u"\n- "_q + item);
+				}
+			}
+		}
 		if (!result.empty()
 			&& result.text.size() + part.text.size() + 2 > kLimit) {
 			break;
@@ -382,6 +638,40 @@ void Show(not_null<Window::SessionController*> controller) {
 		ShowLoaded(controller);
 		Load(nullptr);
 	}
+}
+
+void ShowUpdate(
+		not_null<Window::SessionController*> controller,
+		const QString &version,
+		const QString &body) {
+	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+		box->setTitle(tr::lng_extera_update());
+		box->setWidth(st::boxWideWidth * 3 / 2);
+		box->setMaxHeight(st::boxMaxListHeight);
+
+		auto release = StructuredRelease{
+			.version = version.startsWith('v') ? version.mid(1) : version,
+			.date = QDate::currentDate(),
+			.rawBody = body,
+			.languages = {},
+		};
+		const auto parsed = ParseReleasesFromText(body);
+		if (!parsed.empty()) {
+			release = parsed.front();
+			if (release.version.isEmpty()) {
+				release.version = version;
+			}
+		}
+		FillReleaseContent(box->verticalLayout(), release, true);
+
+		box->addButton(tr::lng_update_telegram(), [=] {
+			box->closeBox();
+			Extera::Update::Install();
+		});
+		box->addButton(tr::lng_close(), [=] {
+			box->closeBox();
+		});
+	}));
 }
 
 } // namespace Extera::Changelog

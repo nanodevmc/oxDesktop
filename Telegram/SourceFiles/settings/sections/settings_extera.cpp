@@ -2399,7 +2399,7 @@ void PartOther2(SectionBuilder &builder) {
 					}
 					switch (result) {
 					case Result::Available:
-						Extera::Update::Install();
+						Extera::Update::ShowUpdateBox(strong);
 						break;
 					case Result::Latest:
 						strong->showToast(

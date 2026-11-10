@@ -1,5 +1,6 @@
 #include "extera/extera_update.h"
 
+#include "extera/extera_changelog.h"
 #include "version_generated.h"
 #include "core/application.h"
 #include "extera/extera_config.h"
@@ -30,6 +31,7 @@ struct State {
 	QNetworkAccessManager *manager = nullptr;
 	rpl::variable<bool> available = false;
 	QString version;
+	QString changelog;
 	QString url;
 	QString assetUrl;
 	QString assetName;
@@ -48,6 +50,15 @@ State &Instance() {
 	if (version.startsWith('v') || version.startsWith('V')) {
 		version = version.mid(1);
 	}
+	const auto paren = version.indexOf('(');
+	if (paren >= 0) {
+		version = version.left(paren);
+	}
+	const auto dash = version.indexOf('-');
+	if (dash >= 0) {
+		version = version.left(dash);
+	}
+	version = version.trimmed();
 	auto result = std::vector<int>();
 	for (const auto &part : version.split('.')) {
 		auto digits = QString();
@@ -57,7 +68,9 @@ State &Instance() {
 			}
 			digits += ch;
 		}
-		result.push_back(digits.toInt());
+		if (!digits.isEmpty()) {
+			result.push_back(digits.toInt());
+		}
 	}
 	while (result.size() < 4) {
 		result.push_back(0);
@@ -170,6 +183,7 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 		}
 		auto &state = Instance();
 		state.version = tag;
+		state.changelog = object.value(u"body"_q).toString();
 		state.url = object.value(u"html_url"_q).toString();
 		state.assetUrl = QString();
 		state.assetName = QString();
@@ -249,6 +263,18 @@ rpl::producer<bool> AvailableValue() {
 
 QString AvailableVersion() {
 	return Instance().version;
+}
+
+QString Changelog() {
+	return Instance().changelog;
+}
+
+void ShowUpdateBox(not_null<Window::SessionController*> controller) {
+	const auto &state = Instance();
+	Extera::Changelog::ShowUpdate(
+		controller,
+		state.version,
+		state.changelog);
 }
 
 void Install() {

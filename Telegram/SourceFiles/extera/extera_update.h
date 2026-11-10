@@ -1,5 +1,9 @@
 #pragma once
 
+namespace Window {
+class SessionController;
+} // namespace Window
+
 namespace Extera::Update {
 
 enum class CheckResult {
@@ -14,7 +18,9 @@ void Start();
 void CheckNow(Fn<void(CheckResult)> done);
 [[nodiscard]] rpl::producer<bool> AvailableValue();
 [[nodiscard]] QString AvailableVersion();
+[[nodiscard]] QString Changelog();
 void OpenRelease();
 void Install();
+void ShowUpdateBox(not_null<Window::SessionController*> controller);
 
 } // namespace Extera::Update

@@ -91,3 +91,5 @@ BUILD_LOG.md
 .agents/*
 *.personal.md
 TODO.md
+TEST_READY.md
+TEST_INFRA.md
