@@ -28,6 +28,8 @@
 #include "styles/style_layers.h"
 #include "styles/style_settings.h"
 
+#include <rpl/variable.h>
+
 #include <QtCore/QCoreApplication>
 #include <QtCore/QFile>
 #include <QtCore/QJsonArray>
@@ -416,11 +418,15 @@ void FillReleaseContent(
 			: QString::fromUtf8("\xF0\x9F\x87\xAC\xF0\x9F\x87\xA7  ");
 		const auto langTitle = langPrefix + lang.title;
 
+		const auto langExpanded = content->lifetime().make_state<rpl::variable<bool>>(isDefaultLang);
+
 		const auto langBtn = hasMultipleLangs
 			? content->add(
 				object_ptr<Ui::SettingsButton>(
 					content,
-					rpl::single(langTitle + (isDefaultLang ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q)),
+					langExpanded->value() | rpl::map([=](bool toggled) {
+						return langTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q);
+					}),
 					st::settingsButtonNoIcon))
 			: nullptr;
 
@@ -438,9 +444,7 @@ void FillReleaseContent(
 
 			langWrap->toggledValue(
 			) | rpl::on_next([=](bool toggled) {
-				langBtn->setText(TextWithEntities{
-					langTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q)
-				});
+				*langExpanded = toggled;
 			}, langBtn->lifetime());
 		}
 
@@ -463,10 +467,14 @@ void FillReleaseContent(
 				+ (sub.header.endsWith(':') ? sub.header.left(sub.header.size() - 1) : sub.header)
 				+ countStr;
 
+			const auto subExpanded = langInner->lifetime().make_state<rpl::variable<bool>>(true);
+
 			const auto subBtn = langInner->add(
 				object_ptr<Ui::SettingsButton>(
 					langInner,
-					rpl::single(baseTitle + u"  \xE2\x96\xBE"_q),
+					subExpanded->value() | rpl::map([=](bool toggled) {
+						return baseTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q);
+					}),
 					st::settingsButtonNoIcon));
 
 			auto subWrap = langInner->add(
@@ -482,9 +490,7 @@ void FillReleaseContent(
 
 			subWrap->toggledValue(
 			) | rpl::on_next([=](bool toggled) {
-				subBtn->setText(TextWithEntities{
-					baseTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q)
-				});
+				*subExpanded = toggled;
 			}, subBtn->lifetime());
 
 			subWrap->toggle(true, anim::type::instant);
