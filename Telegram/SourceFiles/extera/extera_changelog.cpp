@@ -438,7 +438,9 @@ void FillReleaseContent(
 
 			langWrap->toggledValue(
 			) | rpl::on_next([=](bool toggled) {
-				langBtn->setText(langTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q));
+				langBtn->setText(TextWithEntities{
+					langTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q)
+				});
 			}, langBtn->lifetime());
 		}
 
@@ -480,7 +482,9 @@ void FillReleaseContent(
 
 			subWrap->toggledValue(
 			) | rpl::on_next([=](bool toggled) {
-				subBtn->setText(baseTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q));
+				subBtn->setText(TextWithEntities{
+					baseTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q)
+				});
 			}, subBtn->lifetime());
 
 			subWrap->toggle(true, anim::type::instant);
