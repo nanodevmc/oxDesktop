@@ -123,7 +123,21 @@
   </tr>
 </table>
 
-## Загрузка
+## Загрузка и установка
+
+### ⚡ Быстрая установка одной строкой
+
+**Linux, macOS, Git Bash (WSL/MSYS):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.ps1 | iex
+```
+
+### 📦 Ручная загрузка
 
 | Система | Файл |
 |:--|:--|

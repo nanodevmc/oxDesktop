@@ -123,7 +123,21 @@
   </tr>
 </table>
 
-## Downloads
+## Download & Installation
+
+### ⚡ Quick One-Line Install
+
+**Linux, macOS, Git Bash (WSL/MSYS):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.ps1 | iex
+```
+
+### 📦 Manual Download
 
 | Platform | File |
 |:--|:--|
