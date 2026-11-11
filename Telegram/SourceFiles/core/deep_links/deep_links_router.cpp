@@ -26,27 +26,59 @@ Context ParseCommand(
 		const QString &command) {
 	auto result = Context{ .controller = controller };
 
-	auto path = command;
-	auto queryStart = path.indexOf('?');
+	auto path = command.trimmed();
+	const auto queryStart = path.indexOf('?');
 	if (queryStart >= 0) {
 		const auto query = path.mid(queryStart + 1);
-		path = path.left(queryStart);
+		path = path.left(queryStart).trimmed();
+
+		const auto unwrapParens = [](QString str) {
+			str = str.trimmed();
+			if (str.startsWith('(') && str.endsWith(')') && str.size() >= 2) {
+				str = str.mid(1, str.size() - 2).trimmed();
+			}
+			return str;
+		};
+
 		for (const auto &pair : query.split('&')) {
 			const auto eq = pair.indexOf('=');
-			if (eq > 0) {
-				result.params[pair.left(eq).toLower()] = qthelp::url_decode(pair.mid(eq + 1));
+			if (eq == 0) {
+				const auto val = unwrapParens(qthelp::url_decode(pair.mid(1)));
+				if (!val.isEmpty()) {
+					result.params[u"highlight"_q] = val;
+				}
+			} else if (eq > 0) {
+				const auto key = pair.left(eq).toLower();
+				const auto val = unwrapParens(qthelp::url_decode(pair.mid(eq + 1)));
+				result.params[key] = val;
+				if (key == u"highlight"_q || key == u"param"_q || key == u"id"_q) {
+					result.params[u"highlight"_q] = val;
+				}
 			} else if (!pair.isEmpty()) {
+				const auto bare = unwrapParens(qthelp::url_decode(pair));
 				result.params[pair.toLower()] = QString();
+				if (!result.params.contains(u"highlight"_q) && !bare.isEmpty()) {
+					result.params[u"highlight"_q] = bare;
+				}
 			}
 		}
 	}
 
-	path = path.trimmed();
 	while (path.startsWith('/')) {
 		path = path.mid(1);
 	}
 	while (path.endsWith('/')) {
 		path.chop(1);
+	}
+	path = path.trimmed();
+	if (path.startsWith('(') && path.endsWith(')') && path.size() >= 2) {
+		path = path.mid(1, path.size() - 2).trimmed();
+		while (path.startsWith('/')) {
+			path = path.mid(1);
+		}
+		while (path.endsWith('/')) {
+			path.chop(1);
+		}
 	}
 
 	const auto slash = path.indexOf('/');
@@ -125,8 +157,24 @@ Router::DispatchResult Router::dispatch(const Context &ctx) {
 Router::DispatchResult Router::handleSection(
 		const QString &section,
 		const Context &ctx) {
-	const auto it = _handlers.find(section);
+	auto it = _handlers.find(section);
 	if (it == _handlers.end()) {
+		if (section != u"settings"_q) {
+			const auto settingsIt = _handlers.find(u"settings"_q);
+			if (settingsIt != _handlers.end()) {
+				const auto candidate = ctx.path.isEmpty()
+					? section
+					: (section + '/' + ctx.path);
+				for (const auto &entry : settingsIt->second) {
+					if (entry.path == candidate || entry.path.startsWith(candidate + '/')) {
+						auto aliasCtx = ctx;
+						aliasCtx.section = u"settings"_q;
+						aliasCtx.path = candidate;
+						return handleSection(u"settings"_q, aliasCtx);
+					}
+				}
+			}
+		}
 		return { Result::NotFound };
 	}
 
@@ -169,7 +217,11 @@ Result Router::executeAction(const Action &action, const Context &ctx) {
 		if (!highlight.isEmpty()) {
 			ctx.controller->setHighlightControlId(highlight);
 		}
-		ctx.controller->showSettings(s.sectionId);
+		const auto targetSection = ResolveSectionForHighlight(
+			&ctx.controller->session(),
+			highlight,
+			s.sectionId);
+		ctx.controller->showSettings(targetSection);
 		return Result::Handled;
 	}, [&](const SettingsControl &s) {
 		if (!ctx.controller) {

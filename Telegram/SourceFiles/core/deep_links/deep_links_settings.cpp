@@ -73,6 +73,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_privacy_security.h"
 #include "settings/sections/settings_shortcuts.h"
 #include "settings/sections/settings_websites.h"
+#include "settings/settings_builder.h"
 #include "boxes/connection_box.h"
 #include "mainwindow.h"
 #include "window/window_controller.h"
@@ -2247,13 +2248,38 @@ QString SettingsDeepLink(
 		if (control) {
 			return url(*control);
 		} else if (const auto path = sectionPath()) {
-			return url(*path) + u"?highlight="_q + controlId;
+			auto cleanControlId = controlId;
+			if (cleanControlId.startsWith(u"extera/"_q)) {
+				cleanControlId = cleanControlId.mid(u"extera/"_q.size());
+			}
+			return url(*path) + u"?="_q + cleanControlId;
 		}
 		return QString();
 	} else if (const auto path = sectionPath()) {
 		return url(*path);
 	}
 	return QString();
+}
+
+::Settings::Type ResolveSectionForHighlight(
+		not_null<::Main::Session*> session,
+		const QString &highlight,
+		::Settings::Type fallback) {
+	if (highlight.isEmpty()) {
+		return fallback;
+	}
+	const auto entries = ::Settings::Builder::SearchRegistry::Instance().collectAll(session);
+	for (const auto &entry : entries) {
+		const auto match = (entry.id.compare(highlight, Qt::CaseInsensitive) == 0)
+			|| entry.id.endsWith('/' + highlight, Qt::CaseInsensitive)
+			|| highlight.endsWith('/' + entry.id, Qt::CaseInsensitive)
+			|| (highlight == u"byedpi"_q && (entry.id == u"extera/ws_proxy"_q || entry.id == u"ws_proxy"_q))
+			|| (highlight == u"obhod"_q && (entry.id == u"extera/ws_proxy"_q || entry.id == u"ws_proxy"_q));
+		if (match && entry.section) {
+			return entry.section;
+		}
+	}
+	return fallback;
 }
 
 } // namespace Core::DeepLinks

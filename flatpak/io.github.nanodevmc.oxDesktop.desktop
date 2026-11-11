@@ -1,0 +1,22 @@
+[Desktop Entry]
+Type=Application
+Name=oxDesktop
+GenericName=Telegram Client
+GenericName[ru]=Клиент Telegram
+Comment=Expressive Telegram client with Aero Delta and Liquid Glass UI
+Comment[ru]=Клиент Telegram с интерфейсом Aero Delta и Liquid Glass
+Exec=oxDesktop -- %u
+Icon=io.github.nanodevmc.oxDesktop
+Terminal=false
+StartupNotify=true
+Categories=Network;InstantMessaging;Chat;
+MimeType=x-scheme-handler/tg;application/x-oxdesktop-plugin;
+Keywords=tg;chat;im;messaging;telegram;oxdesktop;
+Actions=Quit;
+X-GNOME-UsesNotifications=true
+StartupWMClass=oxDesktop
+
+[Desktop Action Quit]
+Name=Quit oxDesktop
+Name[ru]=Выйти из oxDesktop
+Exec=oxDesktop -quit

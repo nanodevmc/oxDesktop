@@ -1,8 +1,9 @@
 7.3.3 (05.11.26)
 Ru:
 Added:
-- Встроенный обход TgWsProxy: отдельная кнопка подключения и реактивный статус во [вкладке «Прокси»](tg://settings/proxy)
-- Выбор кастомного шрифта (TTF / OTF / WOFF2) в [настройках оформления](tg://settings/appearance)
+- Портирована система кликабельных диплинков к параметрам настроек: формат tg://место?=(параметр) или tg://место?=параметр с переходом и подсветкой нужного пункта
+- Встроенный обход блокировок: отдельная кнопка подключения и реактивный статус во [вкладке «Прокси»](tg://settings/proxy?=ws_proxy)
+- Выбор кастомного шрифта (TTF / OTF / WOFF2) в [настройках оформления](tg://settings/appearance?=custom_font)
 - Теневые черновики: локальное сохранение редакций текста и откат по Ctrl+Shift+Z в [настройках oxDesktop](tg://settings/extera)
 - Быстрый HUD-переключатель чатов по комбинации Ctrl+Shift+K или Ctrl+P
 - Прямой поиск пользователей и каналов по цифровому ID (включая формат id123456)
@@ -22,8 +23,9 @@ Updated:
 
 En:
 Added:
-- Built-in TgWsProxy bypass: dedicated toggle button with reactive status in the [Proxy settings](tg://settings/proxy)
-- Custom font picker (TTF / OTF / WOFF2) in [Appearance settings](tg://settings/appearance)
+- Ported deep links navigation to settings parameters: tg://place?=(parameter) or tg://place?=parameter format with direct jump and highlight
+- Built-in connection bypass: dedicated toggle button with reactive status in the [Proxy settings](tg://settings/proxy?=ws_proxy)
+- Custom font picker (TTF / OTF / WOFF2) in [Appearance settings](tg://settings/appearance?=custom_font)
 - Shadow Drafts: local message revision history with Ctrl+Shift+Z restore in [oxDesktop settings](tg://settings/extera)
 - Quick HUD chat switcher shortcut via Ctrl+Shift+K or Ctrl+P
 - Direct search for users and channels by numeric ID (including id123456 format)

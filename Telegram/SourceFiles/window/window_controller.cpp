@@ -690,7 +690,15 @@ QString Controller::highlightControlId() const {
 }
 
 bool Controller::takeHighlightControlId(const QString &id) {
-	if (_highlightControlId == id) {
+	if (_highlightControlId.isEmpty()) {
+		return false;
+	}
+	const auto match = (_highlightControlId.compare(id, Qt::CaseInsensitive) == 0)
+		|| id.endsWith('/' + _highlightControlId, Qt::CaseInsensitive)
+		|| _highlightControlId.endsWith('/' + id, Qt::CaseInsensitive)
+		|| (_highlightControlId == u"byedpi"_q && (id == u"ws_proxy"_q || id.endsWith(u"/ws_proxy"_q)))
+		|| (_highlightControlId == u"obhod"_q && (id == u"ws_proxy"_q || id.endsWith(u"/ws_proxy"_q)));
+	if (match) {
 		_highlightControlId = QString();
 		return true;
 	}

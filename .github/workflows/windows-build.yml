@@ -16,6 +16,7 @@ on:
       - 'changelog.txt'
       - 'install.sh'
       - 'install.ps1'
+      - 'flatpak/**'
       - 'scripts/**'
       - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'

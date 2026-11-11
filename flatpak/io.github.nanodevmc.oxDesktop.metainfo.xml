@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.nanodevmc.oxDesktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>oxDesktop</name>
+  <name xml:lang="ru">oxDesktop</name>
+  <developer_name>nanodevmc</developer_name>
+  <summary>Fast and secure Telegram client with Aero Delta &amp; Liquid Glass UI</summary>
+  <summary xml:lang="ru">Быстрый и безопасный Telegram-клиент с интерфейсом Aero Delta и Liquid Glass</summary>
+
+  <description>
+    <p>
+      oxDesktop is an expressive, highly optimized desktop messaging client based on Telegram Desktop, featuring:
+    </p>
+    <ul>
+      <li>Pure 60 FPS fluid rendering with spring physics and smooth transitions</li>
+      <li>Liquid Glass + Material Design 3 Expressive UI with Monet dynamic tonal color palettes</li>
+      <li>Tactile live music player with animated sine waveforms and squiggly sliders</li>
+      <li>Integrated ByeDPI WebSocket circumvention engine (Flowseal TgWsProxy v1.11.4+)</li>
+      <li>Smart inline math calculator right inside the chat composer</li>
+      <li>Secure sandbox plugin ecosystem with instant 1-click loading</li>
+      <li>Dynamic accordion changelog and seamless update management</li>
+    </ul>
+    <p xml:lang="ru">
+      oxDesktop — выразительный и оптимизированный десктопный клиент на базе Telegram Desktop:
+    </p>
+    <ul xml:lang="ru">
+      <li>Плавный интерфейс 60 FPS с физикой пружин и мягкими переходами</li>
+      <li>Стиль Liquid Glass + Material Design 3 Expressive с динамической палитрой Monet</li>
+      <li>Живой музыкальный плеер с синусоидальной волной звука и тактильными слайдерами</li>
+      <li>Встроенный модуль обхода блокировок ByeDPI (Flowseal TgWsProxy v1.11.4+)</li>
+      <li>Умный математический калькулятор прямо в строке ввода сообщений</li>
+      <li>Безопасная среда плагинов с мгновенной установкой в один клик</li>
+      <li>Сворачиваемый аккордеон-чейнджлог и удобный центр обновлений</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.nanodevmc.oxDesktop.desktop</launchable>
+
+  <url type="homepage">https://github.com/nanodevmc/oxDesktop</url>
+  <url type="bugtracker">https://github.com/nanodevmc/oxDesktop/issues</url>
+  <url type="help">https://t.me/oxDesktop</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/docs/screenshots/oxdesktop.png</image>
+      <caption>oxDesktop Aero Delta main chat screen</caption>
+      <caption xml:lang="ru">Главный экран чатов oxDesktop Aero Delta</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/docs/screenshots/settings.png</image>
+      <caption>Settings panel with Material 3 Expressive accents</caption>
+      <caption xml:lang="ru">Панель настроек с акцентами Material 3 Expressive</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/docs/screenshots/appearance.png</image>
+      <caption>Liquid Glass appearance and theme options</caption>
+      <caption xml:lang="ru">Параметры оформления и темы Liquid Glass</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/docs/screenshots/plugins.png</image>
+      <caption>Secure plugins ecosystem and manager</caption>
+      <caption xml:lang="ru">Экосистема защищенных плагинов и менеджер</caption>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="7.3.3" date="2026-11-10">
+      <description>
+        <p>oxDesktop v7.3.3 major release:</p>
+        <ul>
+          <li>Dynamic collapsible accordion changelog with localized sections</li>
+          <li>Interactive update dialog with semantic release parsing</li>
+          <li>Material 3 Expressive theme engine with dynamic Monet palette crossfade</li>
+          <li>Integrated Flowseal TgWsProxy v1.11.4+ replay protection</li>
+          <li>Tactile music player sine waveform visualizer and squiggly wave sliders</li>
+          <li>Universal cross-platform one-line web installers</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <provides>
+    <binary>oxDesktop</binary>
+    <mediatype>x-scheme-handler/tg</mediatype>
+    <mediatype>application/x-oxdesktop-plugin</mediatype>
+  </provides>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">intense</content_attribute>
+    <content_attribute id="social-audio">intense</content_attribute>
+  </content_rating>
+</component>
