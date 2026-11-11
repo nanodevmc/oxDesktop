@@ -1202,6 +1202,10 @@ void ProxiesBox::setupContent() {
 		wsProxyButton->setClickedCallback([=] {
 			const auto enable = !Extera::WsProxy::Enabled();
 			Extera::WsProxy::SetEnabled(enable);
+			_controller->setProxySettings(
+				enable
+					? ProxyData::Settings::Enabled
+					: ProxyData::Settings::Disabled);
 		});
 	}
 	_tryIPv6 = inner->add(

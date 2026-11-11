@@ -58,21 +58,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $archive = "oxDesktop-ThirdParty-win64.7z"
-          try {
-            gh release download ci-cache-win64 --pattern $archive --dir .
-            if (Test-Path $archive) {
-              Write-Host "Found prebuilt libraries in release! Extracting..."
-              7z x $archive -y | Out-Null
-              Remove-Item $archive -Force
-              "LIBS_CACHE_HIT=true" >> $env:GITHUB_ENV
-              "LIBS_SOURCE=release" >> $env:GITHUB_ENV
-              exit 0
-            }
-          } catch {
-            Write-Host "Release cache check: $_"
+          $null = & gh release download ci-cache-win64 --pattern $archive --dir . 2>&1
+          $global:LASTEXITCODE = 0
+          if (Test-Path $archive) {
+            Write-Host "Found prebuilt libraries in release! Extracting..."
+            7z x $archive -y | Out-Null
+            Remove-Item $archive -Force
+            "LIBS_CACHE_HIT=true" >> $env:GITHUB_ENV
+            "LIBS_SOURCE=release" >> $env:GITHUB_ENV
+          } else {
+            Write-Host "Prebuilt libraries not found in release, will use Actions Cache fallback."
+            "LIBS_CACHE_HIT=false" >> $env:GITHUB_ENV
+            "LIBS_SOURCE=none" >> $env:GITHUB_ENV
           }
-          "LIBS_CACHE_HIT=false" >> $env:GITHUB_ENV
-          "LIBS_SOURCE=none" >> $env:GITHUB_ENV
+          exit 0
 
       - name: Restore ThirdParty libraries (Actions Cache fallback)
         if: env.LIBS_CACHE_HIT != 'true'
@@ -163,12 +162,13 @@ jobs:
           $archive = "oxDesktop-ThirdParty-win64.7z"
           Write-Host "Packaging prebuilt libraries to $archive..."
           7z a -mx=3 $archive Libraries ThirdParty | Out-Null
-          try {
-            gh release view ci-cache-win64
-            gh release upload ci-cache-win64 $archive --clobber
-          } catch {
-            gh release create ci-cache-win64 $archive --title "CI Cache (Win64 Libraries)" --notes "Automated permanent prebuilt libraries cache" --prerelease
+          $view = & gh release view ci-cache-win64 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            & gh release upload ci-cache-win64 $archive --clobber
+          } else {
+            & gh release create ci-cache-win64 $archive --title "CI Cache (Win64 Libraries)" --notes "Automated permanent prebuilt libraries cache" --prerelease
           }
+          $global:LASTEXITCODE = 0
           Remove-Item $archive -Force
 
       # Plugin engine links against an embedded Python 3.11, expected at

@@ -196,6 +196,9 @@ void Launch() {
 		: QFileInfo(scriptFile).absolutePath();
 	process->setWorkingDirectory(pyDir);
 	process->setProgram(Interpreter());
+	const auto logDir = cWorkingDir() + u"tdata/"_q;
+	QDir().mkpath(logDir);
+	const auto logFile = logDir + u"tgws.log"_q;
 	process->setArguments({
 		u"-u"_q,
 		scriptFile,
@@ -205,6 +208,8 @@ void Launch() {
 		QString::number(port),
 		u"--secret"_q,
 		secret,
+		u"--log-file"_q,
+		logFile,
 	});
 	process->setStandardOutputFile(QProcess::nullDevice());
 	process->setStandardErrorFile(QProcess::nullDevice());
