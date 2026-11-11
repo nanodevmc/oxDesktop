@@ -32,12 +32,13 @@ jobs:
     timeout-minutes: 360
     env:
       SCCACHE_DIR: "${{ github.workspace }}\\.sccache"
-      SCCACHE_CACHE_SIZE: "5G"
+      SCCACHE_CACHE_SIZE: "3500M"
       SCCACHE_DIRECT: "true"
       SCCACHE_IDLE_TIMEOUT: "0"
       CLEAR_QT_BUILD_TREE: "1"
     permissions:
       contents: write
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,7 +51,31 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Restore ThirdParty libraries
+      - name: Restore ThirdParty libraries from Release
+        id: libs_release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $archive = "oxDesktop-ThirdParty-win64.7z"
+          try {
+            gh release download ci-cache-win64 --pattern $archive --dir .
+            if (Test-Path $archive) {
+              Write-Host "Found prebuilt libraries in release! Extracting..."
+              7z x $archive -y | Out-Null
+              Remove-Item $archive -Force
+              "LIBS_CACHE_HIT=true" >> $env:GITHUB_ENV
+              "LIBS_SOURCE=release" >> $env:GITHUB_ENV
+              exit 0
+            }
+          } catch {
+            Write-Host "Release cache check: $_"
+          }
+          "LIBS_CACHE_HIT=false" >> $env:GITHUB_ENV
+          "LIBS_SOURCE=none" >> $env:GITHUB_ENV
+
+      - name: Restore ThirdParty libraries (Actions Cache fallback)
+        if: env.LIBS_CACHE_HIT != 'true'
         id: libs
         uses: actions/cache/restore@v4
         with:
@@ -61,10 +86,17 @@ jobs:
           restore-keys: |
             win-libs-v3-
 
+      - name: Update LIBS_CACHE_HIT from fallback
+        if: env.LIBS_CACHE_HIT != 'true' && steps.libs.outputs.cache-hit == 'true'
+        shell: pwsh
+        run: |
+          "LIBS_CACHE_HIT=true" >> $env:GITHUB_ENV
+          "LIBS_SOURCE=cache" >> $env:GITHUB_ENV
+
       - name: Install ATL for Breakpad
         shell: pwsh
         env:
-          LIBS_CACHE_HIT: ${{ steps.libs.outputs.cache-hit }}
+          LIBS_CACHE_HIT: ${{ env.LIBS_CACHE_HIT }}
         run: |
           $installer = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer'
           $vswhere = Join-Path $installer 'vswhere.exe'
@@ -99,7 +131,7 @@ jobs:
       - name: Build ThirdParty libraries
         shell: cmd
         env:
-          LIBS_CACHE_HIT: ${{ steps.libs.outputs.cache-hit }}
+          LIBS_CACHE_HIT: ${{ env.LIBS_CACHE_HIT }}
           # fetch_archive.py queries the GitHub API, unauthenticated it hits the rate limit.
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -122,14 +154,22 @@ jobs:
             Get-ChildItem -LiteralPath $_.FullName -Force | Remove-Item -Recurse -Force
           }
 
-      - name: Save ThirdParty libraries
-        if: success() && steps.libs.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            Libraries
-            ThirdParty
-          key: win-libs-v3-${{ hashFiles('tdesktop/Telegram/build/prepare/prepare.py', 'tdesktop/Telegram/build/prepare/win.bat') }}
+      - name: Publish ThirdParty libraries to Release (one-time)
+        if: success() && env.LIBS_SOURCE != 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $archive = "oxDesktop-ThirdParty-win64.7z"
+          Write-Host "Packaging prebuilt libraries to $archive..."
+          7z a -mx=3 $archive Libraries ThirdParty | Out-Null
+          try {
+            gh release view ci-cache-win64
+            gh release upload ci-cache-win64 $archive --clobber
+          } catch {
+            gh release create ci-cache-win64 $archive --title "CI Cache (Win64 Libraries)" --notes "Automated permanent prebuilt libraries cache" --prerelease
+          }
+          Remove-Item $archive -Force
 
       # Plugin engine links against an embedded Python 3.11, expected at
       # Libraries/win64/python311 with include/, libs/python311.lib and embed/.
@@ -205,15 +245,6 @@ jobs:
         shell: cmd
         run: cd /d %GITHUB_WORKSPACE%\tdesktop && python tools\sync_version.py
 
-      - name: Restore Build cache
-        uses: actions/cache/restore@v4
-        with:
-          path: tdesktop/out
-          key: win64-build-v3-${{ github.sha }}-${{ github.run_id }}
-          restore-keys: |
-            win64-build-v3-${{ github.sha }}-
-            win64-build-v3-
-
       - name: Configure and build
         id: build
         shell: cmd
@@ -282,13 +313,6 @@ jobs:
           path: .sccache
           key: win64-sccache-v3-${{ github.sha }}-${{ github.run_id }}
 
-      - name: Save Build cache
-        if: always() && steps.build.outcome == 'success'
-        uses: actions/cache/save@v4
-        with:
-          path: tdesktop/out
-          key: win64-build-v3-${{ github.sha }}-${{ github.run_id }}
-
       - name: Package
         shell: pwsh
         run: |
@@ -300,7 +324,10 @@ jobs:
           if ($env:GITHUB_EVENT_NAME -eq 'release') { $packageVersion = $env:GITHUB_REF_NAME.TrimStart('v') }
           $portable = Join-Path $env:GITHUB_WORKSPACE 'oxDesktop-windows-x64'
           New-Item -ItemType Directory -Path $portable -Force | Out-Null
-          Copy-Item (Join-Path $release 'Telegram.exe') $portable
+          if (Test-Path (Join-Path $release 'Telegram.exe')) {
+            Copy-Item (Join-Path $release 'Telegram.exe') (Join-Path $release 'oxDesktop.exe') -Force
+          }
+          Copy-Item (Join-Path $release 'oxDesktop.exe') (Join-Path $portable 'oxDesktop.exe') -Force
           Copy-Item (Join-Path $release 'python') $portable -Recurse
           Copy-Item (Join-Path $release 'modules') $portable -Recurse
           if (Test-Path (Join-Path $release 'Updater.exe')) { Copy-Item (Join-Path $release 'Updater.exe') $portable }
@@ -326,6 +353,26 @@ jobs:
           & $iscc @setupArgs
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
           "BUILD_VERSION=$packageVersion" >> $env:GITHUB_ENV
+
+      - name: Prune older sccache entries
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          try {
+            $cachesJson = gh api -H "Accept: application/vnd.github+json" "/repos/${{ github.repository }}/actions/caches?key=win64-sccache-v3-"
+            $caches = ($cachesJson | ConvertFrom-Json).actions_caches | Sort-Object -Property last_accessed_at -Descending
+            if ($caches.Count -gt 1) {
+              $toDelete = $caches | Select-Object -Skip 1
+              foreach ($c in $toDelete) {
+                Write-Host "Pruning superseded sccache entry: $($c.key) (ID: $($c.id), Size: $([math]::Round($c.size_in_bytes / 1MB, 1)) MB)"
+                gh api -X DELETE "/repos/${{ github.repository }}/actions/caches/$($c.id)" | Out-Null
+              }
+            }
+          } catch {
+            Write-Host "Cache prune warning: $_"
+          }
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

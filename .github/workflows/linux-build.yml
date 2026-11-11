@@ -27,6 +27,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   linux:
@@ -66,15 +67,6 @@ jobs:
           load: true
           tags: ${{ env.IMAGE_TAG }}
           cache-from: type=gha,scope=docker-centos
-          cache-to: type=gha,mode=max,scope=docker-centos
-
-      - name: Restore Build cache
-        uses: actions/cache/restore@v4
-        with:
-          path: out
-          key: ${{ runner.os }}-build-out-${{ hashFiles('Telegram/SourceFiles/**', 'Telegram/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-build-out-
 
       - name: Restore Compiler cache (ccache)
         uses: actions/cache/restore@v4
@@ -112,10 +104,10 @@ jobs:
             -e CONFIG=Release \
             -e API_ID -e API_HASH \
             -e CCACHE_DIR=/var/cache/ccache \
-            -e CCACHE_MAXSIZE=5G \
+            -e CCACHE_MAXSIZE=3500M \
             -e CCACHE_COMPRESS=1 \
             -e CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_ctime,include_file_mtime \
-            -e CCACHE_COMPRESSLEVEL=3 \
+            -e CCACHE_COMPRESSLEVEL=5 \
             -e CCACHE_BASEDIR=/usr/src/tdesktop \
             "$IMAGE_TAG" \
             bash -c '/usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
@@ -154,12 +146,16 @@ jobs:
           path: .ccache
           key: ${{ runner.os }}-ccache-${{ github.sha }}-${{ github.run_id }}
 
-      - name: Save Build cache
-        if: success()
-        uses: actions/cache/save@v4
-        with:
-          path: out
-          key: ${{ runner.os }}-build-out-${{ hashFiles('Telegram/SourceFiles/**', 'Telegram/CMakeLists.txt') }}
+      - name: Prune older ccache entries
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          caches=$(gh api -H "Accept: application/vnd.github+json" "/repos/${{ github.repository }}/actions/caches?key=Linux-ccache-" --jq '.actions_caches | sort_by(.last_accessed_at) | reverse | .[1:][].id' || true)
+          for id in $caches; do
+            echo "Pruning superseded Linux ccache ID: $id"
+            gh api -X DELETE "/repos/${{ github.repository }}/actions/caches/$id" || true
+          done
 
       - name: Package
         run: |

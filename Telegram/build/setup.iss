@@ -2,7 +2,7 @@
 #define MyAppName "oxDesktop"
 #define MyAppPublisher "oxDesktop"
 #define MyAppURL "https://exteradesktop.xyz"
-#define MyAppExeName "Telegram.exe"
+#define MyAppExeName "oxDesktop.exe"
 #define MyAppId "7D324782-E0D8-4A3C-BCF8-ECABD916542F"
 #define CurrentYear GetDateTimeString('yyyy','','')
 
@@ -24,7 +24,7 @@ AllowNoIcons=yes
 OutputDir={#ReleasePath}
 SetupIconFile={#SourcePath}..\Resources\art\icon256.ico
 UninstallDisplayName={#MyAppName}
-UninstallDisplayIcon={app}\Telegram.exe
+UninstallDisplayIcon={app}\oxDesktop.exe
 Compression=lzma2/max
 SolidCompression=yes
 DisableStartupPrompt=yes
@@ -87,7 +87,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "tgws"; Description: "{cm:TgWsProxy}"; GroupDescription: "{cm:Components}"
 
 [Files]
-Source: "{#ReleasePath}\Telegram.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ReleasePath}\oxDesktop.exe"; DestDir: "{app}"; Flags: ignoreversion
 #if FileExists(ReleasePath + "\\Updater.exe")
 Source: "{#ReleasePath}\Updater.exe"; DestDir: "{app}"; Flags: ignoreversion
 #endif

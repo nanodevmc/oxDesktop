@@ -68,7 +68,8 @@ jobs:
           WIN_RUN=$(gh run list --workflow="Windows build" --status=success --limit=1 --json databaseId -q '.[0].databaseId')
           if [ -n "$WIN_RUN" ]; then
             echo "Latest Windows run ID: $WIN_RUN"
-            gh run download "$WIN_RUN" -n oxDesktop-windows-x64 --dir release_assets/windows || true
+            gh run download "$WIN_RUN" -n oxDesktop-windows-installer --dir release_assets/windows || true
+            gh run download "$WIN_RUN" -n oxDesktop-windows-portable --dir release_assets/windows || true
           else
             echo "Warning: No successful Windows run found."
           fi
