@@ -88,6 +88,7 @@ Name: "tgws"; Description: "{cm:TgWsProxy}"; GroupDescription: "{cm:Components}"
 
 [Files]
 Source: "{#ReleasePath}\oxDesktop.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ReleasePath}\oxWsProxy.exe"; DestDir: "{app}"; Flags: skipifsourcedoesntexist ignoreversion
 #if FileExists(ReleasePath + "\\Updater.exe")
 Source: "{#ReleasePath}\Updater.exe"; DestDir: "{app}"; Flags: ignoreversion
 #endif

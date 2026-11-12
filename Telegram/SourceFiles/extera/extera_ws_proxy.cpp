@@ -34,6 +34,29 @@ State &Instance() {
 	return result;
 }
 
+[[nodiscard]] QString NativeBinary() {
+#ifdef Q_OS_WIN
+	const auto names = { u"oxWsProxy.exe"_q, u"ox_ws_proxy.exe"_q };
+#else
+	const auto names = { u"oxWsProxy"_q, u"ox_ws_proxy"_q };
+#endif
+	for (const auto &name : names) {
+		for (const auto &cand : {
+			cExeDir() + name,
+			cWorkingDir() + name,
+			cExeDir() + u"proxy/"_q + name,
+			cWorkingDir() + u"proxy/"_q + name,
+			cExeDir() + u"Telegram/SourceFiles/extera/rust/ox_ws_proxy/target/release/"_q + name,
+			cWorkingDir() + u"Telegram/SourceFiles/extera/rust/ox_ws_proxy/target/release/"_q + name,
+		}) {
+			if (QFile::exists(cand)) {
+				return cand;
+			}
+		}
+	}
+	return QString();
+}
+
 [[nodiscard]] QString PythonDir() {
 	for (const auto &cand : {
 		cExeDir() + u"python/"_q,
@@ -186,27 +209,44 @@ void Launch() {
 
 	const auto process = new QProcess(qApp);
 	state.process = process;
-	const auto scriptFile = Script();
-	const auto pyDir = QDir(PythonDir()).exists()
-		? PythonDir()
-		: QFileInfo(scriptFile).absolutePath();
-	process->setWorkingDirectory(pyDir);
-	process->setProgram(Interpreter());
+	const auto nativeBin = NativeBinary();
 	const auto logDir = cWorkingDir() + u"tdata/"_q;
 	QDir().mkpath(logDir);
 	const auto logFile = logDir + u"tgws.log"_q;
-	process->setArguments({
-		u"-u"_q,
-		scriptFile,
-		u"--parent-pid"_q,
-		QString::number(QCoreApplication::applicationPid()),
-		u"--port"_q,
-		QString::number(port),
-		u"--secret"_q,
-		secret,
-		u"--log-file"_q,
-		logFile,
-	});
+
+	if (!nativeBin.isEmpty()) {
+		process->setWorkingDirectory(QFileInfo(nativeBin).absolutePath());
+		process->setProgram(nativeBin);
+		process->setArguments({
+			u"--parent-pid"_q,
+			QString::number(QCoreApplication::applicationPid()),
+			u"--port"_q,
+			QString::number(port),
+			u"--secret"_q,
+			secret,
+			u"--log-file"_q,
+			logFile,
+		});
+	} else {
+		const auto scriptFile = Script();
+		const auto pyDir = QDir(PythonDir()).exists()
+			? PythonDir()
+			: QFileInfo(scriptFile).absolutePath();
+		process->setWorkingDirectory(pyDir);
+		process->setProgram(Interpreter());
+		process->setArguments({
+			u"-u"_q,
+			scriptFile,
+			u"--parent-pid"_q,
+			QString::number(QCoreApplication::applicationPid()),
+			u"--port"_q,
+			QString::number(port),
+			u"--secret"_q,
+			secret,
+			u"--log-file"_q,
+			logFile,
+		});
+	}
 	process->setStandardOutputFile(QProcess::nullDevice());
 	process->setStandardErrorFile(QProcess::nullDevice());
 	QObject::connect(process, &QProcess::started, [=] {
@@ -248,6 +288,9 @@ void Launch() {
 } // namespace
 
 bool Available() {
+	if (!NativeBinary().isEmpty()) {
+		return true;
+	}
 	const auto interp = Interpreter();
 	const auto script = Script();
 	return !interp.isEmpty()

@@ -163,13 +163,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           $archive = "oxDesktop-ThirdParty-win64.7z"
-          Write-Host "Cleaning up build leftovers and large temporary files before packaging..."
-          Get-ChildItem -Path ThirdParty,Libraries -Filter ".git" -Directory -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
-          Get-ChildItem -Path ThirdParty -Include *.zip,*.tar.gz,*.tgz,*.7z,*.crate -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Force
-          Get-ChildItem -Path Libraries,ThirdParty -Filter "*.pdb" -File -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
-          Get-ChildItem -Path Libraries,ThirdParty -Filter "*.obj" -File -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
-          Write-Host "Packaging prebuilt libraries to $archive with solid LZMA2..."
-          7z a -mx=5 -ms=on $archive Libraries ThirdParty | Out-Null
+          Write-Host "Packaging prebuilt libraries to $archive with solid LZMA2 (non-destructive excludes)..."
+          7z a -mx=5 -ms=on -xr!.git -xr!*.pdb -xr!*.obj -xr!*.zip -xr!*.tar.gz -xr!*.tgz -xr!*.7z -xr!*.crate $archive Libraries ThirdParty | Out-Null
           if (Test-Path $archive) {
             $item = Get-Item $archive
             $mb = [math]::Round($item.Length / 1MB, 2)
@@ -181,7 +176,9 @@ jobs:
           } else {
             & gh release create ci-cache $archive -R $env:GH_REPO --title "CI Cache (Automated Prebuilt Assets)" --notes "Automated permanent prebuilt libraries and docker cache" --prerelease
           }
-          $global:LASTEXITCODE = 0
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to upload $archive to ci-cache release."
+          }
           Remove-Item $archive -Force
 
       # Plugin engine links against an embedded Python 3.11, expected at
@@ -341,6 +338,13 @@ jobs:
             Copy-Item (Join-Path $release 'Telegram.exe') (Join-Path $release 'oxDesktop.exe') -Force
           }
           Copy-Item (Join-Path $release 'oxDesktop.exe') (Join-Path $portable 'oxDesktop.exe') -Force
+          Write-Host "Building native Rust oxWsProxy binary..."
+          cargo build --release --manifest-path tdesktop\Telegram\SourceFiles\extera\rust\ox_ws_proxy\Cargo.toml
+          $rustBin = 'tdesktop\Telegram\SourceFiles\extera\rust\ox_ws_proxy\target\release\ox_ws_proxy.exe'
+          if (Test-Path $rustBin) {
+            Copy-Item $rustBin (Join-Path $release 'oxWsProxy.exe') -Force
+            Copy-Item $rustBin (Join-Path $portable 'oxWsProxy.exe') -Force
+          }
           Copy-Item (Join-Path $release 'python') $portable -Recurse
           Copy-Item (Join-Path $release 'modules') $portable -Recurse
           if (Test-Path (Join-Path $release 'Updater.exe')) { Copy-Item (Join-Path $release 'Updater.exe') $portable }
