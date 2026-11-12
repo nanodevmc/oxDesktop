@@ -93,3 +93,5 @@ BUILD_LOG.md
 TODO.md
 TEST_READY.md
 TEST_INFRA.md
+scratch/
+scratch/*

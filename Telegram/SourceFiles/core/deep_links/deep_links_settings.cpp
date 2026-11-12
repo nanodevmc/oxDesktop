@@ -1316,6 +1316,23 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
+		.path = u"proxy"_q,
+		.action = AliasTo{ u"settings"_q, u"data/proxy"_q },
+	});
+	router.add(u"settings"_q, {
+		.path = u"proxies"_q,
+		.action = AliasTo{ u"settings"_q, u"data/proxy"_q },
+	});
+	router.add(u"settings"_q, {
+		.path = u"connection"_q,
+		.action = AliasTo{ u"settings"_q, u"data/proxy"_q },
+	});
+	router.add(u"settings"_q, {
+		.path = u"connection_type"_q,
+		.action = AliasTo{ u"settings"_q, u"data/proxy"_q },
+	});
+
+	router.add(u"settings"_q, {
 		.path = u"data/proxy"_q,
 		.action = CodeBlock{ [](const Context &ctx) {
 			if (!ctx.controller) {
@@ -2268,13 +2285,19 @@ QString SettingsDeepLink(
 	if (highlight.isEmpty()) {
 		return fallback;
 	}
+	const auto isBypassAlias = (highlight.compare(u"byedpi"_q, Qt::CaseInsensitive) == 0)
+		|| (highlight.compare(u"obhod"_q, Qt::CaseInsensitive) == 0)
+		|| (highlight.compare(u"tgws"_q, Qt::CaseInsensitive) == 0)
+		|| (highlight.compare(u"tg_ws_proxy"_q, Qt::CaseInsensitive) == 0)
+		|| (highlight.compare(u"wsproxy"_q, Qt::CaseInsensitive) == 0)
+		|| (highlight.compare(u"ws_proxy"_q, Qt::CaseInsensitive) == 0);
+
 	const auto entries = ::Settings::Builder::SearchRegistry::Instance().collectAll(session);
 	for (const auto &entry : entries) {
 		const auto match = (entry.id.compare(highlight, Qt::CaseInsensitive) == 0)
 			|| entry.id.endsWith('/' + highlight, Qt::CaseInsensitive)
 			|| highlight.endsWith('/' + entry.id, Qt::CaseInsensitive)
-			|| (highlight == u"byedpi"_q && (entry.id == u"extera/ws_proxy"_q || entry.id == u"ws_proxy"_q))
-			|| (highlight == u"obhod"_q && (entry.id == u"extera/ws_proxy"_q || entry.id == u"ws_proxy"_q));
+			|| (isBypassAlias && (entry.id == u"extera/ws_proxy"_q || entry.id == u"ws_proxy"_q));
 		if (match && entry.section) {
 			return entry.section;
 		}

@@ -31,7 +31,7 @@ class _WsPool:
 
     async def get(self, dc: int, is_media: bool, *, is_test_dc: bool = False
                   ) -> Optional[RawWebSocket]:
-        target_ip = proxy_config.dc_redirects.get(dc)
+        target_ip = proxy_config.dc_redirects.get(dc) or DC_DEFAULT_IPS.get(dc)
         if not target_ip or proxy_config.pool_size <= 0:
             return None
         key = (dc, is_media, is_test_dc)

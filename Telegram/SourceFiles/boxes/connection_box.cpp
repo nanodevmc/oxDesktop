@@ -1188,7 +1188,7 @@ void ProxiesBox::setupContent() {
 
 		const auto wsProxyButton = Settings::AddButtonWithLabel(
 			wsProxyWrap,
-			rpl::single(u"Встроенный обход"_q),
+			tr::lng_exd_ws_proxy(),
 			Extera::WsProxy::statusTextValue(),
 			st::settingsButtonNoIcon);
 
@@ -1202,6 +1202,10 @@ void ProxiesBox::setupContent() {
 		wsProxyButton->setClickedCallback([=] {
 			const auto enable = !Extera::WsProxy::Enabled();
 			Extera::WsProxy::SetEnabled(enable);
+			_proxySettings->setValue(
+				enable
+					? ProxyData::Settings::Enabled
+					: ProxyData::Settings::Disabled);
 			_controller->setProxySettings(
 				enable
 					? ProxyData::Settings::Enabled

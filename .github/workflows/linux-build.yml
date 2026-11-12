@@ -197,10 +197,20 @@ jobs:
             '
           ls -la "oxDesktop-linux-x64.$VERSION.tar.gz"
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxDesktop-linux-x64
+          path: oxDesktop-linux-x64.*.tar.gz
+          compression-level: 9
+          retention-days: 7
+
       - name: Generate Demo Screenshots
+        timeout-minutes: 10
+        continue-on-error: true
         run: |
           mkdir -p screenshots
-          sudo apt-get update && sudo apt-get install -y \
+          sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=15 && sudo apt-get install -y -o Acquire::Retries=3 -o Acquire::http::Timeout=15 --fix-missing \
             xvfb \
             ffmpeg \
             dbus-x11 \
@@ -295,15 +305,6 @@ jobs:
           if-no-files-found: ignore
           compression-level: 9
           retention-days: 7
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: oxDesktop-linux-x64
-          path: oxDesktop-linux-x64.*.tar.gz
-          compression-level: 9
-          retention-days: 7
-
 
       - name: Attach to release
         if: github.event_name == 'release'

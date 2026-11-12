@@ -693,11 +693,17 @@ bool Controller::takeHighlightControlId(const QString &id) {
 	if (_highlightControlId.isEmpty()) {
 		return false;
 	}
+	const auto isBypassAlias = (_highlightControlId.compare(u"byedpi"_q, Qt::CaseInsensitive) == 0)
+		|| (_highlightControlId.compare(u"obhod"_q, Qt::CaseInsensitive) == 0)
+		|| (_highlightControlId.compare(u"tgws"_q, Qt::CaseInsensitive) == 0)
+		|| (_highlightControlId.compare(u"tg_ws_proxy"_q, Qt::CaseInsensitive) == 0)
+		|| (_highlightControlId.compare(u"wsproxy"_q, Qt::CaseInsensitive) == 0)
+		|| (_highlightControlId.compare(u"ws_proxy"_q, Qt::CaseInsensitive) == 0);
+
 	const auto match = (_highlightControlId.compare(id, Qt::CaseInsensitive) == 0)
 		|| id.endsWith('/' + _highlightControlId, Qt::CaseInsensitive)
 		|| _highlightControlId.endsWith('/' + id, Qt::CaseInsensitive)
-		|| (_highlightControlId == u"byedpi"_q && (id == u"ws_proxy"_q || id.endsWith(u"/ws_proxy"_q)))
-		|| (_highlightControlId == u"obhod"_q && (id == u"ws_proxy"_q || id.endsWith(u"/ws_proxy"_q)));
+		|| (isBypassAlias && (id == u"ws_proxy"_q || id.endsWith(u"/ws_proxy"_q)));
 	if (match) {
 		_highlightControlId = QString();
 		return true;

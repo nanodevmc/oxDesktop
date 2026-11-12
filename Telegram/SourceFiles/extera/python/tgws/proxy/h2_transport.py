@@ -5,16 +5,24 @@ import time
 from collections import deque
 from functools import lru_cache
 
-import httpx
-from h2.config import H2Configuration
-from h2.connection import H2Connection
-from h2.errors import ErrorCodes
-from h2.events import (
-    ConnectionTerminated, DataReceived, RemoteSettingsChanged,
-    ResponseReceived, StreamEnded, StreamReset, WindowUpdated,
-)
-from h2.exceptions import H2Error, StreamClosedError
-from h2.settings import SettingCodes, Settings
+try:
+    import httpx
+    from h2.config import H2Configuration
+    from h2.connection import H2Connection
+    from h2.errors import ErrorCodes
+    from h2.events import (
+        ConnectionTerminated, DataReceived, RemoteSettingsChanged,
+        ResponseReceived, StreamEnded, StreamReset, WindowUpdated,
+    )
+    from h2.exceptions import H2Error, StreamClosedError
+    from h2.settings import SettingCodes, Settings
+    H2_AVAILABLE = True
+except ImportError:
+    H2_AVAILABLE = False
+    httpx = None
+
+_BaseByteStream = httpx.AsyncByteStream if H2_AVAILABLE else object
+_BaseTransport = httpx.AsyncBaseTransport if H2_AVAILABLE else object
 
 from .utils import create_ssl_context
 
@@ -30,7 +38,7 @@ def _default_ssl_context():
     return context
 
 
-class _ResponseStream(httpx.AsyncByteStream):
+class _ResponseStream(_BaseByteStream):
     def __init__(self, connection, stream_id, read_timeout):
         self.connection = connection
         self.stream_id = stream_id
@@ -308,7 +316,7 @@ class _Connection:
             pass
 
 
-class H2Transport(httpx.AsyncBaseTransport):
+class H2Transport(_BaseTransport):
     def __init__(self, ssl_context=None, max_streams=64):
         if ssl_context is None:
             self.ssl_context = _default_ssl_context()
