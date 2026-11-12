@@ -32,6 +32,7 @@ permissions:
 jobs:
   linux:
     name: Rocky Linux 8
+    if: github.event_name != 'release' || (!startsWith(github.event.release.tag_name, 'ci-cache') && !contains(github.event.release.tag_name, 'cache'))
     runs-on: ubuntu-latest
 
     env:
@@ -60,13 +61,50 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Restore Docker environment from Release
+        id: docker_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          command -v zstd >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y zstd; }
+          ARCHIVE="oxDesktop-centos-env.tar.zst"
+          if gh release download ci-cache -R "$GH_REPO" -p "$ARCHIVE" 2>/dev/null; then
+            echo "Found prebuilt Docker environment in release! Loading..."
+            zstd -d -c "$ARCHIVE" | docker load
+            rm -f "$ARCHIVE"
+            echo "DOCKER_CACHE_HIT=true" >> "$GITHUB_ENV"
+          else
+            echo "Prebuilt Docker environment not found in release, will build."
+            echo "DOCKER_CACHE_HIT=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Libraries
+        if: env.DOCKER_CACHE_HIT != 'true'
         uses: docker/build-push-action@v6
         with:
           context: Telegram/build/docker/centos_env
           load: true
           tags: ${{ env.IMAGE_TAG }}
           cache-from: type=gha,scope=docker-centos
+
+      - name: Publish Docker environment to Release (one-time)
+        if: success() && env.DOCKER_CACHE_HIT != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          command -v zstd >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y zstd; }
+          ARCHIVE="oxDesktop-centos-env.tar.zst"
+          echo "Exporting and compressing Docker image $IMAGE_TAG..."
+          docker save "$IMAGE_TAG" | zstd -3 -T0 -o "$ARCHIVE"
+          ls -lh "$ARCHIVE"
+          if gh release view ci-cache -R "$GH_REPO" >/dev/null 2>&1; then
+            gh release upload ci-cache "$ARCHIVE" -R "$GH_REPO" --clobber
+          else
+            gh release create ci-cache "$ARCHIVE" -R "$GH_REPO" --title "CI Cache (Automated Prebuilt Assets)" --notes "Automated permanent prebuilt libraries and docker cache" --prerelease
+          fi
+          rm -f "$ARCHIVE"
 
       - name: Restore Compiler cache (ccache)
         uses: actions/cache/restore@v4
@@ -307,7 +345,7 @@ jobs:
           retention-days: 7
 
       - name: Attach to release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'ci-cache') && !contains(github.event.release.tag_name, 'cache')
         uses: softprops/action-gh-release@v2
         with:
           files: oxDesktop-linux-x64.*.tar.gz

@@ -28,6 +28,7 @@ on:
 
 jobs:
   build:
+    if: github.event_name != 'release' || (!startsWith(github.event.release.tag_name, 'ci-cache') && !contains(github.event.release.tag_name, 'cache'))
     runs-on: windows-latest
     timeout-minutes: 360
     env:
@@ -56,9 +57,10 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           $archive = "oxDesktop-ThirdParty-win64.7z"
-          $null = & gh release download ci-cache-win64 --pattern $archive --dir . 2>&1
+          $null = & gh release download ci-cache -R $env:GH_REPO --pattern $archive --dir . 2>&1
           $global:LASTEXITCODE = 0
           if (Test-Path $archive) {
             Write-Host "Found prebuilt libraries in release! Extracting..."
@@ -158,15 +160,16 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           $archive = "oxDesktop-ThirdParty-win64.7z"
           Write-Host "Packaging prebuilt libraries to $archive..."
           7z a -mx=3 $archive Libraries ThirdParty | Out-Null
-          $view = & gh release view ci-cache-win64 2>&1
+          $view = & gh release view ci-cache -R $env:GH_REPO 2>&1
           if ($LASTEXITCODE -eq 0) {
-            & gh release upload ci-cache-win64 $archive --clobber
+            & gh release upload ci-cache $archive -R $env:GH_REPO --clobber
           } else {
-            & gh release create ci-cache-win64 $archive --title "CI Cache (Win64 Libraries)" --notes "Automated permanent prebuilt libraries cache" --prerelease
+            & gh release create ci-cache $archive -R $env:GH_REPO --title "CI Cache (Automated Prebuilt Assets)" --notes "Automated permanent prebuilt libraries and docker cache" --prerelease
           }
           $global:LASTEXITCODE = 0
           Remove-Item $archive -Force
@@ -389,9 +392,10 @@ jobs:
           compression-level: 9
 
       - name: Attach to release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'ci-cache') && !contains(github.event.release.tag_name, 'cache')
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$env:RELEASE_TAG" "oxDesktop-portable-x64.$env:BUILD_VERSION.zip" "tdesktop\out\Release\oxDesktop-setup-x64.$env:BUILD_VERSION.exe" --clobber
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$env:RELEASE_TAG" "oxDesktop-portable-x64.$env:BUILD_VERSION.zip" "tdesktop\out\Release\oxDesktop-setup-x64.$env:BUILD_VERSION.exe" -R "$env:GH_REPO" --clobber
