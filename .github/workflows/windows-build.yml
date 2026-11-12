@@ -163,8 +163,18 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           $archive = "oxDesktop-ThirdParty-win64.7z"
-          Write-Host "Packaging prebuilt libraries to $archive..."
-          7z a -mx=3 $archive Libraries ThirdParty | Out-Null
+          Write-Host "Cleaning up build leftovers and large temporary files before packaging..."
+          Get-ChildItem -Path ThirdParty,Libraries -Filter ".git" -Directory -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+          Get-ChildItem -Path ThirdParty -Include *.zip,*.tar.gz,*.tgz,*.7z,*.crate -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Force
+          Get-ChildItem -Path Libraries,ThirdParty -Filter "*.pdb" -File -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
+          Get-ChildItem -Path Libraries,ThirdParty -Filter "*.obj" -File -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
+          Write-Host "Packaging prebuilt libraries to $archive with solid LZMA2..."
+          7z a -mx=5 -ms=on $archive Libraries ThirdParty | Out-Null
+          if (Test-Path $archive) {
+            $item = Get-Item $archive
+            $mb = [math]::Round($item.Length / 1MB, 2)
+            Write-Host "Archive created successfully: $mb MB ($($item.Length) bytes)"
+          }
           $view = & gh release view ci-cache -R $env:GH_REPO 2>&1
           if ($LASTEXITCODE -eq 0) {
             & gh release upload ci-cache $archive -R $env:GH_REPO --clobber
