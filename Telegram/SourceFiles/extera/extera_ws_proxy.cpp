@@ -137,12 +137,6 @@ State &Instance() {
 	return start;
 }
 
-[[nodiscard]] bool IsOurs(const MTP::ProxyData &proxy) {
-	return proxy.type == MTP::ProxyData::Type::Mtproto
-		&& proxy.host == u"127.0.0.1"_q
-		&& proxy.password.endsWith(Secret());
-}
-
 void Launch();
 
 void ScheduleRestart() {
@@ -172,6 +166,7 @@ void Launch() {
 		return;
 	}
 	state.stopping = false;
+	CleanOurProxies();
 	const auto port = ChoosePort();
 	const auto secret = Secret();
 	state.proxy = MTP::ProxyData();
@@ -187,6 +182,7 @@ void Launch() {
 	Core::App().setCurrentProxy(
 		state.proxy,
 		MTP::ProxyData::Settings::Enabled);
+	Core::App().saveSettings();
 
 	const auto process = new QProcess(qApp);
 	state.process = process;
@@ -288,6 +284,28 @@ rpl::producer<QString> statusTextValue() {
 		});
 }
 
+bool IsOurs(const MTP::ProxyData &proxy) {
+	return proxy.type == MTP::ProxyData::Type::Mtproto
+		&& (proxy.host == u"127.0.0.1"_q || proxy.host == u"localhost"_q)
+		&& (proxy.password.endsWith(Secret())
+			|| (proxy.port >= kDefaultPort && proxy.port < kDefaultPort + kPortAttempts));
+}
+
+void CleanOurProxies() {
+	auto &settings = Core::App().settings().proxy();
+	const auto list = settings.list();
+	auto changed = false;
+	for (const auto &p : list) {
+		if (IsOurs(p)) {
+			settings.removeFromList(p);
+			changed = true;
+		}
+	}
+	if (changed) {
+		Core::App().saveSettings();
+	}
+}
+
 void Start() {
 	if (Enabled()) {
 		Instance().restarts = 0;
@@ -312,6 +330,8 @@ void Stop() {
 			settings.selected(),
 			MTP::ProxyData::Settings::Disabled);
 	}
+	CleanOurProxies();
+	Core::App().saveSettings();
 }
 
 void SetEnabled(bool enabled) {

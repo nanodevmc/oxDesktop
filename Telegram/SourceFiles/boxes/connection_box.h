@@ -83,6 +83,7 @@ public:
 
 	void deleteItem(int id);
 	void deleteItems();
+	void deleteMatching(Fn<bool(const ProxyData &)> filter);
 	void restoreItem(int id);
 	void shareItem(int id, bool qr);
 	void shareItems();

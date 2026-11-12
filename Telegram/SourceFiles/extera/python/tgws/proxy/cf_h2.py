@@ -18,6 +18,7 @@ except ImportError:
     class H2Transport: pass
     H2_AVAILABLE = False
 from .stats import stats
+from .balancer import balancer
 from .utils import (
     DC_DEFAULT_IPS, PROTO_TAG_ABRIDGED,
     PROTO_TAG_SECURE,

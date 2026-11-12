@@ -134,10 +134,12 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			bool square = false;
 			QString initialIconId;
 			bool initialSquare = false;
+			std::vector<AppIcon::Variant> variants;
 		};
 		const auto state = box->lifetime().make_state<State>();
 		state->iconId = state->initialIconId = String(u"app_icon"_q);
 		state->square = state->initialSquare = Bool(u"app_icon_square"_q);
+		state->variants = AppIcon::Variants();
 		const auto content = box->verticalLayout();
 		const auto rebuild = std::make_shared<Fn<void()>>();
 		const auto addTitle = [=](rpl::producer<QString> text) {
@@ -211,7 +213,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				u"https://t.me/oxDesktop"_q,
 				&st::exteraIconWebsite);
 			box->addButton(tr::lng_exd_wizard_setup(), [=] {
-				crl::on_main(box, [=] {
+				base::call_delayed(0, box, [=] {
 					state->step = 1;
 					(*rebuild)();
 				});
@@ -219,17 +221,13 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 		};
 		const auto fillIcon = [=] {
 			addTitle(tr::lng_exd_wizard_icon());
-			const auto variants = AppIcon::Variants();
-			const auto count = int(variants.size());
-			const auto titleFor = [&](int index) {
-				return (index >= 0 && index < count) ? variants[index].title : QString();
-			};
+			const auto count = int(state->variants.size());
 			const auto images = std::make_shared<std::vector<QImage>>();
 			const auto ratio = style::DevicePixelRatio();
 			const auto size = st::exteraAppIconSize;
 			const auto render = [=] {
 				images->clear();
-				for (const auto &variant : variants) {
+				for (const auto &variant : state->variants) {
 					auto image = AppIcon::Render(
 						size * ratio,
 						variant.id,
@@ -253,7 +251,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			};
 			const auto selected = [=] {
 				for (auto i = 0; i != count; ++i) {
-					if (variants[i].id == state->iconId) {
+					if (state->variants[i].id == state->iconId) {
 						return i;
 					}
 				}
@@ -286,6 +284,9 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 					}
 					p.setPen(st::windowFg);
 					p.setFont(st::exteraAppIconCaptionFont);
+					const auto title = (i >= 0 && i < count)
+						? state->variants[i].title
+						: QString();
 					p.drawText(
 						QRect(
 							x,
@@ -294,7 +295,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 							st::exteraAppIconCaptionFont->height),
 						Qt::AlignHCenter | Qt::AlignTop,
 						st::exteraAppIconCaptionFont->elided(
-							titleFor(i),
+							title,
 							cell - 4));
 				}
 			}, grid->lifetime());
@@ -313,7 +314,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 					|| index >= count) {
 					return;
 				}
-				state->iconId = variants[index].id;
+				state->iconId = state->variants[index].id;
 				grid->update();
 			}, grid->lifetime());
 			const auto square = content->add(
@@ -329,7 +330,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				grid->update();
 			}, square->lifetime());
 			box->addButton(tr::lng_exd_wizard_next(), [=] {
-				crl::on_main(box, [=] {
+				base::call_delayed(0, box, [=] {
 					state->step = 2;
 					(*rebuild)();
 				});
@@ -401,7 +402,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				nullptr);
 			addText(tr::lng_exd_wizard_settings_about());
 			box->addButton(rpl::single(u"\u0427\u0442\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u279C"_q), [=] {
-				crl::on_main(box, [=] {
+				base::call_delayed(0, box, [=] {
 					state->step = 3;
 					(*rebuild)();
 				});

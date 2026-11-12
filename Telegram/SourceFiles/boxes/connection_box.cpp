@@ -1210,6 +1210,11 @@ void ProxiesBox::setupContent() {
 				enable
 					? ProxyData::Settings::Enabled
 					: ProxyData::Settings::Disabled);
+			if (!enable) {
+				_controller->deleteMatching([](const ProxyData &p) {
+					return Extera::WsProxy::IsOurs(p);
+				});
+			}
 		});
 	}
 	_tryIPv6 = inner->add(
@@ -2287,6 +2292,14 @@ void ProxiesBoxController::deleteItem(int id) {
 void ProxiesBoxController::deleteItems() {
 	for (const auto &item : _list) {
 		setDeleted(item.id, true);
+	}
+}
+
+void ProxiesBoxController::deleteMatching(Fn<bool(const ProxyData &)> filter) {
+	for (const auto &item : _list) {
+		if (!item.deleted && filter(item.data)) {
+			setDeleted(item.id, true);
+		}
 	}
 }
 
