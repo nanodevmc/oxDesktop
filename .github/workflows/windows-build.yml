@@ -164,16 +164,8 @@ jobs:
         run: |
           $archive = "oxDesktop-ThirdParty-win64.7z"
           Write-Host "Packaging prebuilt libraries to $archive with solid LZMA2 (non-destructive file exclusion list)..."
-          @'
-.git
-*.pdb
-*.obj
-*.zip
-*.tar.gz
-*.tgz
-*.7z
-*.crate
-'@ | Set-Content -Path 'exclude_libs.txt' -Encoding utf8
+          $excludes = @('.git', '*.pdb', '*.obj', '*.zip', '*.tar.gz', '*.tgz', '*.7z', '*.crate')
+          $excludes | Set-Content -Path 'exclude_libs.txt' -Encoding utf8
           7z a -mx=5 -ms=on '-xr@exclude_libs.txt' $archive Libraries ThirdParty | Out-Null
           if (Test-Path $archive) {
             $item = Get-Item $archive
