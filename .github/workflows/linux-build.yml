@@ -196,7 +196,6 @@ jobs:
           done
 
       - name: Build Native Rust Proxy
-        continue-on-error: true
         run: |
           cargo build --release --manifest-path Telegram/SourceFiles/extera/rust/ox_ws_proxy/Cargo.toml
 

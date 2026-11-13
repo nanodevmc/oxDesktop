@@ -134,11 +134,15 @@ mod watchdog {
 
 #[cfg(not(windows))]
 mod watchdog {
+    extern "C" {
+        fn kill(pid: i32, sig: i32) -> i32;
+    }
+
     pub fn start_watchdog(pid: u32) {
         std::thread::spawn(move || loop {
             std::thread::sleep(std::time::Duration::from_secs(2));
             unsafe {
-                if libc::kill(pid as i32, 0) != 0 {
+                if kill(pid as i32, 0) != 0 {
                     std::process::exit(0);
                 }
             }
