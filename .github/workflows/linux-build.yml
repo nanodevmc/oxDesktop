@@ -195,6 +195,11 @@ jobs:
             gh api -X DELETE "/repos/${{ github.repository }}/actions/caches/$id" || true
           done
 
+      - name: Build Native Rust Proxy
+        continue-on-error: true
+        run: |
+          cargo build --release --manifest-path Telegram/SourceFiles/extera/rust/ox_ws_proxy/Cargo.toml
+
       - name: Package
         run: |
           VERSION=$(sed -n 's/.*AppVersionStr = "\([^"]*\)".*/\1/p' Telegram/SourceFiles/core/version.h)
@@ -214,6 +219,10 @@ jobs:
               mkdir -p "$PKG/lib" "$PKG/python" "$PKG/python311/lib"
               cp out/Release/Telegram "$PKG/oxDesktop-bin"
               strip "$PKG/oxDesktop-bin"
+              if [ -f Telegram/SourceFiles/extera/rust/ox_ws_proxy/target/release/ox_ws_proxy ]; then
+                cp Telegram/SourceFiles/extera/rust/ox_ws_proxy/target/release/ox_ws_proxy "$PKG/oxWsProxy"
+                chmod +x "$PKG/oxWsProxy"
+              fi
               cp -L /usr/lib64/libpython3.11.so.1.0 "$PKG/lib/"
               cp -r /usr/lib64/python3.11 "$PKG/python311/lib/python3.11"
               rm -rf "$PKG/python311/lib/python3.11/test" \
