@@ -9528,7 +9528,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_exd_description_more" = "Show more";
 "lng_exd_badge_trusted" = "{name} is a trusted source of oxDesktop plugins.";
 "lng_exd_plugins_sdk" = "Plugin SDK";
-"lng_exd_plugins_sdk_version" = "exteraGram SDK";
+"lng_exd_plugins_sdk_version" = "oxDesktop SDK";
 "lng_exd_plugins_engine" = "oxDesktop plugin engine";
 "lng_exd_changelog_title" = "Changelog";
 "lng_exd_changelog_loading" = "Loading...";
@@ -9765,7 +9765,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_plugins_runtime_python" = "Python 3.11 Runtime";
 "lng_extera_plugins_runtime_running" = "Running";
 "lng_extera_plugins_runtime_stopped" = "Stopped";
-"lng_extera_plugins_runtime_about" = "exteraGram plugins run on the computer through the oxDesktop engine, compatible with exteraGram SDK.";
+"lng_extera_plugins_runtime_about" = "oxDesktop plugins run on the computer through the oxDesktop engine, compatible with oxDesktop SDK.";
 "lng_extera_plugins_unknown_allow" = "Allow";
 "lng_extera_plugins_unknown_warning" = "You are agreeing to install plugins from unknown sources. Every plugin has:\n\n**Full access to your account**\nAct on your behalf: read, send and delete messages.\n\n**App files and data**\nRead cached chats, media, settings and authorization data.\n\n**Unrestricted code**\nRun any code and send anything to any server.\n\nA malicious plugin can take over your account.";
 "lng_extera_plugins_shared" = "Plugin file sent";
