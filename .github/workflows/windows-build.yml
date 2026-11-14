@@ -66,6 +66,23 @@ jobs:
             Write-Host "Found prebuilt libraries in release! Extracting..."
             7z x $archive -y | Out-Null
             Remove-Item $archive -Force
+            $qtDir = Join-Path $env:GITHUB_WORKSPACE 'Libraries\win64\Qt-6.11.2'
+            if (Test-Path $qtDir) {
+              Get-ChildItem -Path "$qtDir\lib\cmake" -Filter "*Targets*.cmake" -Recurse | ForEach-Object {
+                $content = Get-Content $_.FullName -Raw
+                $matches = [regex]::Matches($content, 'lib/objects-[^"]+\.obj')
+                foreach ($m in $matches) {
+                  $relPath = $m.Value.Replace('/', '\')
+                  $fullPath = Join-Path $qtDir $relPath
+                  if (-not (Test-Path $fullPath)) {
+                    $dir = Split-Path $fullPath
+                    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+                    New-Item -ItemType File -Path $fullPath -Force | Out-Null
+                    Write-Host "Created placeholder for missing Qt object: $relPath"
+                  }
+                }
+              }
+            }
             "LIBS_CACHE_HIT=true" >> $env:GITHUB_ENV
             "LIBS_SOURCE=release" >> $env:GITHUB_ENV
           } else {
@@ -164,7 +181,7 @@ jobs:
         run: |
           $archive = "oxDesktop-ThirdParty-win64.7z"
           Write-Host "Packaging prebuilt libraries to $archive with solid LZMA2 (non-destructive file exclusion list)..."
-          $excludes = @('.git', '*.pdb', '*.obj', '*.zip', '*.tar.gz', '*.tgz', '*.7z', '*.crate')
+          $excludes = @('.git', '*.pdb', '*.zip', '*.tar.gz', '*.tgz', '*.7z', '*.crate')
           $excludes | Set-Content -Path 'exclude_libs.txt' -Encoding utf8
           7z a -mx=5 -ms=on '-xr@exclude_libs.txt' $archive Libraries ThirdParty | Out-Null
           if (Test-Path $archive) {

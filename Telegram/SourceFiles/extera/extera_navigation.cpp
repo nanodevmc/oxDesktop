@@ -65,7 +65,7 @@ struct Item {
 [[nodiscard]] QStringList Order() {
 	auto result = String(u"menu_order"_q).split(',', Qt::SkipEmptyParts);
 	const auto hidden = Hidden();
-	std::erase_if(result, [&](const QString &id) {
+	result.removeIf([&](const QString &id) {
 		return (id != kDivider) && (!FindItem(id) || hidden.contains(id));
 	});
 	auto previous = QString();
