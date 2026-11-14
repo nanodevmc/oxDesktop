@@ -1,13 +1,16 @@
 #include "extera/extera_lang.h"
 
-namespace Extera {
+#include <cstring>
 
-void ApplyRussian(Fn<void(const QByteArray&, const QByteArray&)> apply) {
-	struct Entry {
-		const char *key;
-		const char16_t *value;
-	};
-	static const Entry entries[] = {
+namespace Extera {
+namespace {
+
+struct Entry {
+	const char *key;
+	const char16_t *value;
+};
+
+constexpr Entry kRussianEntries[] = {
 		{ "lng_extera_title", u"\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 oxDesktop" },
 		{ "lng_extera_categories", u"\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0438" },
 		{ "lng_extera_links", u"\u0421\u0441\u044B\u043B\u043A\u0438" },
@@ -645,8 +648,12 @@ void ApplyRussian(Fn<void(const QByteArray&, const QByteArray&)> apply) {
 		{ "lng_exd_plugin_settings_off", u"\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B \u043F\u043E\u0441\u043B\u0435 \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u043F\u043B\u0430\u0433\u0438\u043D\u0430." },
 		{ "lng_exd_guard_run", u"\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u043F\u043B\u0430\u0433\u0438\u043D" },
 		{ "lng_exd_plugin_reloaded", u"\u041F\u043B\u0430\u0433\u0438\u043D {name} \u043F\u0435\u0440\u0435\u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043D" },
-	};
-	for (const auto &entry : entries) {
+};
+
+} // namespace
+
+void ApplyRussian(Fn<void(const QByteArray&, const QByteArray&)> apply) {
+	for (const auto &entry : kRussianEntries) {
 		const auto utf8 = QString::fromUtf16(entry.value).toUtf8();
 		apply(QByteArray(entry.key), utf8);
 		const auto keyLen = std::strlen(entry.key);
@@ -657,7 +664,7 @@ void ApplyRussian(Fn<void(const QByteArray&, const QByteArray&)> apply) {
 }
 
 QString LookupRussian(std::string_view key) {
-	for (const auto &entry : entries) {
+	for (const auto &entry : kRussianEntries) {
 		if (key == entry.key) {
 			return QString::fromUtf16(entry.value);
 		}

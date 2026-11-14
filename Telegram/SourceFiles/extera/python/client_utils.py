@@ -42,6 +42,60 @@ def _not_available(what):
     _log(f"{what} is not available on desktop yet")
 
 
+# Application Version (Unified Single Source of Truth)
+
+def get_app_version() -> str:
+    """Return the client application version string (e.g. '7.4.3.3')."""
+    if hasattr(_extera, "APP_VERSION"):
+        return str(_extera.APP_VERSION)
+    native_fn = getattr(_extera, "app_version", None)
+    if callable(native_fn):
+        try:
+            return str(native_fn())
+        except Exception:
+            pass
+    # Fallback to reading version.txt from repository or application bundle
+    try:
+        import os
+        cur = os.path.dirname(os.path.abspath(__file__))
+        for _ in range(6):
+            vpath = os.path.join(cur, "version.txt")
+            if os.path.isfile(vpath):
+                with open(vpath, "r", encoding="utf-8") as vf:
+                    return vf.read().strip()
+            parent = os.path.dirname(cur)
+            if parent == cur:
+                break
+            cur = parent
+    except Exception:
+        pass
+    return "7.4.3.3"
+
+
+def get_app_version_full() -> int:
+    """Return the client application numeric version (e.g. 7004003)."""
+    if hasattr(_extera, "APP_VERSION_FULL"):
+        return int(_extera.APP_VERSION_FULL)
+    native_fn = getattr(_extera, "app_version_full", None)
+    if callable(native_fn):
+        try:
+            return int(native_fn())
+        except Exception:
+            pass
+    ver_str = get_app_version()
+    try:
+        import re
+        m = re.match(r"^(\d+)\.(\d+)(?:\.(\d+))?", ver_str)
+        if m:
+            major = int(m.group(1))
+            minor = int(m.group(2))
+            patch = int(m.group(3) or 0)
+            return major * 1000000 + minor * 1000 + patch
+    except Exception:
+        pass
+    return 7004003
+
+
 # Hook account scope
 
 _hook_state = threading.local()

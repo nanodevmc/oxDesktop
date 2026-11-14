@@ -64,6 +64,8 @@ run_test() {
 run_configure() {
     local BUILD_DIR="${BUILD_DIR:-out}"
     local CONFIG="${CONFIG:-Release}"
+    echo "==> Synchronizing version from version.txt..."
+    python3 tools/sync_version.py
     echo "==> Initializing submodules (lib_ui, cmake)..."
     git submodule update --init Telegram/lib_ui cmake
     

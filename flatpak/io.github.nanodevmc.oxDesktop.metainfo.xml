@@ -66,9 +66,9 @@
   </screenshots>
 
   <releases>
-    <release version="7.3.3" date="2026-11-10">
+    <release version="7.4.3.3" date="2026-11-10">
       <description>
-        <p>oxDesktop v7.3.3 major release:</p>
+        <p>oxDesktop v7.4.3.3 release:</p>
         <ul>
           <li>Dynamic collapsible accordion changelog with localized sections</li>
           <li>Interactive update dialog with semantic release parsing</li>

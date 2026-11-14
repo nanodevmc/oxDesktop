@@ -11,6 +11,15 @@ _lock = threading.RLock()
 _target = None
 _failed = {}
 
+
+def _get_user_agent() -> str:
+    try:
+        from client_utils import get_app_version
+        return f"oxDesktop/{get_app_version()}"
+    except Exception:
+        pass
+    return "oxDesktop/7.4.3.3"
+
 _NAME_RE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
 
@@ -92,7 +101,7 @@ def _install_one(spec: str, depth: int = 0):
     if name in _failed:
         raise RuntimeError(_failed[name])
     url = f"https://pypi.org/pypi/{name}/json"
-    request = urllib.request.Request(url, headers={"User-Agent": "exDesktop"})
+    request = urllib.request.Request(url, headers={"User-Agent": _get_user_agent()})
     with urllib.request.urlopen(request, timeout=20) as response:
         info = json.load(response)
     files = sorted(
@@ -105,7 +114,7 @@ def _install_one(spec: str, depth: int = 0):
         raise RuntimeError(_failed[name])
     wheel = files[0]
     request = urllib.request.Request(
-        wheel["url"], headers={"User-Agent": "exDesktop"})
+        wheel["url"], headers={"User-Agent": _get_user_agent()})
     with urllib.request.urlopen(request, timeout=60) as response:
         data = response.read()
     with zipfile.ZipFile(io.BytesIO(data)) as archive:

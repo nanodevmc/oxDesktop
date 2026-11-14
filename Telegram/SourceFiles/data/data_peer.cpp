@@ -431,11 +431,6 @@ QImage *PeerData::userpicCloudImage(Ui::PeerUserpicView &view) const {
 	if (const auto image = view.cloud.get(); image && !image->isNull()) {
 		_userpicEmpty = nullptr;
 		return image;
-	} else if (isNotificationsUser()) {
-		static auto result = Window::LogoNoMargin().scaledToWidth(
-			kUserpicSize,
-			Qt::SmoothTransformation);
-		return &result;
 	}
 	return nullptr;
 }
@@ -522,6 +517,9 @@ bool PeerData::useEmptyUserpic(Ui::PeerUserpicView &view) const {
 InMemoryKey PeerData::userpicUniqueKey(Ui::PeerUserpicView &view) const {
 	if (const auto broadcast = monoforumBroadcast()) {
 		return broadcast->userpicUniqueKey(view);
+	}
+	if (id == kServiceNotificationsId) {
+		return InMemoryKey(777000, 1);
 	}
 	return useEmptyUserpic(view)
 		? ensureEmptyUserpic()->uniqueKey()

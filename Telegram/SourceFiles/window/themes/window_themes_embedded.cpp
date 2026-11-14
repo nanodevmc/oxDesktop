@@ -626,7 +626,9 @@ EmbeddedAccentRecipe::EmbeddedAccentRecipe(EmbeddedType type)
 	for (const auto &[over, under] : kContrastPairs) {
 		const auto overIndex = GetPaletteIndex(over);
 		const auto underIndex = GetPaletteIndex(under);
-		Assert(overIndex > 1 && underIndex > 1);
+		if (overIndex <= 1 || underIndex <= 1) {
+			continue;
+		}
 		const auto pair = Contrast{
 			.name = over,
 			.index = overIndex,
@@ -640,10 +642,10 @@ EmbeddedAccentRecipe::EmbeddedAccentRecipe(EmbeddedType type)
 	for (auto index = 0; index != style::palette::kCount; ++index) {
 		const auto leaf = leafOf(index);
 		if (leaf < 0
+			|| index <= 1
 			|| ranges::contains(_contrast, index, &Contrast::index)) {
 			continue;
 		}
-		Assert(index > 1);
 		_keys.push_back({
 			.name = defaults[index].name,
 			.index = index,

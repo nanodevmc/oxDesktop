@@ -12,6 +12,7 @@
 #include "apiwrap.h"
 #include "base/call_delayed.h"
 #include "core/application.h"
+#include "core/version.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
 #include "data/data_peer.h"
@@ -926,6 +927,14 @@ PyObject *NativeThemeColor(PyObject *self, PyObject *args) {
 	return PyLong_FromLongLong(Extera::Views::ThemeColor(QString::fromUtf8(name)));
 }
 
+PyObject *NativeAppVersion(PyObject *self, PyObject *args) {
+	return Py_BuildValue("s", AppVersionStr);
+}
+
+PyObject *NativeAppVersionFull(PyObject *self, PyObject *args) {
+	return PyLong_FromLongLong(AppVersion);
+}
+
 PyMethodDef NativeMethods[] = {
 	{ "log", NativeLog, METH_VARARGS, nullptr },
 	{ "toast", NativeToast, METH_VARARGS, nullptr },
@@ -951,6 +960,8 @@ PyMethodDef NativeMethods[] = {
 	{ "measure_text", NativeMeasureText, METH_VARARGS, nullptr },
 	{ "ui_metrics", NativeUiMetrics, METH_VARARGS, nullptr },
 	{ "theme_color", NativeThemeColor, METH_VARARGS, nullptr },
+	{ "app_version", NativeAppVersion, METH_VARARGS, nullptr },
+	{ "app_version_full", NativeAppVersionFull, METH_VARARGS, nullptr },
 	{ nullptr, nullptr, 0, nullptr },
 };
 
@@ -963,7 +974,12 @@ PyModuleDef NativeModule = {
 };
 
 PyObject *InitNativeModule() {
-	return PyModule_Create(&NativeModule);
+	auto *m = PyModule_Create(&NativeModule);
+	if (m) {
+		PyModule_AddStringConstant(m, "APP_VERSION", AppVersionStr);
+		PyModule_AddIntConstant(m, "APP_VERSION_FULL", AppVersion);
+	}
+	return m;
 }
 
 [[nodiscard]] bool InitInterpreter(const QString &runtime) {

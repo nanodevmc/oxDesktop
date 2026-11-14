@@ -61,6 +61,9 @@ if not "%TDESKTOP_API_ID%"=="" (
     set "API_ARGS=-DTDESKTOP_API_TEST=ON"
 )
 
+echo [INFO] Synchronizing version from version.txt...
+python tools\sync_version.py
+
 echo [INFO] Configuring CMake in %BUILD_DIR% (%CONFIG%)...
 cmake -B "%BUILD_DIR%" ^
     -DCMAKE_BUILD_TYPE="%CONFIG%" ^

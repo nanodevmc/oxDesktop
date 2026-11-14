@@ -33,6 +33,10 @@ mock_extera.current_peer = lambda: 123456789
 mock_extera.get_selected_account = lambda: 0
 mock_extera.self_id = lambda: 99999
 mock_extera.peer_info = lambda pid: '{"type":"user","name":"Test Client","bare_id":123456789}'
+mock_extera.APP_VERSION = "7.4.3.3"
+mock_extera.APP_VERSION_FULL = 7004003
+mock_extera.app_version = lambda: "7.4.3.3"
+mock_extera.app_version_full = lambda: 7004003
 
 sys.modules["_extera"] = mock_extera
 import cactuslib
@@ -1232,6 +1236,8 @@ def test_client_utils_peer_id_resolution():
         dialog_id = 777888
     assert client_utils._peer_id(ObjPeer()) == 777888
     assert client_utils.get_selected_account() == 0
+    assert client_utils.get_app_version() == "7.4.3.3"
+    assert client_utils.get_app_version_full() == 7004003
     print("  -> PASSED")
 
 

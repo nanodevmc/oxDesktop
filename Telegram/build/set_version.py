@@ -151,3 +151,13 @@ print('Patching appxmanifest.xml...')
 replaceInFile(scriptPath + '/../Resources/uwp/AppX/AppxManifest.xml', [
   [ r'( Version=)"\d+\.\d+\.\d+\.\d+"', r'\g<1>"' + withdot + '"' ],
 ])
+
+# Synchronize version.txt single source of truth
+version_txt_path = os.path.abspath(scriptPath + '/../../version.txt')
+with open(version_txt_path, 'w', encoding='utf-8', newline='\n') as f:
+  f.write(versionOriginal + '\n')
+print('Updated ' + version_txt_path)
+
+sync_tool = os.path.abspath(scriptPath + '/../../tools/sync_version.py')
+if os.path.exists(sync_tool):
+  subprocess.check_call([sys.executable, sync_tool])
