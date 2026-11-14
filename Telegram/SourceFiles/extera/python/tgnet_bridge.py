@@ -1,3 +1,8 @@
+"""
+oxDesktop Native MTProto & TGNet Bridge.
+Provides input peer constructors and serialization helpers for native MTProto requests.
+"""
+
 import json
 import os
 import tempfile

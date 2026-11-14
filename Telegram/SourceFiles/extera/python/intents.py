@@ -1,3 +1,8 @@
+"""
+oxDesktop Custom URL & Intent Routing Framework.
+Provides URL parsing, parameter template extraction, and handler dispatching.
+"""
+
 import inspect
 import json
 import re

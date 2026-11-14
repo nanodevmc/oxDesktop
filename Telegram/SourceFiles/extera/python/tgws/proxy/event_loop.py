@@ -6,7 +6,7 @@ import sys
 import threading
 
 
-log = logging.getLogger('tg-mtproto-proxy')
+log = logging.getLogger('ox-tgws-proxy')
 
 
 def _replace_self_pipe(loop):

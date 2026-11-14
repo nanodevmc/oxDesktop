@@ -1,3 +1,8 @@
+"""
+oxDesktop Security Sandbox & Filesystem Interceptor.
+Provides path restriction, network permission checking, and sensitive file protection.
+"""
+
 import ipaddress
 import json
 import re
@@ -35,7 +40,7 @@ def install(host, plugins_dir, settings_dir, files_dir, deps_dir, interactive=Tr
     runtime_root = absolute(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     executable = sys.executable or ""
     if executable and (sys.platform == "win32"
-                       or os.path.basename(executable).lower().startswith(("telegram", "exdesktop"))):
+                       or os.path.basename(executable).lower().startswith(("telegram", "oxdesktop"))):
         app_root = absolute(os.path.dirname(executable))
     else:
         app_root = absolute(os.path.dirname(runtime_root))
@@ -59,7 +64,7 @@ def install(host, plugins_dir, settings_dir, files_dir, deps_dir, interactive=Tr
         pass
 
     sensitive_names = (
-        "tdata", "telegram desktop", "ayugram", "exdesktop", ".ssh", ".gnupg", ".aws",
+        "tdata", "telegram desktop", "ayugram", "oxdesktop", "exdesktop", ".ssh", ".gnupg", ".aws",
         "google\\chrome", "google/chrome", "chromium", "microsoft\\edge", "microsoft/edge",
         "bravesoftware", "yandex\\yandexbrowser", "opera software", "vivaldi", "mozilla",
         "discord", "exodus", "electrum", "atomic", "ethereum", "bitcoin", "monero",
@@ -414,7 +419,7 @@ def install(host, plugins_dir, settings_dir, files_dir, deps_dir, interactive=Tr
         if verdict == "hard":
             log("%s: protected path %r from %s" % (plugin_id, raw, origin()))
             toast(plugin_id, "hard")
-            raise PermissionError("exDesktop sandbox: access to protected files is blocked")
+            raise PermissionError("oxDesktop sandbox: access to protected files is blocked")
         if path_allowed(plugin_id, raw):
             return
         folder = folder_key(raw)
@@ -433,7 +438,7 @@ def install(host, plugins_dir, settings_dir, files_dir, deps_dir, interactive=Tr
         if path_allowed(plugin_id, raw):
             return
         log("%s: path denied %r" % (plugin_id, raw))
-        raise PermissionError("exDesktop sandbox: access to %s is not allowed" % folder)
+        raise PermissionError("oxDesktop sandbox: access to %s is not allowed" % folder)
 
     def is_local_host(host_name):
         name = str(host_name or "").strip("[]").lower()
@@ -470,7 +475,7 @@ def install(host, plugins_dir, settings_dir, files_dir, deps_dir, interactive=Tr
             return
         if rule == "deny":
             toast(plugin_id, "denied_net", target=domain)
-            raise PermissionError("exDesktop sandbox: connection to %s is denied" % domain)
+            raise PermissionError("oxDesktop sandbox: connection to %s is denied" % domain)
 
         def answer(value):
             if value == "always":
@@ -498,7 +503,7 @@ def install(host, plugins_dir, settings_dir, files_dir, deps_dir, interactive=Tr
             recent_dns.domain = (domain, time.time())
             return
         log("%s: network denied %s" % (plugin_id, domain))
-        raise PermissionError("exDesktop sandbox: connection to %s is not allowed" % domain)
+        raise PermissionError("oxDesktop sandbox: connection to %s is not allowed" % domain)
 
     read_events = {"os.listdir", "os.scandir", "glob.glob"}
     write_events = {"os.remove", "os.rmdir", "os.mkdir", "os.chmod", "os.utime", "os.truncate",
@@ -576,20 +581,20 @@ def install(host, plugins_dir, settings_dir, files_dir, deps_dir, interactive=Tr
             if name.split(".")[0] in blocked_imports:
                 log("%s: import %s blocked" % (plugin_id, name))
                 toast(plugin_id, "native")
-                raise ImportError("exDesktop sandbox: module %s is not available to plugins" % name)
+                raise ImportError("oxDesktop sandbox: module %s is not available to plugins" % name)
         elif event.startswith("ctypes.") or event.startswith("winreg."):
             log("%s: %s blocked" % (plugin_id, event))
             toast(plugin_id, "native")
-            raise PermissionError("exDesktop sandbox: native access is blocked")
+            raise PermissionError("oxDesktop sandbox: native access is blocked")
         elif event in process_events:
             log("%s: %s blocked" % (plugin_id, event))
             toast(plugin_id, "process")
-            raise PermissionError("exDesktop sandbox: starting programs is blocked")
+            raise PermissionError("oxDesktop sandbox: starting programs is blocked")
         elif event in internals:
             if importing and event in ("marshal.loads", "marshal.load", "code.__new__"):
                 return
             log("%s: %s blocked" % (plugin_id, event))
-            raise PermissionError("exDesktop sandbox: %s is not available to plugins" % event)
+            raise PermissionError("oxDesktop sandbox: %s is not available to plugins" % event)
         elif event == "urllib.Request":
             url = str(args[0] or "")
             host_name = urllib.parse.urlsplit(url).hostname
@@ -616,7 +621,7 @@ def install(host, plugins_dir, settings_dir, files_dir, deps_dir, interactive=Tr
             address = args[1] if len(args) > 1 else None
             if isinstance(address, tuple) and address and not is_local_host(address[0]):
                 log("%s: bind %r blocked" % (plugin_id, address))
-                raise PermissionError("exDesktop sandbox: listening on network is blocked")
+                raise PermissionError("oxDesktop sandbox: listening on network is blocked")
 
     def list_permissions(plugin_id):
         with lock:

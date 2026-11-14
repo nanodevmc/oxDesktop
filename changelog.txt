@@ -1,3 +1,59 @@
+7.4.3.3 (13.11.26)
+Ru:
+Added:
+- Обновление базы Telegram Desktop до 7.4.3:
+  — Вкладки глобального поиска: раздельный поиск по приложениям (мини-аппам), каналам, постам и медиафайлам
+  — Поддержка HTML-виджетов и QuickJS-песочницы в сообщениях ботов
+  — Анимация полёта отправленных текстовых сообщений прямо в пузыри чата
+  — Запрос разрешений на доступ к камере и микрофону в мини-приложениях для Windows и macOS
+  — Нижняя панель действий (Bottom Button) в списках диалогов
+- Нативный обход блокировок oxWsProxy на Rust:
+  — Сверхбыстрый запуск за 2-3 мс и ультранизкое потребление ОЗУ (3-4 МБ вместо 50+ МБ у Python)
+  — Размер бинарника всего 1.0 МБ с LTO и стриппингом символов
+  — Приоритетный автоматический запуск нативного прокси при включении встроенного обхода
+- Автоматическая очистка устаревших локальных адресов прокси (127.0.0.1) в списке подключений
+
+Fixes:
+- Устранён сбой (Use-After-Free) при быстром переключении шагов в окне приветствия tg://welcome
+- Исправлен импорт балансировщика H2 fallback в фоновом транспорте
+- Исправлен сброс пользовательской папки загрузок и настроек при обновлении
+- Устранено дрожание развёрнутого окна на Windows и вылет всплывающих уведомлений за пределы экрана
+- Устранён сбой при запуске на некоторых конфигурациях Windows
+- Исправлена потеря отступов первой строки в блоках моноширинного кода
+- Исправлено срабатывание горячих клавиш сохранения в медиапросмотрщике
+- Исправлены падения при удалении топиков форума
+
+Updated:
+- Независимая модульная архитектура и глубокий clean-room рефакторинг компонентов
+- Оптимизированы пайплайны CI/CD: стабильное кэширование предварительно собранных библиотек через ci-cache с ускорением сборки на 1-2 часа
+
+En:
+Added:
+- Updated base Telegram Desktop to 7.4.3:
+  — Global search tabs: separate search for mini apps, channels, posts, and media
+  — Support for HTML widgets and QuickJS sandbox in bot messages
+  — Flight animation for sent text messages gliding into chat bubbles
+  — Permission requests for camera and microphone in mini apps on Windows and macOS
+  — Bottom action button support in dialog lists
+- Native Rust bypass proxy oxWsProxy:
+  — Instant 2-3 ms startup and ultra-low RAM footprint (3-4 MB vs 50+ MB with Python)
+  — Lightweight 1.0 MB binary compiled with LTO and stripped symbols
+  — Automatic priority launch of native proxy on bypass activation
+- Automatic cleanup of stale local proxy entries (127.0.0.1) from connection list
+
+Fixes:
+- Fixed Use-After-Free crash on rapid step transitions in tg://welcome setup wizard
+- Fixed balancer import in H2 fallback transport
+- Fixed custom download folder and preference resets across updates
+- Fixed maximized window jitter and off-screen notifications on Windows
+- Fixed launch crashes on specific Windows configurations
+- Fixed indentation loss on first line in formatted code blocks
+- Fixed media viewer save hotkeys and forum topic deletion crashes
+
+Updated:
+- Decoupled modular architecture and deep clean-room refactoring of client components
+- Optimized CI/CD build cache pipelines via ci-cache prebuilt assets skipping multi-hour library builds
+
 7.3.3 (05.11.26)
 Ru:
 Added:

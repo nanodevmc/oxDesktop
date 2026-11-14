@@ -39,6 +39,7 @@ struct Profile {
 
 struct ProfilesState {
 	base::flat_map<uint64, Profile> items;
+	std::vector<TrustedSource> trustedSources;
 	int64 lastSyncTimestamp = 0;
 };
 
@@ -48,10 +49,14 @@ ProfilesState &State() {
 }
 
 [[nodiscard]] QString CachePath() {
+	return cWorkingDir() + u"tdata/ox_profiles.json"_q;
+}
+
+[[nodiscard]] QString LegacyProfilesPath() {
 	return cWorkingDir() + u"tdata/extera_profiles.json"_q;
 }
 
-[[nodiscard]] QString LegacyCachePath() {
+[[nodiscard]] QString LegacyBadgesPath() {
 	return cWorkingDir() + u"tdata/extera_badges.json"_q;
 }
 
@@ -82,6 +87,21 @@ bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 
 	if (document.isObject()) {
 		const auto rootObj = document.object();
+		if (rootObj.contains(u"trusted"_q)) {
+			auto list = std::vector<TrustedSource>();
+			for (const auto &entry : rootObj.value(u"trusted"_q).toArray()) {
+				const auto obj = entry.toObject();
+				const auto id = ReadId(obj.value(u"id"_q));
+				const auto username = obj.value(u"username"_q).toString();
+				if (id != 0 || !username.isEmpty()) {
+					list.push_back({ .id = id, .username = username });
+				}
+			}
+			if (!list.empty()) {
+				state.trustedSources = std::move(list);
+			}
+		}
+
 		if (rootObj.contains(u"users"_q) || rootObj.contains(u"channels"_q)) {
 			auto typesMap = base::flat_map<QString, DocumentId>();
 			if (rootObj.contains(u"types"_q)) {
@@ -103,6 +123,7 @@ bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 					p.type = obj.value(u"type"_q).toString();
 					p.status = p.type.toUpper();
 					p.badgeText = obj.value(u"text"_q).toString();
+					p.number = obj.value(u"number"_q).toInt();
 					if (obj.contains(u"emoji"_q)) {
 						p.badgeDocumentId = DocumentId(ReadId(obj.value(u"emoji"_q)));
 					} else if (typesMap.contains(p.type)) {
@@ -180,32 +201,20 @@ void SaveToCache() {
 }
 
 void RefreshProfiles(QNetworkAccessManager *manager) {
-	const auto urls = std::vector<QString>{
-		u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/badges.json"_q,
-		u"https://api.exteragram.app/api/v1/profiles"_q,
-	};
-	const auto tryNext = std::make_shared<Fn<void(size_t)>>();
-	*tryNext = [=](size_t index) {
-		if (index >= urls.size()) {
-			return;
-		}
-		auto request = QNetworkRequest(QUrl(urls[index]));
-		request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
-		request.setRawHeader("Accept", "application/json");
-		const auto reply = manager->get(request);
-		QObject::connect(reply, &QNetworkReply::finished, [=] {
-			reply->deleteLater();
-			if (reply->error() == QNetworkReply::NoError) {
-				const auto bytes = reply->readAll();
-				if (ApplyProfiles(bytes, false)) {
-					SaveToCache();
-					return;
-				}
+	const auto url = u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/badges.json"_q;
+	auto request = QNetworkRequest(QUrl(url));
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+	request.setRawHeader("Accept", "application/json");
+	const auto reply = manager->get(request);
+	QObject::connect(reply, &QNetworkReply::finished, [=] {
+		reply->deleteLater();
+		if (reply->error() == QNetworkReply::NoError) {
+			const auto bytes = reply->readAll();
+			if (ApplyProfiles(bytes, false)) {
+				SaveToCache();
 			}
-			(*tryNext)(index + 1);
-		});
-	};
-	(*tryNext)(0);
+		}
+	});
 }
 
 } // namespace
@@ -222,7 +231,8 @@ void StartBadges() {
 			cWorkingDir() + u"badges.json"_q,
 			u":/badges.json"_q,
 			CachePath(),
-			LegacyCachePath() }) {
+			LegacyProfilesPath(),
+			LegacyBadgesPath() }) {
 		auto f = QFile(p);
 		if (f.open(QIODevice::ReadOnly)) {
 			if (ApplyProfiles(f.readAll(), loadedLocal)) {
@@ -260,14 +270,16 @@ BadgeKind BadgeKindFor(not_null<PeerData*> peer) {
 	}
 	if (profile.status == u"DEVELOPER"_q) {
 		return peer->isUser() ? BadgeKind::Developer : BadgeKind::OfficialChannel;
+	} else if (profile.status == u"PORTER"_q) {
+		return peer->isUser() ? BadgeKind::Porter : BadgeKind::PorterChannel;
 	} else if (profile.status == u"SUPPORTER"_q || profile.status == u"DONOR"_q) {
 		return BadgeKind::Supporter;
 	} else if (profile.status == u"BUGHUNTER"_q) {
-		return BadgeKind::Custom;
+		return BadgeKind::Bughunter;
 	} else if (profile.status == u"HELPER"_q) {
-		return BadgeKind::Custom;
+		return BadgeKind::Helper;
 	} else if (profile.status == u"TRUSTED"_q) {
-		return BadgeKind::Custom;
+		return BadgeKind::Trusted;
 	}
 	return BadgeKind::None;
 }
@@ -352,11 +364,14 @@ DocumentId BadgeTypeEmoji(const QString &type) {
 }
 
 std::optional<std::vector<TrustedSource>> TrustedSources() {
-	static const auto sources = std::vector<TrustedSource>{
-		{ .id = 1588661783ULL, .username = u"exteraPluginRepo"_q },
-		{ .id = 1481105943ULL, .username = u"exteraGram"_q },
+	const auto &state = State();
+	if (!state.trustedSources.empty()) {
+		return state.trustedSources;
+	}
+	static const auto defaultSources = std::vector<TrustedSource>{
+		{ .id = 4469639949ULL, .username = u"oxDesktop"_q },
 	};
-	return sources;
+	return defaultSources;
 }
 
 bool IsTrustedHash(const QString &sha256) {

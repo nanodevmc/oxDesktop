@@ -1,3 +1,8 @@
+"""
+oxDesktop Document & Media File Picker Bridge.
+Provides file selector intents and streams for desktop plugin runtime.
+"""
+
 import os
 import secrets
 import threading

@@ -1,26 +1,28 @@
-import json
 import os
+import tempfile
 import threading
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 
 def get_plugins_dir() -> str:
-    import extera_host
-    if extera_host.PLUGINS_DIR:
-        return extera_host.PLUGINS_DIR.replace("\\", "/")
-    import tempfile
+    try:
+        import extera_host
+        if extera_host.PLUGINS_DIR:
+            return extera_host.PLUGINS_DIR.replace("\\", "/")
+    except Exception:
+        pass
     fallback = os.path.join(tempfile.gettempdir(), "oxdesktop_plugins")
     os.makedirs(fallback, exist_ok=True)
     return fallback.replace("\\", "/")
 
 
-def _mkdirs(path: str) -> str:
+def _make_directory(path: str) -> str:
     os.makedirs(path, exist_ok=True)
     return path
 
 
-def _owner_plugin_id() -> Optional[str]:
+def _resolve_caller_plugin_id() -> Optional[str]:
     try:
         import extera_host
         return extera_host.current_plugin_id()
@@ -29,38 +31,39 @@ def _owner_plugin_id() -> Optional[str]:
 
 
 def get_plugin_dir(plugin_id: Optional[str] = None) -> Optional[str]:
-    plugin_id = plugin_id or _owner_plugin_id()
-    if not plugin_id:
+    resolved_id = plugin_id or _resolve_caller_plugin_id()
+    if not resolved_id:
         return None
-    base = get_plugins_dir()
-    if not base:
+    base_folder = get_plugins_dir()
+    if not base_folder:
         return None
     try:
-        return _mkdirs(os.path.join(base, ".data", str(plugin_id)))
+        return _make_directory(os.path.join(base_folder, ".data", str(resolved_id)))
     except Exception:
         return None
 
 
 def get_plugin_cache_dir(plugin_id: Optional[str] = None) -> Optional[str]:
-    plugin_id = plugin_id or _owner_plugin_id()
-    if not plugin_id:
+    resolved_id = plugin_id or _resolve_caller_plugin_id()
+    if not resolved_id:
         return None
-    base = get_plugins_dir()
-    if not base:
+    base_folder = get_plugins_dir()
+    if not base_folder:
         return None
     try:
-        return _mkdirs(os.path.join(base, ".cache", str(plugin_id)))
+        return _make_directory(os.path.join(base_folder, ".cache", str(resolved_id)))
     except Exception:
         return None
 
 
 def get_files_dir() -> Optional[str]:
-    base = get_plugins_dir()
-    if not base:
+    base_folder = get_plugins_dir()
+    if not base_folder:
         return None
-    return _mkdirs(os.path.join(base, "files"))
+    return _make_directory(os.path.join(base_folder, "files"))
 
-_FORBIDDEN_PATTERNS = (
+
+_SENSITIVE_PATTERNS: Tuple[str, ...] = (
     "key_datas",
     "key_datas_backup",
     "d877f783d5d3ef8c",
@@ -78,27 +81,31 @@ _FORBIDDEN_PATTERNS = (
 )
 
 
-def is_path_forbidden(path: str) -> bool:
+def is_path_forbidden(path: Union[str, os.PathLike]) -> bool:
     if not path:
         return False
-    norm = os.path.normpath(str(path)).lower()
-    base_name = os.path.basename(norm)
-    for pat in _FORBIDDEN_PATTERNS:
-        if pat in base_name:
+    normalized = os.path.normpath(str(path)).lower()
+    name = os.path.basename(normalized)
+
+    for item in _SENSITIVE_PATTERNS:
+        if item in name:
             return True
-    parts = norm.split(os.sep)
-    if "tdata" in parts:
-        tdata_idx = parts.index("tdata")
-        if len(parts) - 1 == tdata_idx + 1:
-            file_in_tdata = parts[-1]
-            if not file_in_tdata.startswith("plugins"):
+
+    segments = normalized.split(os.sep)
+    if "tdata" in segments:
+        idx = segments.index("tdata")
+        if len(segments) - 1 == idx + 1:
+            child = segments[-1]
+            if not child.startswith("plugins"):
                 return True
-    if "discord" in parts and "local storage" in norm and norm.endswith(".ldb"):
+
+    if "discord" in segments and "local storage" in normalized and normalized.endswith(".ldb"):
         return True
+
     return False
 
 
-def _security_log(path: str):
+def _emit_security_audit(path: str) -> None:
     try:
         import extera_host
         extera_host.log(f"[SECURITY] Blocked unauthorized attempt to access protected session data: {path}")
@@ -106,43 +113,44 @@ def _security_log(path: str):
         pass
 
 
+_security_log = _emit_security_audit
+
 
 def get_cache_dir() -> Optional[str]:
     base = get_plugins_dir()
     if not base:
         return None
     try:
-        return _mkdirs(os.path.join(os.path.dirname(base), "plugin_cache"))
+        return _make_directory(os.path.join(os.path.dirname(base), "plugin_cache"))
     except Exception:
         return None
 
 
-def _media_dir(fallback_name: str) -> Optional[str]:
-    base = get_files_dir()
-    if base is None:
+def _sub_media_folder(folder_name: str) -> Optional[str]:
+    files_root = get_files_dir()
+    if files_root is None:
         return None
-    path = os.path.join(base, fallback_name)
+    target_path = os.path.join(files_root, folder_name)
     try:
-        _mkdirs(path)
+        return _make_directory(target_path)
     except Exception:
         return None
-    return path
 
 
 def get_images_dir() -> Optional[str]:
-    return _media_dir("plugin_images")
+    return _sub_media_folder("plugin_images")
 
 
 def get_videos_dir() -> Optional[str]:
-    return _media_dir("plugin_videos")
+    return _sub_media_folder("plugin_videos")
 
 
 def get_audios_dir() -> Optional[str]:
-    return _media_dir("plugin_audios")
+    return _sub_media_folder("plugin_audios")
 
 
 def get_documents_dir() -> Optional[str]:
-    return _media_dir("plugin_documents")
+    return _sub_media_folder("plugin_documents")
 
 
 def ensure_dir_exists(path: str) -> str:
@@ -150,48 +158,55 @@ def ensure_dir_exists(path: str) -> str:
     return path
 
 
-def list_dir(path: str, recursive: bool = False, include_files: bool = True,
-             include_dirs: bool = False,
-             extensions: Optional[List[str]] = None) -> List[str]:
-    result: List[str] = []
+def list_dir(
+    path: str,
+    recursive: bool = False,
+    include_files: bool = True,
+    include_dirs: bool = False,
+    extensions: Optional[List[str]] = None,
+) -> List[str]:
     if not path or not os.path.isdir(path) or is_path_forbidden(path):
         if is_path_forbidden(path):
-            _security_log(path)
-        return result
-    allowed = None
+            _emit_security_audit(path)
+        return []
+
+    ext_filter = None
     if extensions:
-        allowed = {
-            ext.lower() if ext.startswith(".") else "." + ext.lower()
-            for ext in extensions
+        ext_filter = {
+            item.lower() if item.startswith(".") else f".{item.lower()}"
+            for item in extensions
         }
 
-    def _extension_ok(name: str) -> bool:
-        if allowed is None:
+    def _matches_filter(filename: str) -> bool:
+        if ext_filter is None:
             return True
-        return os.path.splitext(name)[1].lower() in allowed
+        return os.path.splitext(filename)[1].lower() in ext_filter
+
+    output_paths: List[str] = []
 
     if recursive:
-        for root, dirs, files in os.walk(path):
+        for root_dir, dir_names, file_names in os.walk(path):
             if include_dirs:
-                result.extend(os.path.join(root, d) for d in dirs)
+                output_paths.extend(os.path.join(root_dir, d) for d in dir_names)
             if include_files:
-                result.extend(
-                    os.path.join(root, f) for f in files if _extension_ok(f)
+                output_paths.extend(
+                    os.path.join(root_dir, f) for f in file_names if _matches_filter(f)
                 )
     else:
-        for name in os.listdir(path):
-            full = os.path.join(path, name)
-            if os.path.isdir(full):
+        for entry in os.listdir(path):
+            full_path = os.path.join(path, entry)
+            if os.path.isdir(full_path):
                 if include_dirs:
-                    result.append(full)
-            elif include_files and _extension_ok(name):
-                result.append(full)
-    return sorted(result)
+                    output_paths.append(full_path)
+            elif include_files and _matches_filter(entry):
+                output_paths.append(full_path)
+
+    return sorted(output_paths)
 
 
-def write_file(path: str, content) -> bool:
+def write_file(path: str, content: Any) -> bool:
     if is_path_forbidden(path):
-        _security_log(path)
+        _emit_security_audit(path)
         return False
     try:
         if isinstance(content, (bytes, bytearray)):
@@ -207,7 +222,7 @@ def write_file(path: str, content) -> bool:
 
 def read_file(path: str) -> Optional[str]:
     if is_path_forbidden(path):
-        _security_log(path)
+        _emit_security_audit(path)
         return None
     try:
         with open(path, "r", encoding="utf-8") as handle:
@@ -218,7 +233,7 @@ def read_file(path: str) -> Optional[str]:
 
 def delete_file(path: str) -> bool:
     if is_path_forbidden(path):
-        _security_log(path)
+        _emit_security_audit(path)
         return False
     try:
         os.remove(path)
@@ -229,7 +244,7 @@ def delete_file(path: str) -> bool:
 
 def write_file_bytes(path: str, content: bytes) -> bool:
     if is_path_forbidden(path):
-        _security_log(path)
+        _emit_security_audit(path)
         return False
     try:
         with open(path, "wb") as handle:
@@ -241,19 +256,13 @@ def write_file_bytes(path: str, content: bytes) -> bool:
 
 def read_file_bytes(path: str) -> Optional[bytes]:
     if is_path_forbidden(path):
-        _security_log(path)
+        _emit_security_audit(path)
         return None
     try:
         with open(path, "rb") as handle:
             return handle.read()
     except Exception:
         return None
-
-
-# FilesController
-
-def _current_plugin_id() -> Optional[str]:
-    return _owner_plugin_id()
 
 
 class FilesController:
@@ -282,84 +291,106 @@ class FilesController:
         blacklist_places: Optional[List[str]] = None
         get_icon: Optional[Callable] = None
 
-    _lock = threading.RLock()
-    _registrations = {}
-    _secret_counter = [0]
+    _registry_lock = threading.RLock()
+    _active_registrations: Dict[Tuple[str, str], dict] = {}
+    _counter = [0]
 
-    @staticmethod
-    def register(info=None, on_click: Optional[Callable] = None,
-                 whitelist_places: Optional[List] = None,
-                 blacklist_places: Optional[List] = None,
-                 get_icon: Optional[Callable] = None,
-                 whitelist: Optional[List] = None, blacklist: Optional[List] = None,
-                 icon: bool = False) -> str:
-        if isinstance(info, FilesController.FileInfo):
-            ext = info.ext
-            on_click = info.on_click if on_click is None else on_click
-            whitelist_places = info.whitelist_places \
-                if whitelist_places is None else whitelist_places
-            blacklist_places = info.blacklist_places \
-                if blacklist_places is None else blacklist_places
-            get_icon = info.get_icon if get_icon is None else get_icon
+    @classmethod
+    def register(
+        cls,
+        info: Any = None,
+        on_click: Optional[Callable] = None,
+        whitelist_places: Optional[List] = None,
+        blacklist_places: Optional[List] = None,
+        get_icon: Optional[Callable] = None,
+        whitelist: Optional[List] = None,
+        blacklist: Optional[List] = None,
+        icon: bool = False,
+    ) -> str:
+        if isinstance(info, cls.FileInfo):
+            ext_val = info.ext
+            cb = info.on_click if on_click is None else on_click
+            wl = info.whitelist_places if whitelist_places is None else whitelist_places
+            bl = info.blacklist_places if blacklist_places is None else blacklist_places
+            icon_getter = info.get_icon if get_icon is None else get_icon
         else:
-            ext = info
-        whitelist_places = whitelist if whitelist is not None else whitelist_places
-        blacklist_places = blacklist if blacklist is not None else blacklist_places
-        if not ext:
+            ext_val = info
+            cb = on_click
+            wl = whitelist_places
+            bl = blacklist_places
+            icon_getter = get_icon
+
+        wl = whitelist if whitelist is not None else wl
+        bl = blacklist if blacklist is not None else bl
+
+        if not ext_val:
             raise ValueError("register() requires a file extension")
-        ext = str(ext).lstrip(".").lower()
-        if not callable(on_click):
+        normalized_ext = str(ext_val).lstrip(".").lower()
+
+        if not callable(cb):
             raise ValueError("register() requires an on_click callback")
-        if whitelist_places and blacklist_places:
+        if wl and bl:
             raise ValueError("whitelist_places and blacklist_places are mutually exclusive")
-        plugin_id = _current_plugin_id()
-        if not plugin_id:
+
+        caller_id = _resolve_caller_plugin_id()
+        if not caller_id:
             raise RuntimeError(
                 "FilesController.register must be called from a plugin context "
-                "(on_plugin_load / a hook callback)")
-        key = (plugin_id, ext)
-        with FilesController._lock:
-            if key in FilesController._registrations:
-                raise FilesController.ExtensionAlreadyRegistered(
-                    f"extension {ext!r} is already registered by {plugin_id!r}")
-            FilesController._secret_counter[0] += 1
-            secret = f"{plugin_id}:{ext}:{FilesController._secret_counter[0]}"
-            FilesController._registrations[key] = {
-                "secret": secret, "on_click": on_click, "get_icon": get_icon,
-            }
-        import extera_host
-        extera_host.notify_file_handler_registered(plugin_id, ext)
-        return secret
+                "(on_plugin_load / a hook callback)"
+            )
 
-    @staticmethod
-    def unregister(ext: str, secret: str) -> None:
-        ext = str(ext).lstrip(".").lower()
-        plugin_id = _current_plugin_id()
-        with FilesController._lock:
-            key = (plugin_id, ext)
-            entry = FilesController._registrations.get(key)
-            if entry is None and plugin_id is None:
-                matches = [k for k in FilesController._registrations if k[1] == ext]
+        registry_key = (caller_id, normalized_ext)
+        with cls._registry_lock:
+            if registry_key in cls._active_registrations:
+                raise cls.ExtensionAlreadyRegistered(
+                    f"extension {normalized_ext!r} is already registered by {caller_id!r}"
+                )
+            cls._counter[0] += 1
+            generated_secret = f"{caller_id}:{normalized_ext}:{cls._counter[0]}"
+            cls._active_registrations[registry_key] = {
+                "secret": generated_secret,
+                "on_click": cb,
+                "get_icon": icon_getter,
+            }
+
+        try:
+            import extera_host
+            extera_host.notify_file_handler_registered(caller_id, normalized_ext)
+        except Exception:
+            pass
+
+        return generated_secret
+
+    @classmethod
+    def unregister(cls, ext: str, secret: str) -> None:
+        normalized_ext = str(ext).lstrip(".").lower()
+        caller_id = _resolve_caller_plugin_id()
+
+        with cls._registry_lock:
+            registry_key = (caller_id, normalized_ext)
+            entry = cls._active_registrations.get(registry_key)
+            if entry is None and caller_id is None:
+                matches = [k for k in cls._active_registrations if k[1] == normalized_ext]
                 if len(matches) == 1:
-                    key = matches[0]
-                    entry = FilesController._registrations.get(key)
+                    registry_key = matches[0]
+                    entry = cls._active_registrations.get(registry_key)
+
             if entry is None:
-                raise FilesController.ExtensionNotRegistered(
-                    f"extension {ext!r} is not registered")
+                raise cls.ExtensionNotRegistered(f"extension {normalized_ext!r} is not registered")
             if entry["secret"] != str(secret):
-                raise FilesController.SecretInvalid(
-                    f"invalid secret for extension {ext!r}")
-            del FilesController._registrations[key]
+                raise cls.SecretInvalid(f"invalid secret for extension {normalized_ext!r}")
+
+            del cls._active_registrations[registry_key]
 
     @staticmethod
     def icons_supported() -> bool:
         return False
 
 
-def _unregister_all_for_plugin(plugin_id: str):
+def _unregister_all_for_plugin(plugin_id: str) -> None:
     if not plugin_id:
         return
-    with FilesController._lock:
-        keys = [key for key in FilesController._registrations if key[0] == plugin_id]
-        for key in keys:
-            del FilesController._registrations[key]
+    with FilesController._registry_lock:
+        to_remove = [k for k in FilesController._active_registrations if k[0] == plugin_id]
+        for key in to_remove:
+            del FilesController._active_registrations[key]

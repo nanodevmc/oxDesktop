@@ -1,3 +1,9 @@
+"""
+oxDesktop Python Plugin Host & Runtime Dispatcher.
+Provides sandbox lifecycle management, secure inter-process dispatch,
+and event wrapping for embedded plugins.
+"""
+
 import contextlib
 import importlib.abc
 import importlib.machinery
@@ -374,7 +380,8 @@ class Record:
             "format": "elyx" if self.elyx else "plugin",
             "desktop": bool(self.meta.get("desktop")),
             "ported_from": self.meta.get("ported_from") or "",
-            "unsupported": list(getattr(self.instance, "__dict__", {}).get("_exd_unsupported", []))
+            "unsupported": list(getattr(self.instance, "__dict__", {}).get("_oxd_unsupported")
+                                or getattr(self.instance, "__dict__", {}).get("_exd_unsupported", []))
             if self.instance is not None else [],
         }
 
@@ -634,7 +641,7 @@ def _install_requirements(record, requirements):
 
         _extera.run_on_main(finish, 0)
 
-    threading.Thread(target=work, name="exd-requirements", daemon=True).start()
+    threading.Thread(target=work, name="oxd-requirements", daemon=True).start()
 
 
 def _deactivate(record):

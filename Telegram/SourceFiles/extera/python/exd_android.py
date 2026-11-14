@@ -1,3 +1,8 @@
+"""
+oxDesktop Android SDK & Java Bridge Compatibility Layer.
+Provides Android framework classes, controllers, and notifications for cross-platform plugins.
+"""
+
 import io
 import os
 import random
@@ -1365,6 +1370,9 @@ def install(shims):
         "org.telegram.messenger": {"R": R, "NotificationCenter": NotificationCenter, "FileLoader": FileLoader,
                                    "SendMessagesHelper": SendMessagesHelper},
         "org.telegram.ui.Components": {"InstantCameraView": InstantCameraView, "InstantCameraView2": InstantCameraView},
+        "org.oxdesktop.messenger": {"OxConfig": ExteraConfig, "ExteraConfig": ExteraConfig},
+        "org.oxdesktop.messenger.plugins": {"PluginsController": PluginsController, "Plugin": Plugin,
+                                             "PythonPluginsEngine": PythonPluginsEngine},
         "com.exteragram.messenger": {"ExteraConfig": ExteraConfig},
         "com.exteragram.messenger.plugins": {"PluginsController": PluginsController, "Plugin": Plugin,
                                              "PythonPluginsEngine": PythonPluginsEngine},

@@ -15,6 +15,9 @@
 #include "styles/style_window.h"
 #include "styles/style_window_main_menu.h"
 
+#include <algorithm>
+#include <vector>
+
 namespace Extera::Navigation {
 namespace {
 
@@ -62,10 +65,9 @@ struct Item {
 [[nodiscard]] QStringList Order() {
 	auto result = String(u"menu_order"_q).split(',', Qt::SkipEmptyParts);
 	const auto hidden = Hidden();
-	result.erase(std::remove_if(result.begin(), result.end(), [&](
-			const QString &id) {
+	std::erase_if(result, [&](const QString &id) {
 		return (id != kDivider) && (!FindItem(id) || hidden.contains(id));
-	}), result.end());
+	});
 	auto previous = QString();
 	for (const auto &item : Items()) {
 		if (!result.contains(item.id) && !hidden.contains(item.id)) {
@@ -203,8 +205,8 @@ void FillSettings(not_null<Ui::VerticalLayout*> container) {
 				if (*dragging) {
 					return;
 				}
-				auto order = Order();
-				auto hidden = Hidden();
+				auto currentOrder = Order();
+				auto currentHidden = Hidden();
 				const auto index = [&] {
 					for (auto i = 0; i != list->count(); ++i) {
 						if (list->widgetAt(i) == button) {
@@ -213,15 +215,15 @@ void FillSettings(not_null<Ui::VerticalLayout*> container) {
 					}
 					return -1;
 				}();
-				if (index >= 0 && index < order.size()) {
+				if (index >= 0 && index < currentOrder.size()) {
 					if (id == kSettings) {
 						return;
 					}
-					order.removeAt(index);
+					currentOrder.removeAt(index);
 					if (id != kDivider) {
-						hidden.push_back(id);
+						currentHidden.push_back(id);
 					}
-					Save(order, hidden);
+					Save(currentOrder, currentHidden);
 					crl::on_main(container, [=] { (*rebuild)(); });
 				}
 			});
@@ -241,12 +243,12 @@ void FillSettings(not_null<Ui::VerticalLayout*> container) {
 			if (data.state != State::Applied) {
 				return;
 			}
-			auto order = QStringList();
+			auto newOrder = QStringList();
 			for (auto i = 0; i != list->count(); ++i) {
-				order.push_back(
+				newOrder.push_back(
 					list->widgetAt(i)->property(kProperty).toString());
 			}
-			Save(order, Hidden());
+			Save(newOrder, Hidden());
 		}, list->lifetime());
 		reorder->start();
 
@@ -260,9 +262,9 @@ void FillSettings(not_null<Ui::VerticalLayout*> container) {
 				&st::windowBgActive,
 			}
 		))->setClickedCallback([=] {
-			auto order = Order();
-			order.push_back(kDivider);
-			Save(order, Hidden());
+			auto newOrder = Order();
+			newOrder.push_back(kDivider);
+			Save(newOrder, Hidden());
 			crl::on_main(container, [=] { (*rebuild)(); });
 		});
 		Ui::AddDividerText(container, tr::lng_extera_nav_items_about());
@@ -280,11 +282,11 @@ void FillSettings(not_null<Ui::VerticalLayout*> container) {
 					st::settingsButton,
 					{ item->icon }
 				))->setClickedCallback([=] {
-					auto order = Order();
-					auto hidden = Hidden();
-					hidden.removeAll(id);
-					order.push_back(id);
-					Save(order, hidden);
+					auto newOrder = Order();
+					auto newHidden = Hidden();
+					newHidden.removeAll(id);
+					newOrder.push_back(id);
+					Save(newOrder, newHidden);
 					crl::on_main(container, [=] { (*rebuild)(); });
 				});
 			}

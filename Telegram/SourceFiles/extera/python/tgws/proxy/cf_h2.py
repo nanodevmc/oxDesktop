@@ -24,7 +24,7 @@ from .utils import (
     PROTO_TAG_SECURE,
 )
 
-log = logging.getLogger('tg-mtproto-proxy')
+log = logging.getLogger('ox-tgws-proxy')
 MAX_PACKET = 4 * 1024 * 1024
 MAX_PLAIN_PADDING = 256
 MAX_CHANNEL_REQUESTS = 8

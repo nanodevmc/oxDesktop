@@ -73,7 +73,7 @@ _HINTS = (
     (("sendRequest", "performRequest"), "requests",
      "Hook on a network request: use add_hook(\"TL_<request>\") with pre_request_hook or post_request_hook."),
     (("isPremium", "premiumFeaturesBlocked", "hasPremiumOnAccounts", "isPremiumFeatureAvailable"), None,
-     "Premium checks: drop them, exDesktop has its own local Premium settings."),
+     "Premium checks: drop them, oxDesktop has its own local Premium settings."),
     (("createView", "onResume", "onPause", "onDraw", "onLayout", "onMeasure", "dispatchDraw",
       "onBindViewHolder", "fillItems", "updateRowsIds", "onAttachedToWindow", "onTouchEvent",
       "dispatchTouchEvent", "updateTitle", "updateSubtitle", "setText"), "menus",
@@ -206,7 +206,7 @@ def _hosts(source):
 
 def _target_id(original_id):
     base = re.sub(r"[^A-Za-z0-9_]", "_", str(original_id or "plugin"))
-    return base[:_ID_LIMIT - 4] + "_exd"
+    return base[:_ID_LIMIT - 4] + "_oxd"
 
 
 def prepare(path, meta, capabilities):
@@ -226,7 +226,7 @@ def prepare(path, meta, capabilities):
         "Required id of the ported plugin: %s" % target,
         "Required __ported_from__: \"%s %s\"" % (original_id, version),
         "Required __desktop_os__: \"%s\"" % current_os(),
-        "The user runs exDesktop on %s. The plugin must work on %s first. Keep it portable to Windows, Linux "
+        "The user runs oxDesktop on %s. The plugin must work on %s first. Keep it portable to Windows, Linux "
         "and macOS: use os.path or pathlib, no hard-coded drive letters or separators, no modules that exist "
         "on one system only." % (_OS_NAMES[current_os()], _OS_NAMES[current_os()]),
     ]
@@ -723,10 +723,10 @@ def parse_report(report):
             current = matched
             rest = line.split(":", 1)[1].strip() if ":" in line else ""
             if rest and rest.lower() not in ("none", "-", "nothing", "none."):
-                result[current].append(rest.lstrip("-*• ").strip())
+                result[current].append(rest.lstrip("-*•— ").strip())
             continue
         if current and line:
-            item = line.lstrip("-*•0123456789. ").strip()
+            item = line.lstrip("-*•—0123456789. ").strip()
             if item and item.lower() not in ("none", "nothing"):
                 result[current].append(item)
     for key in result:
@@ -736,7 +736,7 @@ def parse_report(report):
 
 def fix_prompt(errors):
     return (
-        "The ported plugin fails the exDesktop checks:\n- "
+        "The ported plugin fails the oxDesktop checks:\n- "
         + "\n- ".join(errors[:20])
         + "\n\nFix every problem and return the complete corrected plugin in the same answer format."
     )

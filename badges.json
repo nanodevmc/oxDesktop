@@ -31,13 +31,13 @@
       "type": "owner",
       "number": 1,
       "emoji": "5425060246269736415",
-      "text": "Ведущий разработчик какого-то oxDesktop"
+      "text": "Ведущий разработчик oxDesktop"
     },
     {
       "id": 6296191170,
       "type": "developer",
       "number": 2,
-      "text": "Второй в этой компании, друг разработчика чего-то там."
+      "text": "Второй в этой компании, друг разработчика oxDesktop."
     }
   ],
   "channels": [
@@ -52,9 +52,9 @@
   ],
   "trusted": [
     {
-      "id": 2189715950,
-      "username": "exteraPluginsSup",
-      "name": "exteraGram Plugins"
+      "id": 4469639949,
+      "username": "oxDesktop",
+      "name": "oxDesktop"
     }
   ]
 }

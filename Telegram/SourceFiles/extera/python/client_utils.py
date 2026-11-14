@@ -1,3 +1,9 @@
+"""
+oxDesktop Python Client Utilities.
+Provides account-scoped Telegram client helpers, thread-local context management,
+and native bridge bindings.
+"""
+
 import json
 import threading
 import time
@@ -25,7 +31,7 @@ def _log(message):
         from android_utils import log
         log(message)
     except Exception:
-        print(f"[extera:client_utils] {message}")
+        print(f"[oxDesktop:client_utils] {message}")
 
 
 def _native(name):

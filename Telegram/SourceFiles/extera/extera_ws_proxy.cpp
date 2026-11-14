@@ -113,13 +113,21 @@ State &Instance() {
 
 [[nodiscard]] QString Script() {
 	const auto candidates = {
-		PythonDir() + u"extera/tgws/exd_tgws.py"_q,
+		PythonDir() + u"tgws/ox_tgws.py"_q,
 		PythonDir() + u"tgws/exd_tgws.py"_q,
-		cExeDir() + u"python/extera/tgws/exd_tgws.py"_q,
+		PythonDir() + u"extera/tgws/ox_tgws.py"_q,
+		PythonDir() + u"extera/tgws/exd_tgws.py"_q,
+		cExeDir() + u"python/tgws/ox_tgws.py"_q,
 		cExeDir() + u"python/tgws/exd_tgws.py"_q,
-		cWorkingDir() + u"python/extera/tgws/exd_tgws.py"_q,
+		cExeDir() + u"python/extera/tgws/ox_tgws.py"_q,
+		cExeDir() + u"python/extera/tgws/exd_tgws.py"_q,
+		cWorkingDir() + u"python/tgws/ox_tgws.py"_q,
 		cWorkingDir() + u"python/tgws/exd_tgws.py"_q,
+		cWorkingDir() + u"python/extera/tgws/ox_tgws.py"_q,
+		cWorkingDir() + u"python/extera/tgws/exd_tgws.py"_q,
+		cExeDir() + u"Telegram/SourceFiles/extera/python/tgws/ox_tgws.py"_q,
 		cExeDir() + u"Telegram/SourceFiles/extera/python/tgws/exd_tgws.py"_q,
+		cWorkingDir() + u"Telegram/SourceFiles/extera/python/tgws/ox_tgws.py"_q,
 		cWorkingDir() + u"Telegram/SourceFiles/extera/python/tgws/exd_tgws.py"_q,
 	};
 	for (const auto &candidate : candidates) {
@@ -127,7 +135,7 @@ State &Instance() {
 			return candidate;
 		}
 	}
-	return PythonDir() + u"extera/tgws/exd_tgws.py"_q;
+	return PythonDir() + u"tgws/exd_tgws.py"_q;
 }
 
 [[nodiscard]] QString Secret() {

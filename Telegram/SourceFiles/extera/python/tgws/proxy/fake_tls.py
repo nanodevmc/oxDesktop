@@ -21,7 +21,7 @@ except ImportError:
     X25519PrivateKey = None
 
 
-log = logging.getLogger('tg-mtproto-proxy')
+log = logging.getLogger('ox-tgws-proxy')
 
 TLS_RECORD_HANDSHAKE = 0x16
 TLS_RECORD_CCS = 0x14

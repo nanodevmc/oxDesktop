@@ -1,3 +1,8 @@
+"""
+oxDesktop Plugin Settings Storage & Type Coercion.
+Provides thread-safe persistence, caching, and notification for plugin configurations.
+"""
+
 import json as _json
 import os as _os
 import threading as _threading

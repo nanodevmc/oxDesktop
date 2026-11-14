@@ -1,2 +1,3 @@
 #pragma once
 #define APP_VERSION "@APP_VERSION@"
+#define APP_VERSION_FULL @APP_VERSION_FULL@

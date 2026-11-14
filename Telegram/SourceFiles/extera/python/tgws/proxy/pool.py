@@ -12,7 +12,7 @@ from .stats import stats
 from .config import proxy_config
 from .utils import ws_domains, DC_DEFAULT_IPS, WS_PATH, WS_PATH_TEST
 
-log = logging.getLogger('tg-mtproto-proxy')
+log = logging.getLogger('ox-tgws-proxy')
 
 
 class _WsPool:

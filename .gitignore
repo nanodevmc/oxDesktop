@@ -95,3 +95,8 @@ TEST_READY.md
 TEST_INFRA.md
 scratch/
 scratch/*
+
+
+# Backup files across all directories
+*.bak
+*.bak.*

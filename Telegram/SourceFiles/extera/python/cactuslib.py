@@ -1,8 +1,3 @@
-"""
-CactusLib Compatibility Layer for oxDesktop
-Compatible with exteraGram and AyuGram CactusLib plugins.
-"""
-
 from __future__ import annotations
 
 import functools
@@ -12,14 +7,13 @@ import re
 import shlex
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import client_utils
 from base_plugin import BasePlugin, HookResult, HookStrategy
 import tgnet_bridge
 import tl_runtime
 
-# Re-export HookResult and HookStrategy
 __all__ = [
     "BasePlugin",
     "HookResult",
@@ -30,53 +24,44 @@ __all__ = [
     "CactusUtils",
 ]
 
-_COMMANDS_REGISTRY: Dict[str, Dict[str, Callable]] = {}
+_REGISTERED_COMMANDS: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
 
-def command(name: Optional[str] = None, doc: Optional[str] = None, prefixes: Union[str, tuple, list] = ("/", ".")):
-    """
-    Decorator to register a command in a CactusUtils.Plugin.
-    Usage:
-        @command("ping", doc="Check ping")
-        def ping_cmd(self, cmd: CactusUtils.Command):
-            cmd.answer("Pong!")
-            return HookResult(HookStrategy.CANCEL)
-    """
-    def decorator(fn: Callable):
+def command(
+    name: Optional[str] = None,
+    doc: Optional[str] = None,
+    prefixes: Union[str, tuple, list] = ("/", "."),
+) -> Callable:
+    def decorator(fn: Callable) -> Callable:
         cmd_name = (name or fn.__name__).lstrip("/.").lower()
+        prefix_tuple = tuple(prefixes) if isinstance(prefixes, (tuple, list)) else (prefixes,)
         fn._cactus_command = {
             "name": cmd_name,
             "doc": doc or fn.__doc__ or "",
-            "prefixes": tuple(prefixes) if isinstance(prefixes, (tuple, list)) else (prefixes,),
+            "prefixes": prefix_tuple,
         }
         return fn
     return decorator
 
 
-def uri(plugin: Union[str, BasePlugin], command_name: str, **kwargs) -> str:
-    """Generate an internal plugin URI: extera://plugin/<plugin_id>/<command>?k=v"""
-    plugin_id = getattr(plugin, "id", None) or getattr(plugin, "_extera_plugin_id", None) or str(plugin)
-    query_parts = [f"{k}={v}" for k, v in kwargs.items()]
-    qs = f"?{'&'.join(query_parts)}" if query_parts else ""
-    return f"extera://plugin/{plugin_id}/{command_name}{qs}"
+def uri(plugin: Union[str, BasePlugin], command_name: str, **kwargs: Any) -> str:
+    plugin_identifier = getattr(plugin, "id", None) or getattr(plugin, "_extera_plugin_id", None) or str(plugin)
+    params = [f"{k}={v}" for k, v in kwargs.items()]
+    query_string = f"?{'&'.join(params)}" if params else ""
+    return f"extera://plugin/{plugin_identifier}/{command_name}{query_string}"
 
 
 def message_uri(peer_id: int, message_id: int) -> str:
-    """Generate internal message URI."""
     return f"tg://openmessage?chat_id={peer_id}&message_id={message_id}"
 
 
 class CactusUtils:
-    """Unified CactusLib helper utilities for oxDesktop."""
-
     class Uri:
         @staticmethod
-        def create(plugin: Union[str, BasePlugin], command_name: str, **kwargs) -> str:
+        def create(plugin: Union[str, BasePlugin], command_name: str, **kwargs: Any) -> str:
             return uri(plugin, command_name, **kwargs)
 
     class Command:
-        """Represents an intercepted command execution context."""
-
         def __init__(self, name: str, args: List[str], text: str, params: Any, account: int, plugin: Any):
             self.name = name
             self.args = args
@@ -85,263 +70,254 @@ class CactusUtils:
             self.params = params
             self.account = account
             self.plugin = plugin
-            
-            # Extract peer and message details
-            self.peer_id = int(getattr(params, "peer", 0) or getattr(params, "peer_id", 0) or client_utils.get_current_dialog_id())
-            self.peer = self.peer_id
-            self.dialog_id = self.peer_id
-            self.reply_to_id = int(getattr(params, "reply_to_id", 0) or getattr(params, "replyToMsg", 0) or 0)
-            self.reply_to = self.reply_to_id
-            self.raw_message = getattr(params, "message", "") or ""
-            self.message = self.raw_message
 
-        def answer(self, text: str, parse_mode: Optional[str] = "markdown", reply_to_sender: bool = False):
-            """Send a reply to the current dialog."""
-            reply_id = self.reply_to_id if reply_to_sender else 0
+            p_id = int(getattr(params, "peer", 0) or getattr(params, "peer_id", 0) or client_utils.get_current_dialog_id())
+            self.peer_id = p_id
+            self.peer = p_id
+            self.dialog_id = p_id
+
+            r_id = int(getattr(params, "reply_to_id", 0) or getattr(params, "replyToMsg", 0) or 0)
+            self.reply_to_id = r_id
+            self.reply_to = r_id
+
+            msg_text = getattr(params, "message", "") or ""
+            self.raw_message = msg_text
+            self.message = msg_text
+
+        def answer(self, text: str, parse_mode: Optional[str] = "markdown", reply_to_sender: bool = False) -> None:
+            reply_target = self.reply_to_id if reply_to_sender else 0
             client_utils.send_text(
                 peer_id=self.peer_id,
                 text=str(text),
-                replyToMsg=reply_id,
+                replyToMsg=reply_target,
                 parse_mode=parse_mode,
                 account=self.account,
             )
 
-        def reply(self, text: str, parse_mode: Optional[str] = "markdown"):
-            """Send a reply targeting the current message or reply-to."""
+        def reply(self, text: str, parse_mode: Optional[str] = "markdown") -> None:
             self.answer(text, parse_mode=parse_mode, reply_to_sender=True)
 
-        def edit(self, new_text: str):
-            """Modify outgoing message text in-place before it is sent."""
-            self.params.message = str(new_text)
+        def edit(self, new_text: str) -> None:
+            text_str = str(new_text)
+            self.params.message = text_str
             try:
-                self.params.text = str(new_text)
+                self.params.text = text_str
             except Exception:
                 pass
             if hasattr(self.params, "__setitem__"):
                 try:
-                    self.params["message"] = str(new_text)
-                    self.params["text"] = str(new_text)
+                    self.params["message"] = text_str
+                    self.params["text"] = text_str
                 except Exception:
                     pass
 
         def cancel(self) -> HookResult:
-            """Cancel sending the command message."""
             return HookResult(strategy=HookStrategy.CANCEL)
 
     class Telegram:
-        """Synchronous and asynchronous Telegram MTProto request helpers."""
-
         class TLRPCException(Exception):
-            def __init__(self, error):
+            def __init__(self, error: Any):
                 self.error = error
                 super().__init__(str(error))
 
         class Result:
-            def __init__(self, response=None, error=None):
+            def __init__(self, response: Any = None, error: Any = None):
                 self.response = response
                 self.error = error
 
         @classmethod
         def send(cls, req: Any, *, wait_response: bool = True, timeout: int = 7, raise_errors: bool = True) -> Any:
-            """Send TLRPC request with optional synchronous waiting."""
             if not wait_response:
                 return client_utils.send_request(req)
 
-            event = threading.Event()
-            result_box = [None, None]  # [response, error]
+            completion_event = threading.Event()
+            payload_box: List[Any] = [None, None]
 
-            def callback(resp, err):
-                result_box[0] = resp
-                result_box[1] = err
-                event.set()
+            def on_finished(resp: Any, err: Any) -> None:
+                payload_box[0] = resp
+                payload_box[1] = err
+                completion_event.set()
 
-            req_id = client_utils.send_request(req, fn=callback)
-            if not req_id:
+            request_id = client_utils.send_request(req, fn=on_finished)
+            if not request_id:
                 if raise_errors:
                     raise RuntimeError("Failed to send TLRPC request via client_utils")
                 return cls.Result(None, "Failed to send request")
 
-            finished = event.wait(timeout=max(1, int(timeout)))
-            if not finished:
+            wait_success = completion_event.wait(timeout=max(1, int(timeout)))
+            if not wait_success:
                 if raise_errors:
                     raise TimeoutError(f"TLRPC request {type(req).__name__} timed out after {timeout}s")
                 return cls.Result(None, f"Request timed out after {timeout}s")
 
-            response, error = result_box
-            if error is not None:
+            response_data, error_data = payload_box
+            if error_data is not None:
                 if raise_errors:
-                    raise cls.TLRPCException(error)
-                return cls.Result(None, error)
+                    raise cls.TLRPCException(error_data)
+                return cls.Result(None, error_data)
+
             if not raise_errors:
-                return cls.Result(response, None)
-            return response
+                return cls.Result(response_data, None)
+            return response_data
 
         send_request = send
 
         @staticmethod
-        def tlrpc_object(cls_or_name: Any, **kwargs) -> Any:
-            """Construct TLRPC object dynamically with kwargs."""
+        def tlrpc_object(cls_or_name: Any, **kwargs: Any) -> Any:
             if isinstance(cls_or_name, str):
-                cls = getattr(tl_runtime.TLRPC, cls_or_name, None)
-                if cls is None:
+                target_cls = getattr(tl_runtime.TLRPC, cls_or_name, None)
+                if target_cls is None:
                     raise ValueError(f"Unknown TLRPC constructor: {cls_or_name}")
             else:
-                cls = cls_or_name
-            return cls(**kwargs)
+                target_cls = cls_or_name
+            return target_cls(**kwargs)
 
         @staticmethod
-        def get_user(user_id: int):
+        def get_user(user_id: int) -> Any:
             return tgnet_bridge.get_user(user_id)
 
         @staticmethod
-        def get_chat(chat_id: int):
+        def get_chat(chat_id: int) -> Any:
             return tgnet_bridge.get_chat(chat_id)
 
         @staticmethod
-        def get_peer(dialog_id: int):
+        def get_peer(dialog_id: int) -> Any:
             return tgnet_bridge.get_peer(dialog_id)
 
     class Database:
-        """Lightweight persistent JSON storage for CactusLib plugins."""
-
         def __init__(self, plugin_id: str, db_name: str = "db.json"):
             self._plugin_id = plugin_id
             self._db_name = db_name
             self._lock = threading.RLock()
-            self._data: Dict[str, Any] = {}
-            self._loaded = False
+            self._cached_store: Dict[str, Any] = {}
+            self._is_ready = False
 
-        def _get_path(self) -> str:
+        def _locate_file_path(self) -> str:
             from extera_host import SETTINGS_DIR
             base_dir = SETTINGS_DIR or os.path.expanduser("~")
             db_dir = os.path.join(base_dir, "databases", self._plugin_id)
             os.makedirs(db_dir, exist_ok=True)
             return os.path.join(db_dir, self._db_name)
 
-        def _load(self):
-            if self._loaded:
+        def _ensure_loaded(self) -> None:
+            if self._is_ready:
                 return
             with self._lock:
-                path = self._get_path()
+                path = self._locate_file_path()
                 if os.path.exists(path):
                     try:
-                        with open(path, "r", encoding="utf-8") as f:
-                            self._data = json.load(f)
+                        with open(path, "r", encoding="utf-8") as handle:
+                            self._cached_store = json.load(handle)
                     except Exception:
-                        self._data = {}
+                        self._cached_store = {}
                 else:
-                    self._data = {}
-                self._loaded = True
+                    self._cached_store = {}
+                self._is_ready = True
 
-        def _save(self):
+        def _persist(self) -> None:
             with self._lock:
-                path = self._get_path()
+                path = self._locate_file_path()
                 try:
-                    with open(path, "w", encoding="utf-8") as f:
-                        json.dump(self._data, f, ensure_ascii=False, indent=2)
+                    with open(path, "w", encoding="utf-8") as handle:
+                        json.dump(self._cached_store, handle, ensure_ascii=False, indent=2)
                 except Exception:
                     pass
 
         def get(self, key: str, default: Any = None) -> Any:
-            self._load()
+            self._ensure_loaded()
             with self._lock:
-                return self._data.get(key, default)
+                return self._cached_store.get(key, default)
 
-        def set(self, key: str, value: Any):
-            self._load()
+        def set(self, key: str, value: Any) -> None:
+            self._ensure_loaded()
             with self._lock:
-                self._data[key] = value
-                self._save()
+                self._cached_store[key] = value
+                self._persist()
 
-        def delete(self, key: str):
-            self._load()
+        def delete(self, key: str) -> None:
+            self._ensure_loaded()
             with self._lock:
-                if key in self._data:
-                    del self._data[key]
-                    self._save()
+                if key in self._cached_store:
+                    del self._cached_store[key]
+                    self._persist()
 
         def all(self) -> Dict[str, Any]:
-            self._load()
+            self._ensure_loaded()
             with self._lock:
-                return dict(self._data)
+                return dict(self._cached_store)
 
     @staticmethod
     def get_all_commands() -> List[Dict[str, Any]]:
-        """Get all registered commands across all active CactusLib plugins."""
-        out = []
-        for pid, cmds in _COMMANDS_REGISTRY.items():
-            for cmd_name, info in cmds.items():
-                prefixes = info.get("prefixes", ("/", "."))
-                out.append({
+        entries: List[Dict[str, Any]] = []
+        for pid, commands in _REGISTERED_COMMANDS.items():
+            for cmd_name, info in commands.items():
+                pfxs = info.get("prefixes", ("/", "."))
+                entries.append({
                     "name": cmd_name,
                     "doc": info.get("doc", ""),
-                    "prefix": prefixes[0] if prefixes else "/",
-                    "prefixes": prefixes,
+                    "prefix": pfxs[0] if pfxs else "/",
+                    "prefixes": pfxs,
                     "plugin_id": pid,
                 })
-        return out
+        return entries
 
     class Plugin(BasePlugin):
-        """
-        Base plugin class for CactusLib plugins.
-        Provides automated @command dispatch, database access, and helper utilities.
-        """
-
         def __init__(self):
             super().__init__()
             self._cactus_commands: Dict[str, Callable] = {}
-            self._db: Optional[CactusUtils.Database] = None
+            self._db_instance: Optional[CactusUtils.Database] = None
             self.utils = CactusUtils
             self.Telegram = CactusUtils.Telegram
 
-        def _register_cactus_commands(self):
+        def _register_cactus_commands(self) -> None:
             pid = self.id or getattr(self, "_extera_plugin_id", "default")
-            if pid not in _COMMANDS_REGISTRY:
-                _COMMANDS_REGISTRY[pid] = {}
-            for attr_name in dir(self):
+            if pid not in _REGISTERED_COMMANDS:
+                _REGISTERED_COMMANDS[pid] = {}
+
+            for member_name in dir(self):
                 try:
-                    attr = getattr(self, attr_name)
-                    if callable(attr) and hasattr(attr, "_cactus_command"):
-                        cmd_info = attr._cactus_command
-                        cmd_name = cmd_info["name"]
-                        self._cactus_commands[cmd_name] = attr
-                        _COMMANDS_REGISTRY[pid][cmd_name] = {
+                    member = getattr(self, member_name)
+                    if callable(member) and hasattr(member, "_cactus_command"):
+                        cmd_spec = member._cactus_command
+                        cmd_name = cmd_spec["name"]
+                        self._cactus_commands[cmd_name] = member
+                        _REGISTERED_COMMANDS[pid][cmd_name] = {
                             "name": cmd_name,
-                            "doc": cmd_info.get("doc", ""),
-                            "prefixes": cmd_info.get("prefixes", ("/", ".")),
-                            "handler": attr,
+                            "doc": cmd_spec.get("doc", ""),
+                            "prefixes": cmd_spec.get("prefixes", ("/", ".")),
+                            "handler": member,
                             "plugin_id": pid,
                         }
                 except Exception:
                     continue
+
             if self._cactus_commands:
                 self.add_on_send_message_hook(priority=100)
 
         def get_all_commands(self) -> List[Dict[str, Any]]:
             return CactusUtils.get_all_commands()
 
-        def _extera_attach(self, plugin_id: str):
+        def _extera_attach(self, plugin_id: str) -> None:
             super()._extera_attach(plugin_id)
             self._register_cactus_commands()
 
-        def on_plugin_load(self):
+        def on_plugin_load(self) -> None:
             self._register_cactus_commands()
             super().on_plugin_load()
 
-        def on_plugin_unload(self):
+        def on_plugin_unload(self) -> None:
             pid = self.id or getattr(self, "_extera_plugin_id", "default")
-            _COMMANDS_REGISTRY.pop(pid, None)
+            _REGISTERED_COMMANDS.pop(pid, None)
             super().on_plugin_unload()
 
         @property
         def db(self) -> CactusUtils.Database:
-            if self._db is None:
+            if self._db_instance is None:
                 pid = self.id or getattr(self, "_extera_plugin_id", "default")
-                self._db = CactusUtils.Database(pid)
-            return self._db
+                self._db_instance = CactusUtils.Database(pid)
+            return self._db_instance
 
         def on_send_message_hook(self, account: int, params: Any) -> Optional[HookResult]:
-            """Intercept outgoing messages and route registered commands."""
             if not self._cactus_commands:
                 return HookResult(strategy=HookStrategy.DEFAULT)
 
@@ -349,26 +325,26 @@ class CactusUtils:
             if not msg or not isinstance(msg, str) or not msg.strip():
                 return HookResult(strategy=HookStrategy.DEFAULT)
 
-            stripped = msg.strip()
-            # Match command prefix
+            stripped_msg = msg.strip()
+
             for cmd_name, handler in self._cactus_commands.items():
-                cmd_info = getattr(handler, "_cactus_command", {})
-                prefixes = cmd_info.get("prefixes", ("/", "."))
+                cmd_meta = getattr(handler, "_cactus_command", {})
+                prefix_list = cmd_meta.get("prefixes", ("/", "."))
 
-                for pfx in prefixes:
+                for pfx in prefix_list:
                     pattern = f"^{re.escape(pfx)}{re.escape(cmd_name)}(\\s+.*)?$"
-                    m = re.match(pattern, stripped, re.IGNORECASE)
-                    if m:
-                        rest = (m.group(1) or "").strip()
+                    matched = re.match(pattern, stripped_msg, re.IGNORECASE)
+                    if matched:
+                        tail = (matched.group(1) or "").strip()
                         try:
-                            args = shlex.split(rest)
+                            split_args = shlex.split(tail)
                         except Exception:
-                            args = rest.split()
+                            split_args = tail.split()
 
-                        cmd_ctx = CactusUtils.Command(
+                        cmd_context = CactusUtils.Command(
                             name=cmd_name,
-                            args=args,
-                            text=rest,
+                            args=split_args,
+                            text=tail,
                             params=params,
                             account=account,
                             plugin=self,
@@ -376,14 +352,15 @@ class CactusUtils:
 
                         try:
                             try:
-                                res = handler(cmd_ctx)
+                                outcome = handler(cmd_context)
                             except TypeError:
-                                res = handler(self, cmd_ctx)
-                            if isinstance(res, HookResult):
-                                return res
+                                outcome = handler(self, cmd_context)
+
+                            if isinstance(outcome, HookResult):
+                                return outcome
                             return HookResult(strategy=HookStrategy.CANCEL)
-                        except Exception as e:
-                            self.logger.error(f"Command '{cmd_name}' execution error: {e}")
+                        except Exception as exc:
+                            self.logger.error(f"Command '{cmd_name}' execution error: {exc}")
                             return HookResult(strategy=HookStrategy.DEFAULT)
 
             return HookResult(strategy=HookStrategy.DEFAULT)

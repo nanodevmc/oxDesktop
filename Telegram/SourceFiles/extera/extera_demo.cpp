@@ -1,6 +1,7 @@
 #include "extera/extera_demo.h"
 
 #include "core/application.h"
+#include "core/version.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
 #include "window/themes/window_theme.h"
@@ -31,6 +32,8 @@
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
 #include <iostream>
+#include <array>
+#include <string_view>
 
 namespace Extera::Demo {
 namespace {
@@ -47,6 +50,10 @@ bool gAutoExit = false;
 	return emblem.scaled(size, size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 }
 
+[[nodiscard]] QString FormatClientVersion() {
+	return u"oxDesktop v"_q + QString::fromUtf8(AppVersionStr);
+}
+
 void ShowDemoSettings(not_null<Window::Controller*> window) {
 	window->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setStyle(st::exteraPlayerBox);
@@ -56,33 +63,33 @@ void ShowDemoSettings(not_null<Window::Controller*> window) {
 		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 		const auto header = box->addRow(
-			object_ptr<Ui::FixedHeightWidget>(box, 82),
-			style::margins(16, 6, 16, 6));
+			object_ptr<Ui::FixedHeightWidget>(box, 86),
+			style::margins(16, 8, 16, 6));
 		header->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(header);
 			auto hq = PainterHighQualityEnabler(p);
 			const auto rect = QRectF(0, 0, header->width(), header->height()).adjusted(1, 1, -1, -1);
 			auto bgGrad = QLinearGradient(0, 0, header->width(), header->height());
-			bgGrad.setColorAt(0., QColor(28, 22, 22, 240));
-			bgGrad.setColorAt(1., QColor(15, 16, 18, 245));
-			p.setPen(QPen(QColor(218, 48, 24, 90), 1.2));
+			bgGrad.setColorAt(0., QColor(24, 28, 34, 240));
+			bgGrad.setColorAt(1., QColor(14, 16, 20, 248));
+			p.setPen(QPen(QColor(46, 204, 113, 80), 1.2));
 			p.setBrush(bgGrad);
-			p.drawRoundedRect(rect, 10, 10);
+			p.drawRoundedRect(rect, 12, 12);
 
-			p.drawImage(QRect(16, 12, 58, 58), DeltaEmblemIcon(58));
+			p.drawImage(QRect(16, 14, 58, 58), DeltaEmblemIcon(58));
 
 			p.setPen(Qt::white);
 			auto titleFont = st::semiboldFont->f;
 			titleFont.setPixelSize(14);
 			titleFont.setBold(true);
 			p.setFont(titleFont);
-			p.drawText(86, 35, u"oxDesktop v7.3.3"_q);
+			p.drawText(86, 37, FormatClientVersion());
 
 			p.setPen(QColor(180, 185, 192));
 			auto subFont = st::normalFont->f;
 			subFont.setPixelSize(12);
 			p.setFont(subFont);
-			p.drawText(86, 55, u"Официальная сборка • @oxDesktop"_q);
+			p.drawText(86, 57, u"Официальная сборка • @oxDesktop"_q);
 		}, header->lifetime());
 
 		auto container = box->verticalLayout();
@@ -136,7 +143,7 @@ void ShowDemoAppearance(not_null<Window::Controller*> window) {
 		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 		const auto preview = box->addRow(
-			object_ptr<Ui::FixedHeightWidget>(box, 118),
+			object_ptr<Ui::FixedHeightWidget>(box, 122),
 			style::margins(16, 8, 16, 6));
 		preview->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(preview);
@@ -153,7 +160,7 @@ void ShowDemoAppearance(not_null<Window::Controller*> window) {
 			} cards[] = {
 				{ u"Aero Delta"_q, QColor(218, 48, 24), QColor(20, 21, 23), true },
 				{ u"Delta Dark"_q, QColor(28, 30, 34), QColor(15, 16, 18), false },
-				{ u"Liquid Glass"_q, QColor(32, 35, 40), QColor(20, 21, 23), false },
+				{ u"Liquid Glass"_q, QColor(32, 45, 42), QColor(16, 22, 24), false },
 				{ u"OLED Black"_q, QColor(18, 18, 18), QColor(0, 0, 0), false },
 			};
 
@@ -166,7 +173,7 @@ void ShowDemoAppearance(not_null<Window::Controller*> window) {
 
 				p.setPen(cards[i].active ? QPen(QColor(255, 85, 51), 2.) : QPen(QColor(255, 255, 255, 30), 1.));
 				p.setBrush(grad);
-				p.drawRoundedRect(cardRect, 8, 8);
+				p.drawRoundedRect(cardRect, 10, 10);
 
 				p.setPen(Qt::NoPen);
 				p.setBrush(QColor(255, 255, 255, 45));
@@ -269,7 +276,7 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 		const auto chatList = box->addRow(
-			object_ptr<Ui::FixedHeightWidget>(box, 134),
+			object_ptr<Ui::FixedHeightWidget>(box, 138),
 			style::margins(16, 6, 16, 6));
 		chatList->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(chatList);
@@ -278,15 +285,15 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 			const auto h = chatList->height();
 
 			p.setPen(QPen(QColor(255, 255, 255, 25), 1.));
-			p.setBrush(QColor(20, 21, 23, 235));
-			p.drawRoundedRect(QRectF(0, 0, w, h).adjusted(1, 1, -1, -1), 10, 10);
+			p.setBrush(QColor(18, 20, 24, 235));
+			p.drawRoundedRect(QRectF(0, 0, w, h).adjusted(1, 1, -1, -1), 12, 12);
 
 			const struct MockChat {
 				QString name;
 				QString text;
 				QString time;
 			} chats[] = {
-				{ u"oxDesktop"_q, u"Официальный релиз oxDesktop v7.3.3"_q, u"18:42"_q },
+				{ u"oxDesktop"_q, u"Официальный релиз "_q + FormatClientVersion(), u"18:42"_q },
 				{ u"oxDesktop | Changelog"_q, u"История версий, патч-ноуты и обновления расширений"_q, u"17:15"_q },
 			};
 
@@ -346,6 +353,82 @@ void ShowDemoChats(not_null<Window::Controller*> window) {
 	}));
 }
 
+enum class SectionType {
+	Appearance,
+	Chats,
+	Plugins,
+	Player,
+	Badges,
+	Settings,
+};
+
+[[nodiscard]] SectionType ParseSection(const QString &view) {
+	const auto lower = view.toLower();
+	if (lower == u"appearance"_q) {
+		return SectionType::Appearance;
+	} else if (lower == u"chats"_q) {
+		return SectionType::Chats;
+	} else if (lower == u"plugins"_q) {
+		return SectionType::Plugins;
+	} else if (lower == u"player"_q) {
+		return SectionType::Player;
+	} else if (lower == u"badges"_q) {
+		return SectionType::Badges;
+	}
+	return SectionType::Settings;
+}
+
+void DispatchSection(
+		SectionType type,
+		not_null<Window::Controller*> window) {
+	const auto session = window->sessionController();
+	switch (type) {
+	case SectionType::Appearance:
+		if (session) {
+			session->showSettings(Settings::ExteraAppearanceId());
+		} else {
+			ShowDemoAppearance(window);
+		}
+		break;
+	case SectionType::Chats:
+		if (session) {
+			session->showSettings(Settings::ExteraGeneralId());
+		} else {
+			ShowDemoChats(window);
+		}
+		break;
+	case SectionType::Plugins:
+		if (session) {
+			session->showSettings(Settings::ExteraPluginsId());
+		} else {
+			ShowDemoPlugins(window);
+		}
+		break;
+	case SectionType::Player:
+		if (session) {
+			Extera::FullPlayer::Show(session);
+		} else {
+			window->showSettings();
+		}
+		break;
+	case SectionType::Badges:
+		if (session) {
+			Settings::ShowExteraSupportBox(session);
+		} else {
+			window->showSettings();
+		}
+		break;
+	case SectionType::Settings:
+	default:
+		if (session) {
+			session->showSettings(Settings::ExteraId());
+		} else {
+			ShowDemoSettings(window);
+		}
+		break;
+	}
+}
+
 } // namespace
 
 bool IsActive() {
@@ -391,7 +474,6 @@ void SetAutoExit(bool exit) {
 }
 
 void Start(not_null<Window::Controller*> window) {
-	// Force apply dark Aero Delta theme for screenshot/demo rendering
 	if (const auto palette = Window::Theme::PrepareEmbeddedPalette(
 			Window::Theme::EmbeddedType::AeroDelta,
 			QColor(218, 48, 24))) {
@@ -416,46 +498,7 @@ void Start(not_null<Window::Controller*> window) {
 	bg->show();
 	bg->lower();
 
-	const auto targetView = View().toLower();
-	const auto session = window->sessionController();
-
-	if (targetView == u"appearance"_q) {
-		if (session) {
-			session->showSettings(Settings::ExteraAppearanceId());
-		} else {
-			ShowDemoAppearance(window);
-		}
-	} else if (targetView == u"chats"_q) {
-		if (session) {
-			session->showSettings(Settings::ExteraGeneralId());
-		} else {
-			ShowDemoChats(window);
-		}
-	} else if (targetView == u"plugins"_q) {
-		if (session) {
-			session->showSettings(Settings::ExteraPluginsId());
-		} else {
-			ShowDemoPlugins(window);
-		}
-	} else if (targetView == u"player"_q) {
-		if (session) {
-			Extera::FullPlayer::Show(session);
-		} else {
-			window->showSettings();
-		}
-	} else if (targetView == u"badges"_q) {
-		if (session) {
-			Settings::ShowExteraSupportBox(session);
-		} else {
-			window->showSettings();
-		}
-	} else if (targetView == u"settings"_q || targetView == u"extera"_q) {
-		if (session) {
-			session->showSettings(Settings::ExteraId());
-		} else {
-			ShowDemoSettings(window);
-		}
-	}
+	DispatchSection(ParseSection(View()), window);
 
 	const auto path = ScreenshotPath();
 	const auto delay = DelayMs();
@@ -463,14 +506,14 @@ void Start(not_null<Window::Controller*> window) {
 
 	base::call_delayed(crl::time(delay), [=] {
 		if (!path.isEmpty()) {
-			const auto widget = window->widget();
-			for (const auto child : widget->findChildren<QWidget*>()) {
+			const auto hostWidget = window->widget();
+			for (const auto child : hostWidget->findChildren<QWidget*>()) {
 				const auto name = QString::fromLatin1(child->metaObject()->className());
 				if (name.contains(u"Intro"_q)) {
 					child->hide();
 				}
 			}
-			const auto pixmap = widget->grab();
+			const auto pixmap = hostWidget->grab();
 			const auto file = QFileInfo(path);
 			QDir().mkpath(file.absolutePath());
 			const auto ok = pixmap.save(path, "PNG");

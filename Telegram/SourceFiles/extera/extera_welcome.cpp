@@ -1,4 +1,5 @@
 #include "extera/extera_welcome.h"
+#include "extera/extera_changelog.h"
 
 #include "base/call_delayed.h"
 #include "core/application.h"
@@ -28,8 +29,19 @@
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 
+#include <QtCore/QFile>
+#include <QtCore/QDir>
+#include <QtCore/QCoreApplication>
+
 namespace Extera {
 namespace {
+
+enum class Step : uint8_t {
+	Welcome = 0,
+	Icon = 1,
+	Settings = 2,
+	Changelog = 3,
+};
 
 [[nodiscard]] TextWithEntities ParseMarkdownLinks(const QString &source) {
 	auto result = TextWithEntities();
@@ -128,8 +140,9 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setTitle(rpl::single(AppName.utf16()));
 		box->setWidth(st::boxWideWidth);
+
 		struct State {
-			int step = 0;
+			Step step = Step::Welcome;
 			QString iconId;
 			bool square = false;
 			QString initialIconId;
@@ -140,8 +153,10 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 		state->iconId = state->initialIconId = String(u"app_icon"_q);
 		state->square = state->initialSquare = Bool(u"app_icon_square"_q);
 		state->variants = AppIcon::Variants();
+
 		const auto content = box->verticalLayout();
 		const auto rebuild = std::make_shared<Fn<void()>>();
+
 		const auto addTitle = [=](rpl::producer<QString> text) {
 			content->add(
 				object_ptr<Ui::FlatLabel>(
@@ -160,6 +175,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				st::exteraWelcomeTextPadding,
 				style::al_top);
 		};
+
 		const auto finish = [=] {
 			Config::Instance().setBool(u"wizard_shown"_q, true);
 			const auto changed = (state->iconId != state->initialIconId)
@@ -173,6 +189,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				AppIcon::Apply();
 			}
 		};
+
 		const auto fillWelcome = [=] {
 			const auto size = st::exteraWelcomeLogoSize;
 			const auto logo = content->add(
@@ -214,11 +231,12 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				&st::exteraIconWebsite);
 			box->addButton(tr::lng_exd_wizard_setup(), [=] {
 				base::call_delayed(0, box, [=] {
-					state->step = 1;
+					state->step = Step::Icon;
 					(*rebuild)();
 				});
 			});
 		};
+
 		const auto fillIcon = [=] {
 			addTitle(tr::lng_exd_wizard_icon());
 			const auto count = int(state->variants.size());
@@ -331,11 +349,12 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			}, square->lifetime());
 			box->addButton(tr::lng_exd_wizard_next(), [=] {
 				base::call_delayed(0, box, [=] {
-					state->step = 2;
+					state->step = Step::Settings;
 					(*rebuild)();
 				});
 			});
 		};
+
 		const auto fillSettings = [=] {
 			addTitle(tr::lng_exd_wizard_settings());
 			const auto card = content->add(
@@ -345,9 +364,9 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				auto p = QPainter(card);
 				auto hq = PainterHighQualityEnabler(p);
 				const auto rect = QRectF(card->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
-				p.setPen(QPen(QColor(255, 255, 255, 24), 1.0));
-				p.setBrush(QColor(255, 255, 255, 8));
-				p.drawRoundedRect(rect, 10.0, 10.0);
+				p.setPen(QPen(QColor(46, 204, 113, 60), 1.0));
+				p.setBrush(QColor(24, 28, 34, 230));
+				p.drawRoundedRect(rect, 12.0, 12.0);
 			}, card->lifetime());
 
 			const auto toggle = [=](
@@ -403,86 +422,32 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			addText(tr::lng_exd_wizard_settings_about());
 			box->addButton(rpl::single(u"\u0427\u0442\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u279C"_q), [=] {
 				base::call_delayed(0, box, [=] {
-					state->step = 3;
+					state->step = Step::Changelog;
 					(*rebuild)();
 				});
 			});
 		};
+
 		const auto fillChangelog = [=] {
 			addTitle(rpl::single(u"\u0427\u0442\u043E \u043D\u043E\u0432\u043E\u0433\u043E"_q));
-			auto contentText = QString();
-			for (const auto &loc : {
-				u"changelog.txt"_q,
-				QCoreApplication::applicationDirPath() + u"/changelog.txt"_q,
-				QDir::currentPath() + u"/changelog.txt"_q,
-			}) {
-				auto f = QFile(loc);
-				if (f.open(QIODevice::ReadOnly)) {
-					contentText = QString::fromUtf8(f.readAll());
-					f.close();
-					break;
-				}
-			}
-			if (contentText.isEmpty()) {
-				contentText = u"7.3.3 (05.11.26)\nRu:\n- Встроенный обход TgWsProxy: отдельная кнопка подключения и реактивный статус во [вкладке «Прокси»](tg://settings/proxy)\n- Выбор кастомного шрифта (TTF / OTF / WOFF2) в [настройках оформления](tg://settings/appearance)\n- Теневые черновики (Shadow Drafts): локальное сохранение редакций текста и откат по Ctrl+Shift+Z в [настройках oxDesktop](tg://settings/extera)\n- Инлайн-калькулятор в поле ввода: расчет математических выражений, поддержка степеней (2²=, (2)²=, сложные формулы), конвертер валют и величин\n- Умный анти-призрак: статус набора текста скрывается при вычислениях на лету\n- Быстрый HUD-переключатель чатов по комбинации Ctrl+Shift+K или Ctrl+P\n- Прямой поиск пользователей и каналов по цифровому ID (включая формат id123456)\n- Контекстное меню для сообщений в очереди отправки (быстрый ответ до завершения загрузки)\n- Лимит одновременно подключенных аккаунтов установлен на 5 в [управлении профилем](tg://settings)\n- Повышенная четкость и динамическое обновление иконки в системном трее Windows (100%–200%)\n- Интерактивная 3D-модель значка поддержки [tg://support](tg://support) и обновленный мастер приветствия [tg://welcome](tg://welcome)\n- Музыкальный виджет сохраненных треков в профиле пользователя с аккуратными отступами\n- Фирменная иконка OX Monogram по умолчанию и обновленное оформление стартового экрана\n\nEn:\n- Built-in TgWsProxy bypass: dedicated toggle button with reactive status in the [Proxy settings](tg://settings/proxy)\n- Custom font picker (TTF / OTF / WOFF2) in [Appearance settings](tg://settings/appearance)\n- Shadow Drafts: local message revision history with Ctrl+Shift+Z restore in [oxDesktop settings](tg://settings/extera)\n- Inline input calculator: math evaluation with superscript exponent support (2²=, (2)²=, chained powers), currency conversion, and unit translations\n- Smart Ghost: typing indicator suppressed during math parsing\n- HUD Quick Chat Switcher shortcut (Ctrl+Shift+K or Ctrl+P)\n- Direct peer search by numeric ID (including id123456 format)\n- Context menu for pending outgoing messages (queue reply before upload completes)\n- Max connected accounts limit set to 5 in [Account settings](tg://settings)\n- Crisp high-DPI Windows tray icon supersampling and live refresh on icon change (100%–200%)\n- Interactive 3D support badge model [tg://support](tg://support) and refreshed welcome setup wizard [tg://welcome](tg://welcome)\n- Profile saved music widget with adjusted vertical spacing\n- Default OX Monogram app icon and refreshed welcome layout\n"_q;
-			}
-			const auto lines = contentText.split('\n');
-			Ui::VerticalLayout *currentCard = nullptr;
-			for (const auto &line : lines) {
-				const auto trimmed = line.trimmed();
-				if (trimmed.isEmpty() || trimmed.startsWith(u"v7."_q) || trimmed.startsWith(u"v"_q) || trimmed.startsWith(u"7."_q)) {
-					continue;
-				}
-				if (trimmed.startsWith(u"Ru:"_q) || trimmed.startsWith(u"En:"_q)) {
-					currentCard = content->add(
-						object_ptr<Ui::VerticalLayout>(content),
-						style::margins(16, 6, 16, 6));
-					currentCard->paintRequest() | rpl::on_next([=] {
-						auto p = QPainter(currentCard);
-						auto hq = PainterHighQualityEnabler(p);
-						const auto rect = QRectF(currentCard->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
-						p.setPen(QPen(QColor(255, 255, 255, 24), 1.0));
-						p.setBrush(QColor(255, 255, 255, 8));
-						p.drawRoundedRect(rect, 10.0, 10.0);
-					}, currentCard->lifetime());
-
-					const auto title = trimmed.startsWith(u"Ru:"_q)
-						? u"\u0420\u0443\u0441\u0441\u043A\u0430\u044F \u043B\u043E\u043A\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F"_q
-						: u"English"_q;
-					currentCard->add(
-						object_ptr<Ui::FlatLabel>(
-							currentCard,
-							rpl::single(title),
-							st::boxTitle),
-						style::margins(12, 10, 12, 6));
-				} else if (currentCard) {
-					auto itemText = trimmed;
-					if (itemText.startsWith('-')) {
-						itemText = u"\u2014 "_q + itemText.mid(1).trimmed();
-					}
-					const auto label = currentCard->add(
-						object_ptr<Ui::FlatLabel>(
-							currentCard,
-							rpl::single(ParseMarkdownLinks(itemText)),
-							st::boxLabel),
-						style::margins(16, 2, 12, 4));
-					label->setLinksTrusted();
-				}
-			}
+			Extera::Changelog::FillLatestFromChangelog(content);
 			box->addButton(tr::lng_exd_wizard_finish(), finish);
 		};
+
 		*rebuild = [=] {
 			box->clearButtons();
 			box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 			content->clear();
 			switch (state->step) {
-			case 0: fillWelcome(); break;
-			case 1: fillIcon(); break;
-			case 2: fillSettings(); break;
+			case Step::Welcome: fillWelcome(); break;
+			case Step::Icon: fillIcon(); break;
+			case Step::Settings: fillSettings(); break;
+			case Step::Changelog:
 			default: fillChangelog(); break;
 			}
 			content->resizeToWidth(st::boxWideWidth);
 		};
+
 		(*rebuild)();
 		box->boxClosing() | rpl::on_next([=] {
 			Config::Instance().setBool(u"wizard_shown"_q, true);

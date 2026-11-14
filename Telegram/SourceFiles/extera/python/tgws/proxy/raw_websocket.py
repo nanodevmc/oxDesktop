@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple
 from .config import proxy_config
 from .utils import create_ssl_context
 
-log = logging.getLogger('tg-mtproto-proxy')
+log = logging.getLogger('ox-tgws-proxy')
 
 
 _st_BB = struct.Struct('>BB')

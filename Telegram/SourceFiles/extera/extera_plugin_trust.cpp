@@ -190,8 +190,7 @@ std::vector<Source> Sources() {
 		return result;
 	}
 	return {
-		{ .id = 2189715950ULL, .username = u"exteraPlugins"_q },
-		{ .id = 3914431400ULL, .username = u"oxDesktopPlugins"_q },
+		{ .id = 4469639949ULL, .username = u"oxDesktop"_q },
 	};
 }
 

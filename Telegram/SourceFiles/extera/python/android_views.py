@@ -1,3 +1,8 @@
+"""
+oxDesktop Android View Emulation Hierarchy.
+Provides View, TextView, LinearLayout, and GradientDrawable emulation for Qt mapping.
+"""
+
 import json
 import threading
 

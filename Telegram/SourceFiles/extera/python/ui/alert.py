@@ -1,3 +1,8 @@
+"""
+oxDesktop Alert Dialog Builder & Dialog Emulation.
+Provides fluid modal alert builders and CamelCase compatibility for dialogs.
+"""
+
 import itertools
 import json
 from typing import Any, Callable, List, Optional

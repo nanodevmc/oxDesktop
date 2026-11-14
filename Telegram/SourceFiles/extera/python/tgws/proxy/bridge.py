@@ -16,7 +16,7 @@ from .network_debug import WsActivity
 from .cf_h2 import bridge_h2
 
 
-log = logging.getLogger('tg-mtproto-proxy')
+log = logging.getLogger('ox-tgws-proxy')
 _st_I_le = struct.Struct('<I')
 
 TCP_BACKOFF_INITIAL = 30.0

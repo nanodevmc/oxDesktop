@@ -23,6 +23,7 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt")
             set(_ver_patch "0")
         endif()
         math(EXPR _ver_full "(${_ver_major} * 1000000) + (${_ver_minor} * 1000) + ${_ver_patch}")
+        set(APP_VERSION_FULL "${_ver_full}")
         set(_ver_str_major "${_ver_major}.${_ver_minor}")
         set(_ver_str "${_ver_major}.${_ver_minor}.${_ver_patch}")
         file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/Telegram/build/version"

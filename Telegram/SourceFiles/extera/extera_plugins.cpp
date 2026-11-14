@@ -117,21 +117,20 @@ private:
 	}
 	return inMacOS;
 #else
-	// Linux / generic Unix: check local candidates where extera_host.py might reside
 	const auto localToExe = cExeDir() + u"python/"_q;
-	if (QFile::exists(localToExe + u"extera/extera_host.py"_q)) {
+	if (QFile::exists(localToExe + u"extera/extera_host.py"_q) || QFile::exists(localToExe + u"extera_host.py"_q)) {
 		return localToExe;
 	}
 	const auto appData = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/python/"_q;
-	if (QFile::exists(appData + u"extera/extera_host.py"_q)) {
+	if (QFile::exists(appData + u"extera/extera_host.py"_q) || QFile::exists(appData + u"extera_host.py"_q)) {
 		return appData;
 	}
 	const auto localShare = QDir::homePath() + u"/.local/share/oxDesktop/python/"_q;
-	if (QFile::exists(localShare + u"extera/extera_host.py"_q)) {
+	if (QFile::exists(localShare + u"extera/extera_host.py"_q) || QFile::exists(localShare + u"extera_host.py"_q)) {
 		return localShare;
 	}
 	const auto systemShare = u"/usr/share/oxDesktop/python/"_q;
-	if (QFile::exists(systemShare + u"extera/extera_host.py"_q)) {
+	if (QFile::exists(systemShare + u"extera/extera_host.py"_q) || QFile::exists(systemShare + u"extera_host.py"_q)) {
 		return systemShare;
 	}
 	return QFile::exists(localToExe) ? localToExe : appData;
@@ -443,8 +442,6 @@ void ShowAlert(const QString &payload) {
 		}, box->lifetime());
 	}));
 }
-
-// Native
 
 PyObject *NativeLog(PyObject *self, PyObject *args) {
 	const char *text = nullptr;
@@ -1030,7 +1027,6 @@ PyObject *InitNativeModule() {
 	PyConfig_Clear(&config);
 
 #ifndef Q_OS_WIN
-	// Add runtime and extera directories to sys.path so modules can be imported
 	PyObject *sysPath = PySys_GetObject("path");
 	if (sysPath && PyList_Check(sysPath)) {
 		const auto extraPaths = QStringList{
@@ -1060,9 +1056,11 @@ PyObject *InitNativeModule() {
 bool Available() {
 #ifdef Q_OS_WIN
 	return QFile::exists(RuntimePath() + u"python311.dll"_q)
-		&& QFile::exists(RuntimePath() + u"extera/extera_host.py"_q);
+		&& (QFile::exists(RuntimePath() + u"extera/extera_host.py"_q)
+			|| QFile::exists(RuntimePath() + u"extera_host.py"_q));
 #else // Q_OS_WIN
-	return QFile::exists(RuntimePath() + u"extera/extera_host.py"_q);
+	return QFile::exists(RuntimePath() + u"extera/extera_host.py"_q)
+		|| QFile::exists(RuntimePath() + u"extera_host.py"_q);
 #endif // Q_OS_WIN
 }
 

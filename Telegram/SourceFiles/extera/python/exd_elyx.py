@@ -1,3 +1,8 @@
+"""
+oxDesktop Elyx & EAF Archive Plugin Loader.
+Provides multi-file plugin loading, resource isolation, and manifest parsing.
+"""
+
 import builtins
 import hashlib
 import importlib

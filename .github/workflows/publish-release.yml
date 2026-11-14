@@ -43,7 +43,7 @@ jobs:
         run: |
           VERSION=$(cat version.txt | tr -d '\r\n ')
           if [ -z "$VERSION" ]; then
-            VERSION="7.3.3"
+            VERSION="7.4.3.3"
           fi
           TAG="${{ github.event.inputs.tag_name }}"
           if [ -z "$TAG" ]; then

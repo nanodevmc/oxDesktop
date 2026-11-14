@@ -2,7 +2,7 @@ import logging
 import time
 from collections import defaultdict
 
-log = logging.getLogger('tg-mtproto-proxy')
+log = logging.getLogger('ox-tgws-proxy')
 
 
 class WsActivity:

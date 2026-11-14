@@ -1,7 +1,6 @@
 """
 oxDesktop Embedded TgWsProxy
-Official Flowseal/tg-ws-proxy v1.11.4 core port.
-Zero-dependency embedded Python engine for Windows, Linux, and macOS.
+Clean-room embedded WebSocket proxy engine for Windows, Linux, and macOS.
 """
 from __future__ import annotations
 

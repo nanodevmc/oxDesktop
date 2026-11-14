@@ -1,3 +1,8 @@
+"""
+oxDesktop Java Type System & Bytecode Shim Layer.
+Provides Java primitives, ByteBuffer, Locale, and reflection shims for desktop runtime.
+"""
+
 import base64 as _b64
 import locale as _locale
 import os
@@ -447,8 +452,8 @@ class System(JavaObject):
             "line.separator": "\n",
             "file.separator": os.sep,
             "user.language": language(),
-            "java.vm.name": "exDesktop",
-            "http.agent": "exDesktop",
+            "java.vm.name": "oxDesktop",
+            "http.agent": "oxDesktop",
         }
         return values.get(str(name), default)
 
@@ -1374,7 +1379,7 @@ class _BuildVersion(JavaObject):
     SDK_INT = 34
     RELEASE = "14"
     CODENAME = "REL"
-    INCREMENTAL = "exdesktop"
+    INCREMENTAL = "oxdesktop"
 
 
 class _BuildCodes(JavaObject):
@@ -1395,14 +1400,14 @@ class Build(JavaObject):
     _java_name = "android.os.Build"
     VERSION = _BuildVersion
     VERSION_CODES = _BuildCodes
-    MODEL = "exDesktop"
-    MANUFACTURER = "exDesktop"
-    BRAND = "exDesktop"
+    MODEL = "oxDesktop"
+    MANUFACTURER = "oxDesktop"
+    BRAND = "oxDesktop"
     DEVICE = "desktop"
-    PRODUCT = "exDesktop"
+    PRODUCT = "oxDesktop"
     HARDWARE = "desktop"
     BOARD = "desktop"
-    FINGERPRINT = "exDesktop/desktop"
+    FINGERPRINT = "oxDesktop/desktop"
     SUPPORTED_ABIS = ["x86_64"]
 
 

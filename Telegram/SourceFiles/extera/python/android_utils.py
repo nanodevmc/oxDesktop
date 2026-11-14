@@ -1,3 +1,8 @@
+"""
+oxDesktop Android Emulation Utilities.
+Provides safe callback execution, UI thread dispatchers, and clipboard helpers.
+"""
+
 import sys
 from typing import Any, Callable
 
@@ -18,7 +23,7 @@ def log(data):
     try:
         _extera.log(message)
     except Exception:
-        print(f"[extera:sdk] {message}", file=sys.stderr)
+        print(f"[oxDesktop:sdk] {message}", file=sys.stderr)
 
 
 def safe_call(fn, *args, **kwargs):

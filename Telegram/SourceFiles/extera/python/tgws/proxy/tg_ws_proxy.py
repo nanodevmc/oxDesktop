@@ -38,7 +38,7 @@ from .event_loop import install_self_pipe_guard
 from ._aes import Cipher, algorithms, modes
 
 
-log = logging.getLogger('tg-mtproto-proxy')
+log = logging.getLogger('ox-tgws-proxy')
 
 LISTENER_CHECK_INTERVAL = 5.0
 LISTENER_RESTART_DELAY = 1.0

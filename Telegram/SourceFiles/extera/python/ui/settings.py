@@ -1,3 +1,8 @@
+"""
+oxDesktop Dynamic Settings Components & Descriptors.
+Provides UI layout items, category flattening, and serialization for Qt settings screens.
+"""
+
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Union
 

@@ -47,7 +47,6 @@ namespace {
 
 constexpr auto kMaxQuickActions = 5;
 
-
 class DetailAction final : public Ui::Menu::ItemBase {
 public:
 	DetailAction(
@@ -306,10 +305,10 @@ void QuickRow::addButton(
 		auto p = QPainter(button);
 		if (_hovered == index || _pressed == index) {
 			auto hq = PainterHighQualityEnabler(p);
-			p.setPen(Qt::NoPen);
+			p.setPen(QPen(QColor(46, 204, 113, 80), 1.0));
 			p.setBrush(_st.itemBgOver);
 			const auto radius = st::roundRadiusLarge;
-			p.drawRoundedRect(button->rect(), radius, radius);
+			p.drawRoundedRect(button->rect().adjusted(1, 1, -1, -1), radius, radius);
 		}
 		icon->paintInCenter(p, button->rect());
 	}, button->lifetime());
@@ -370,78 +369,86 @@ void QuickRow::paintEvent(QPaintEvent *e) {
 	return tr::lng_mediaview_date_time(
 		tr::now,
 		lt_date,
-		QLocale().toString(parsed.date(), u"dd.MM.yyyy"_q),
+		langDayOfMonthFull(parsed.date()),
 		lt_time,
-		QLocale().toString(parsed.time(), u"HH:mm:ss"_q));
+		QLocale().toString(parsed.time(), QLocale::ShortFormat));
 }
 
 void FillDetails(
 		not_null<Ui::PopupMenu*> menu,
 		not_null<HistoryItem*> item) {
+	const auto st = menu->st().menu;
+
 	const auto add = [&](
 			const style::icon *icon,
 			const QString &title,
 			const QString &value) {
+		if (value.isEmpty()) {
+			return;
+		}
 		menu->addAction(base::make_unique_q<DetailAction>(
 			menu->menu(),
-			menu->st().menu,
+			st,
 			icon,
 			title,
 			value));
 	};
+
 	add(
 		&st::menuIconInfo,
 		tr::lng_extera_details_id(tr::now),
 		QString::number(item->id.bare));
 	add(
-		&st::menuIconChats,
+		&st::menuIconChatBubble,
 		tr::lng_extera_details_chat(tr::now),
-		QString::number(
-			item->history()->peer->id.value & PeerId::kChatTypeMask));
+		item->history()->peer->name());
 	if (const auto from = item->from()) {
-		add(
-			&st::menuIconProfile,
-			tr::lng_extera_details_sender(tr::now),
-			QString::number(from->id.value & PeerId::kChatTypeMask));
+		if (from != item->history()->peer) {
+			add(
+				&st::menuIconProfile,
+				tr::lng_extera_details_sender(tr::now),
+				from->name());
+		}
 	}
 	add(
 		&st::menuIconSchedule,
 		tr::lng_extera_details_date(tr::now),
 		FormatFullDate(item->date()));
-	if (const auto edited = item->Get<HistoryMessageEdited>()) {
-		if (edited->date) {
-			add(
-				&st::menuIconEdit,
-				tr::lng_extera_details_edited(tr::now),
-				FormatFullDate(edited->date));
+	if (item->hasDirectLink()) {
+		if (const auto ms = item->layout()->customSenderTitle()) {
+			if (ms->media && ms->media->isEdited()) {
+				add(
+					&st::menuIconEdit,
+					tr::lng_extera_details_edited(tr::now),
+					QString::fromUtf8("Yes"));
+			}
 		}
 	}
-	if (const auto forwarded = item->Get<HistoryMessageForwarded>()) {
-		if (forwarded->originalDate) {
-			add(
-				&st::menuIconForward,
-				tr::lng_extera_details_forwarded(tr::now),
-				FormatFullDate(forwarded->originalDate));
-		}
+	if (const auto fwd = item->Get<HistoryMessageForwarded>()) {
+		add(
+			&st::menuIconForward,
+			tr::lng_extera_details_forwarded(tr::now),
+			fwd->originalSender ? fwd->originalSender->name() : fwd->originalAuthor);
 	}
 	if (const auto media = item->media()) {
 		if (const auto document = media->document()) {
-			if (!document->filename().isEmpty()) {
+			const auto name = document->filename();
+			if (!name.isEmpty()) {
 				add(
 					&st::menuIconFile,
 					tr::lng_extera_details_file(tr::now),
-					document->filename());
+					name);
 			}
 			add(
-				&st::menuIconDownload,
+				&st::menuIconInfo,
 				tr::lng_extera_details_size(tr::now),
 				Ui::FormatSizeText(document->size));
-			const auto path = document->filepath();
+			const auto path = document->filepath(true);
 			if (!path.isEmpty()) {
 				const auto platform = Extera::Platform::DetectFromFile(path);
 				if (platform != Extera::Platform::SenderPlatform::Unknown) {
 					add(
-						&st::menuIconInfo,
+						&st::menuIconDevices,
 						tr::lng_extera_platform_sender(tr::now),
 						Extera::Platform::FormatPlatform(platform));
 				}
@@ -456,85 +463,77 @@ void AddMessageMenuActions(
 		not_null<Ui::PopupMenu*> menu,
 		not_null<HistoryItem*> item,
 		not_null<Window::SessionController*> controller) {
-	if (!item->isRegular()) {
-		return;
-	}
-	const auto itemId = item->fullId();
-	const auto session = &item->history()->session();
-	if (Bool(u"menu_copy_photo"_q)) {
-		if (const auto media = item->media()) {
+	if (const auto media = item->media()) {
 		if (const auto photo = media->photo()) {
-			if (!photo->isNull() && photo->activeMediaView() && photo->activeMediaView()->loaded()) {
-				menu->addAction(tr::lng_extera_menu_copy_photo(tr::now), [=] {
-					photo->activeMediaView()->setToClipboard();
-				}, &st::menuIconCopy);
+			if (const auto image = photo->createMediaView(); image && image->loaded()) {
+				const auto pixmap = image->pixmap();
+				if (!pixmap.isNull()) {
+					menu->addAction(tr::lng_extera_menu_copy_photo(tr::now), [=] {
+						QGuiApplication::clipboard()->setPixmap(pixmap);
+					}, &st::menuIconCopy);
+				}
 			}
 		}
-		}
-	}
-	if (Bool(u"menu_save"_q)) {
-		if (const auto media = item->media()) {
-			if (const auto document = media->document()) {
+		if (const auto document = media->document()) {
+			const auto path = document->filepath(true);
+			if (!path.isEmpty()) {
 				menu->addAction(tr::lng_extera_menu_save(tr::now), [=] {
-					DocumentSaveClickHandler::Save(
-						item->fullId(),
+					DocumentOpenClickHandler::Save(
+						Data::FileOrigin(),
 						document,
-						DocumentSaveClickHandler::Mode::ToFile);
+						DocumentOpenClickHandler::Mode::ForceSaveAs);
 				}, &st::menuIconDownload);
 			}
 		}
 	}
+
 	const auto ip = Extera::IpInfo::ExtractIp(item->originalText().text);
-	if (!ip.isEmpty()) {
+	if (!ip.isEmpty() && Extera::IpInfo::IsAvailable()) {
 		menu->addAction(tr::lng_extera_inspect_ip(tr::now) + " (" + ip + ")", [=] {
 			Extera::IpInfo::Inspect(controller, ip);
-		}, &st::menuIconInfo);
+		}, &st::menuIconSearch);
 	}
+
 	if (const auto media = item->media()) {
 		if (const auto document = media->document()) {
 			if (document->isSong()) {
-				const auto song = document->song();
-				const auto artist = song ? song->performer : QString();
-				const auto title = song ? song->title : document->filename();
-				const auto duration = int(document->duration() / 1000);
+				const auto artist = document->song()->artist;
+				const auto title = document->song()->title;
+				const auto duration = document->song()->duration;
 				menu->addAction(tr::lng_extera_player_lyrics(tr::now), [=] {
 					Extera::Lyrics::ShowBox(controller, artist, title, duration);
-				}, &st::menuIconInfo);
+				}, &st::menuIconMusic);
 			}
 		}
 	}
-	if (Bool(u"menu_clean_link"_q)) {
-		const auto text = item->originalText().text;
+
+	const auto text = item->originalText().text;
+	if (text.contains(u"://"_q)) {
 		const auto cleaned = Extera::CleanTextUrls(text);
-		if (!cleaned.isEmpty() && cleaned != text) {
+		if (cleaned != text) {
 			menu->addAction(tr::lng_extera_menu_clean_text(tr::now), [=] {
 				QGuiApplication::clipboard()->setText(cleaned);
 			}, &st::menuIconCopy);
 		}
 	}
-	if (Bool(u"menu_repeat"_q)
-		&& item->allowsForward()
-		&& Data::CanSendAnything(item->history())) {
+
+	if (item->out() && item->isRegular()) {
 		menu->addAction(tr::lng_extera_menu_repeat(tr::now), [=] {
-			if (const auto item = session->data().message(itemId)) {
-				session->api().forwardMessages(
-					Data::ResolvedForwardDraft{
-						.items = { item },
-						.options = Data::ForwardOptions::NoSenderNames,
-					},
-					Api::SendAction(item->history()));
-			}
-		}, &st::menuIconRestore);
+			auto action = Api::SendAction(item->history());
+			action.replyTo = item->replyTo();
+			action.generateLocal = true;
+			item->history()->session().api().forwardMessages(
+				Data::ForwardDraft{
+					.ids = { item->fullId() },
+					.action = action,
+				},
+				[=] {});
+		}, &st::menuIconRestart);
 	}
-	if (item->history()->peer->isForum() && item->allowsForward()) {
-		menu->addAction(tr::lng_exd_reply_in_topic(tr::now), [=] {
-			HistoryView::Controls::ShowReplyToChatBox(
-				controller->uiShow(),
-				FullReplyTo{ .messageId = itemId });
-		}, &st::menuIconReply);
-	}
-	Plugins::AddMessageMenuItems(menu, item);
-	if (Bool(u"menu_details"_q)) {
+
+	Extera::Plugins::AddMenuActions(menu, item, controller);
+
+	if (Bool(u"menu_message_details"_q)) {
 		const auto action = menu->addAction(
 			tr::lng_extera_menu_details(tr::now),
 			[] {},

@@ -32,6 +32,7 @@
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QFile>
+#include <QtCore/QFileInfo>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
@@ -80,6 +81,10 @@ State &Instance() {
 }
 
 [[nodiscard]] QString CachePath() {
+	return cWorkingDir() + u"tdata/ox_releases.json"_q;
+}
+
+[[nodiscard]] QString LegacyCachePath() {
 	return cWorkingDir() + u"tdata/exd_releases.json"_q;
 }
 
@@ -144,7 +149,7 @@ State &Instance() {
 
 	auto ensureLang = [&](const QString &code, const QString &title) {
 		if (!currentRelease) {
-			ensureRelease(u"7.3.3"_q, QString());
+			ensureRelease(QString::fromUtf8(AppVersionStr), QString());
 		}
 		for (auto &l : currentRelease->languages) {
 			if (l.lang.compare(code, Qt::CaseInsensitive) == 0) {
@@ -267,20 +272,23 @@ void ApplyFallback() {
 	if (!state.releases.empty()) {
 		return;
 	}
-	auto file = QFile(u":/gui/changelog.txt"_q);
-	if (!file.open(QIODevice::ReadOnly)) {
-		file.setFileName(cWorkingDir() + u"changelog.txt"_q);
-		if (!file.open(QIODevice::ReadOnly)) {
-			file.setFileName(
-				QCoreApplication::applicationDirPath() + u"/changelog.txt"_q);
-			file.open(QIODevice::ReadOnly);
-		}
-	}
-	if (file.isOpen()) {
-		const auto content = QString::fromUtf8(file.readAll());
-		file.close();
-		if (!content.isEmpty()) {
-			state.releases = ParseReleasesFromText(content);
+	for (const auto &loc : {
+		u":/gui/changelog.txt"_q,
+		cWorkingDir() + u"changelog.txt"_q,
+		QDir::currentPath() + u"/changelog.txt"_q,
+		QCoreApplication::applicationDirPath() + u"/changelog.txt"_q,
+		u"changelog.txt"_q,
+	}) {
+		auto file = QFile(loc);
+		if (file.open(QIODevice::ReadOnly)) {
+			const auto content = QString::fromUtf8(file.readAll());
+			file.close();
+			if (!content.isEmpty()) {
+				state.releases = ParseReleasesFromText(content);
+				if (!state.releases.empty()) {
+					break;
+				}
+			}
 		}
 	}
 }
@@ -613,6 +621,9 @@ void Start() {
 	}
 	started = true;
 	auto file = QFile(CachePath());
+	if (!file.exists() && QFile::exists(LegacyCachePath())) {
+		file.setFileName(LegacyCachePath());
+	}
 	if (file.open(QIODevice::ReadOnly)) {
 		Apply(file.readAll());
 	}
@@ -682,6 +693,14 @@ void ShowUpdate(
 			box->closeBox();
 		});
 	}));
+}
+
+void FillLatestFromChangelog(not_null<Ui::VerticalLayout*> container) {
+	ApplyFallback();
+	const auto &releases = Instance().releases;
+	if (!releases.empty()) {
+		FillReleaseContent(container, releases.front(), false);
+	}
 }
 
 } // namespace Extera::Changelog

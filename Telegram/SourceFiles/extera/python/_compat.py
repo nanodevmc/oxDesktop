@@ -1,3 +1,15 @@
+import html
+import importlib.abc
+import importlib.machinery
+import json
+import os
+import re
+import sys
+import tempfile
+from html.parser import HTMLParser
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import _extera
 
 try:
     from tl_runtime import ArrayList
@@ -7,24 +19,42 @@ except ImportError:
         ArrayList = exd_java.ArrayList
     except Exception:
         class ArrayList(list):
-            def add(self, item):
-                self.append(item)
+            def add(self, *args: Any) -> bool:
+                if len(args) == 1:
+                    self.append(args[0])
+                else:
+                    self.insert(args[0], args[1])
+                return True
 
-import html
-import importlib.abc
-import importlib.machinery
-import json
-import re
-import os
-import sys
-from html.parser import HTMLParser
+            def size(self) -> int:
+                return len(self)
 
-import _extera
+            def get(self, index: int) -> Any:
+                return self[index]
+
+            def set(self, index: int, value: Any) -> Any:
+                old = self[index]
+                self[index] = value
+                return old
+
+            def isEmpty(self) -> bool:
+                return len(self) == 0
+
+            def contains(self, value: Any) -> bool:
+                return value in self
+
+            def clear(self) -> None:
+                del self[:]
+
+            def addAll(self, values: Any) -> bool:
+                self.extend(values)
+                return True
+
+            def toArray(self) -> List[Any]:
+                return list(self)
 
 
-# Stub
-
-TERMINAL = {
+TERMINAL_METHODS: Dict[str, Any] = {
     "getSuperclass": None,
     "getGenericSuperclass": None,
     "getEnclosingClass": None,
@@ -45,116 +75,119 @@ TERMINAL = {
 }
 
 
-def lenient(name, item):
+def lenient(name: str, item: str) -> Any:
     if item in ("getName", "getCanonicalName", "getTypeName"):
         return lambda *args, **kwargs: str(name)
     if item == "getSimpleName":
         return lambda *args, **kwargs: str(name).replace("$", ".").split(".")[-1]
     if item in ("getDeclaredMethod", "getMethod"):
-        return lambda method_name="", *args, **kwargs: Missing("%s.%s" % (name, method_name))
-    if item in TERMINAL:
-        value = TERMINAL[item]
-        return lambda *args, **kwargs: value
-    return Stub(name + "." + item)
+        return lambda method_name="", *args, **kwargs: Missing(f"{name}.{method_name}")
+    if item in TERMINAL_METHODS:
+        target_val = TERMINAL_METHODS[item]
+        return lambda *args, **kwargs: target_val
+    return Stub(f"{name}.{item}")
 
 
 class Stub:
-    def __init__(self, name="stub"):
-        object.__setattr__(self, "_name", name)
+    def __init__(self, name: str = "stub"):
+        object.__setattr__(self, "_name", str(name))
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         if item.startswith("__") and item.endswith("__"):
             raise AttributeError(item)
         return lenient(self._name, item)
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key: str, value: Any) -> None:
         object.__setattr__(self, key, value)
 
-    def __call__(self, *args, **kwargs):
-        return Stub(self._name + "()")
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return Stub(f"{self._name}()")
 
-    def __instancecheck__(self, obj):
-        name = str(object.__getattribute__(self, "_name"))
-        if name in ("java.lang.Class", "java.chaquopy.JavaClass", "java.lang.Object", "java.chaquopy.JavaObject"):
+    def __instancecheck__(self, obj: Any) -> bool:
+        target_name = str(object.__getattribute__(self, "_name"))
+        if target_name in (
+            "java.lang.Class",
+            "java.chaquopy.JavaClass",
+            "java.lang.Object",
+            "java.chaquopy.JavaObject",
+        ):
             return isinstance(obj, (type, Stub)) or hasattr(obj, "_java_name") or hasattr(obj, "getName")
         other = getattr(obj, "_java_name", None) or getattr(type(obj), "_java_name", None)
         if isinstance(obj, Stub):
             other = object.__getattribute__(obj, "_name")
-        return bool(other) and str(other).split("(")[0] == name
+        return bool(other) and str(other).split("(")[0] == target_name
 
-    def __subclasscheck__(self, cls):
+    def __subclasscheck__(self, cls: type) -> bool:
         other = getattr(cls, "_java_name", None)
         return bool(other) and str(other) == str(object.__getattribute__(self, "_name"))
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return True
 
     def __iter__(self):
         return iter(())
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 0
 
-    def __int__(self):
+    def __int__(self) -> int:
         return 0
 
-    def __float__(self):
+    def __float__(self) -> float:
         return 0.0
 
-    def __index__(self):
+    def __index__(self) -> int:
         return 0
 
-    def _zero(self, *args):
+    def _zero_op(self, *args: Any) -> int:
         return 0
 
-    def _union(self, other):
+    def _union_op(self, other: Any) -> Any:
         if other is None or isinstance(other, (type, Stub, str)) or hasattr(other, "__origin__"):
             return self
         return 0
 
-    __add__ = __radd__ = __sub__ = __rsub__ = _zero
-    __mul__ = __rmul__ = __truediv__ = __rtruediv__ = _zero
-    __floordiv__ = __rfloordiv__ = __mod__ = __rmod__ = _zero
-    __or__ = __ror__ = _union
-    __and__ = __rand__ = __xor__ = __rxor__ = _zero
-    __lshift__ = __rlshift__ = __rshift__ = __rrshift__ = _zero
-    __neg__ = __pos__ = __invert__ = __abs__ = _zero
+    __add__ = __radd__ = __sub__ = __rsub__ = _zero_op
+    __mul__ = __rmul__ = __truediv__ = __rtruediv__ = _zero_op
+    __floordiv__ = __rfloordiv__ = __mod__ = __rmod__ = _zero_op
+    __or__ = __ror__ = _union_op
+    __and__ = __rand__ = __xor__ = __rxor__ = _zero_op
+    __lshift__ = __rlshift__ = __rshift__ = __rrshift__ = _zero_op
+    __neg__ = __pos__ = __invert__ = __abs__ = _zero_op
 
-    def __getitem__(self, item):
-        return Stub(self._name + "[]")
+    def __getitem__(self, item: Any) -> Any:
+        return Stub(f"{self._name}[]")
 
-    def __setitem__(self, item, value):
+    def __setitem__(self, item: Any, value: Any) -> None:
         return None
 
-    def __contains__(self, item):
+    def __contains__(self, item: Any) -> bool:
         return False
 
-    def __fspath__(self):
-        import tempfile
-        path = os.path.join(tempfile.gettempdir(), "exdesktop_plugins")
-        os.makedirs(path, exist_ok=True)
-        return path
+    def __fspath__(self) -> str:
+        folder = os.path.join(tempfile.gettempdir(), "oxdesktop_plugins")
+        os.makedirs(folder, exist_ok=True)
+        return folder
+
     __lt__ = __le__ = __gt__ = __ge__ = lambda self, other: False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ""
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<stub {self._name}>"
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return isinstance(other, Stub)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self._name)
 
-    def __mro_entries__(self, bases):
+    def __mro_entries__(self, bases: Any) -> Tuple[type, ...]:
         return (object,)
 
 
-# Shims
-
-def _open_url(url):
+def _open_url(url: Any) -> bool:
     _extera.open_url(str(url))
     return True
 
@@ -163,55 +196,56 @@ class _Toast:
     LENGTH_SHORT = 0
     LENGTH_LONG = 1
 
-    def __init__(self, text):
+    def __init__(self, text: Any):
         self._text = str(text)
 
     @staticmethod
-    def makeText(context, text, duration=0):
+    def makeText(context: Any, text: Any, duration: int = 0) -> "_Toast":
         return _Toast(text)
 
-    def show(self):
+    def show(self) -> None:
         _extera.toast(self._text)
 
 
 class _Uri:
     _java_name = "android.net.Uri"
 
-    def __init__(self, value):
+    def __init__(self, value: Any):
         self._value = str(value)
 
     @staticmethod
-    def parse(value):
+    def parse(value: Any) -> "_Uri":
         return _Uri(value)
 
     @staticmethod
-    def fromFile(file):
+    def fromFile(file: Any) -> "_Uri":
         path = file.getAbsolutePath() if hasattr(file, "getAbsolutePath") else str(file)
-        return _Uri("file:///" + str(path).replace("\\", "/").lstrip("/"))
+        normalized = str(path).replace("\\", "/").lstrip("/")
+        return _Uri(f"file:///{normalized}")
 
-    def getPath(self):
+    def getPath(self) -> str:
         import exd_picker
         return exd_picker.uri_path(self)
 
-    def getLastPathSegment(self):
+    def getLastPathSegment(self) -> str:
         return os.path.basename(self.getPath())
 
-    def getScheme(self):
+    def getScheme(self) -> str:
         return self._value.split(":", 1)[0] if ":" in self._value else ""
 
-    def getHost(self):
+    def getHost(self) -> Optional[str]:
         import urllib.parse
         return urllib.parse.urlsplit(self._value).hostname
 
-    def getQueryParameter(self, name):
+    def getQueryParameter(self, name: str) -> Optional[str]:
         import urllib.parse
         values = urllib.parse.parse_qs(urllib.parse.urlsplit(self._value).query).get(str(name))
         return values[0] if values else None
 
-    def toString(self):
+    def toString(self) -> str:
         return self._value
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self._value
 
 
@@ -232,33 +266,33 @@ class _Intent(Stub):
     FLAG_GRANT_READ_URI_PERMISSION = 1
     FLAG_ACTIVITY_NEW_TASK = 0x10000000
 
-    def __init__(self, action=None, uri=None, *args):
-        Stub.__init__(self, "Intent")
+    def __init__(self, action: Optional[str] = None, uri: Optional[Any] = None, *args: Any):
+        super().__init__("Intent")
         object.__setattr__(self, "action", action)
         object.__setattr__(self, "uri", uri)
 
-    def addFlags(self, flags):
+    def addFlags(self, flags: int) -> "_Intent":
         return self
 
-    def setFlags(self, flags):
+    def setFlags(self, flags: int) -> "_Intent":
         return self
 
-    def setData(self, uri):
+    def setData(self, uri: Any) -> "_Intent":
         object.__setattr__(self, "uri", uri)
         return self
 
-    def setAction(self, action):
+    def setAction(self, action: Optional[str]) -> "_Intent":
         object.__setattr__(self, "action", action)
         return self
 
-    def setType(self, mime):
+    def setType(self, mime: str) -> "_Intent":
         object.__setattr__(self, "_type", mime)
         return self
 
-    def addCategory(self, category):
+    def addCategory(self, category: str) -> "_Intent":
         return self
 
-    def putExtra(self, key, value=None):
+    def putExtra(self, key: Any, value: Any = None) -> "_Intent":
         extras = self.__dict__.get("_extras")
         if extras is None:
             extras = {}
@@ -266,57 +300,58 @@ class _Intent(Stub):
         extras[str(key)] = value
         return self
 
-    def getData(self):
+    def getData(self) -> Any:
         return self.__dict__.get("uri")
 
-    def getAction(self):
+    def getAction(self) -> Optional[str]:
         return self.__dict__.get("action")
 
-    def getClipData(self):
+    def getClipData(self) -> Optional["_ClipData"]:
         clip = self.__dict__.get("_clip")
         if not clip:
             return None
         return _ClipData(clip)
 
-    def getStringExtra(self, key):
+    def getStringExtra(self, key: Any) -> Optional[str]:
         return (self.__dict__.get("_extras") or {}).get(str(key))
 
 
-def _plugin_files_dir(kind="files"):
+def _plugin_files_dir(kind: str = "files") -> Any:
     import exd_java
     import file_utils
     try:
         import extera_host
-        plugin_id = extera_host.current_plugin_id()
+        pid = extera_host.current_plugin_id()
     except Exception:
-        plugin_id = None
+        pid = None
+
     if kind == "cache":
-        path = file_utils.get_plugin_cache_dir(plugin_id) if plugin_id else None
+        resolved_path = file_utils.get_plugin_cache_dir(pid) if pid else None
     else:
-        path = file_utils.get_plugin_dir(plugin_id) if plugin_id else None
-    if not path:
-        import tempfile
-        path = os.path.join(tempfile.gettempdir(), "exdesktop_plugins")
-        os.makedirs(path, exist_ok=True)
-    return exd_java.File(path)
+        resolved_path = file_utils.get_plugin_dir(pid) if pid else None
+
+    if not resolved_path:
+        resolved_path = os.path.join(tempfile.gettempdir(), "oxdesktop_plugins")
+        os.makedirs(resolved_path, exist_ok=True)
+    return exd_java.File(resolved_path)
 
 
 class _ClipItem:
-    def __init__(self, uri):
+    def __init__(self, uri: Any):
         self._uri = uri
 
-    def getUri(self):
+    def getUri(self) -> Any:
         return self._uri
 
 
 class _ClipData:
-    def __init__(self, uris):
+    def __init__(self, uris: Any):
         self._uris = list(uris)
 
-    def getItemCount(self):
+    def getItemCount(self) -> int:
         return len(self._uris)
 
-    def getItemAt(self, index):
+    def getItemAt(self, index: int) -> _ClipItem:
         return _ClipItem(self._uris[int(index)])
 
 
@@ -325,59 +360,59 @@ class ClassNotFoundException(Exception):
 
 
 class _Context(Stub):
-    def getContentResolver(self, *args):
+    def getContentResolver(self, *args: Any) -> Any:
         import exd_picker
         return exd_picker.ContentResolver()
 
-    def startActivityForResult(self, intent, request_code=0, *args):
+    def startActivityForResult(self, intent: Any, request_code: int = 0, *args: Any) -> None:
         import exd_picker
         if exd_picker.start_for_result(intent, request_code, self):
             return None
-        uri = getattr(intent, "uri", None)
-        if uri is not None:
-            _open_url(uri)
+        uri_val = getattr(intent, "uri", None)
+        if uri_val is not None:
+            _open_url(uri_val)
         return None
 
-    def startActivity(self, intent, *args):
+    def startActivity(self, intent: Any, *args: Any) -> None:
         import exd_picker
         if exd_picker.start_for_result(intent, 0, self):
             return None
-        uri = getattr(intent, "uri", None)
-        if uri is not None:
-            _open_url(uri)
+        uri_val = getattr(intent, "uri", None)
+        if uri_val is not None:
+            _open_url(uri_val)
 
-    def getFilesDir(self, *args):
+    def getFilesDir(self, *args: Any) -> Any:
         return _plugin_files_dir()
 
-    def getFilesDirFixed(self, *args):
+    def getFilesDirFixed(self, *args: Any) -> Any:
         return _plugin_files_dir()
 
-    def getExternalFilesDir(self, *args):
+    def getExternalFilesDir(self, *args: Any) -> Any:
         return _plugin_files_dir()
 
-    def getCacheDir(self, *args):
+    def getCacheDir(self, *args: Any) -> Any:
         return _plugin_files_dir("cache")
 
-    def getExternalCacheDir(self, *args):
+    def getExternalCacheDir(self, *args: Any) -> Any:
         return _plugin_files_dir("cache")
 
-    def getDataDir(self, *args):
+    def getDataDir(self, *args: Any) -> Any:
         return _plugin_files_dir()
 
-    def getPackageName(self, *args):
-        return "com.exteragram.messenger"
+    def getPackageName(self, *args: Any) -> str:
+        return "org.oxdesktop.messenger"
 
-    def getClassLoader(self):
+    def getClassLoader(self) -> Any:
         class _ClassLoader:
-            def loadClass(self, name):
+            def loadClass(self, name: str) -> Any:
                 import hook_utils
-                found = hook_utils.find_class(str(name))
-                if found is not None and not isinstance(found, Missing):
-                    return found
+                target = hook_utils.find_class(str(name))
+                if target is not None and not isinstance(target, Missing):
+                    return target
                 raise ClassNotFoundException(str(name))
         return _ClassLoader()
 
-    def getParentActivity(self):
+    def getParentActivity(self) -> "_Context":
         return self
 
 
@@ -386,22 +421,23 @@ _BROWSER_EXTERNAL = [True]
 
 class _Browser:
     @staticmethod
-    def openUrl(context, url, *args):
+    def openUrl(context: Any, url: Any, *args: Any) -> Any:
         if not _BROWSER_EXTERNAL[0]:
             _BROWSER_EXTERNAL[0] = True
             return None
-        return _open_url(str(getattr(url, "toString", lambda: url)()))
+        target_str = str(getattr(url, "toString", lambda: url)())
+        return _open_url(target_str)
 
 
 class LenientMeta(type):
-    def __getattr__(cls, item):
+    def __getattr__(cls, item: str) -> Any:
         if item.startswith("__") and item.endswith("__"):
             raise AttributeError(item)
         return lenient(cls.__name__, item)
 
 
 class Missing(Stub):
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return False
 
 
@@ -409,11 +445,11 @@ class _ApplicationLoader(metaclass=LenientMeta):
     applicationContext = _Context("applicationContext")
 
     @staticmethod
-    def getFilesDirFixed(*args):
+    def getFilesDirFixed(*args: Any) -> Any:
         return _plugin_files_dir()
 
     @staticmethod
-    def getCacheDirFixed(*args):
+    def getCacheDirFixed(*args: Any) -> Any:
         return _plugin_files_dir("cache")
 
 
@@ -423,44 +459,44 @@ class _LaunchActivity:
 
 class _AndroidUtilities(Stub):
     @staticmethod
-    def addToClipboard(text):
+    def addToClipboard(text: Any) -> bool:
         _extera.copy(str(text))
         return True
 
     @staticmethod
-    def runOnUIThread(runnable, delay=0):
-        run = getattr(runnable, "run", runnable)
-        _extera.run_on_main(run, int(delay or 0))
+    def runOnUIThread(runnable: Any, delay: int = 0) -> None:
+        callback = getattr(runnable, "run", runnable)
+        _extera.run_on_main(callback, int(delay or 0))
 
     @staticmethod
-    def dp(value):
+    def dp(value: Any) -> float:
         import android_views
         return android_views.dp(value)
 
     @staticmethod
-    def displaySize():
+    def displaySize() -> Any:
         import android_views
         return android_views.displaySize
 
 
 class _LocaleController(Stub):
     @staticmethod
-    def getString(*args):
-        for value in args:
-            if isinstance(value, str):
-                return value
+    def getString(*args: Any) -> str:
+        for val in args:
+            if isinstance(val, str):
+                return val
         return ""
 
     @staticmethod
-    def formatString(*args):
+    def formatString(*args: Any) -> str:
         return ""
 
 
-def _dynamic_proxy(*interfaces):
+def _dynamic_proxy(*interfaces: Any) -> type:
     return object
 
 
-def _widget_shims():
+def _build_widget_shims() -> Dict[str, Dict[str, Any]]:
     import android_views
     return {
         "android.widget": {
@@ -508,7 +544,7 @@ def _widget_shims():
     }
 
 
-SHIMS = {
+SHIMS: Dict[str, Dict[str, Any]] = {
     "android.widget": {"Toast": _Toast},
     "android.net": {"Uri": _Uri},
     "android.content": {"Intent": _Intent},
@@ -534,81 +570,89 @@ SHIMS = {
     },
 }
 
-ROOTS = ("java", "android", "androidx", "org", "com", "kotlin", "dalvik",
-         "de", "me", "io")
+ROOT_PACKAGES = (
+    "java", "android", "androidx", "org", "com", "kotlin", "dalvik",
+    "de", "me", "io",
+)
 
 
-class _StubModule(type(sys)):
-    def __getattr__(self, item):
+class _DynamicStubModule(type(sys)):
+    def __getattr__(self, item: str) -> Any:
         if item.startswith("__") and item.endswith("__"):
             raise AttributeError(item)
-        value = Stub(self.__name__ + "." + item)
-        setattr(self, item, value)
-        return value
+        val = Stub(f"{self.__name__}.{item}")
+        setattr(self, item, val)
+        return val
 
 
-class _Finder(importlib.abc.MetaPathFinder, importlib.abc.Loader):
-    def find_spec(self, fullname, path, target=None):
+class _CompatImportFinder(importlib.abc.MetaPathFinder, importlib.abc.Loader):
+    def find_spec(self, fullname: str, path: Optional[Any], target: Optional[Any] = None) -> Optional[importlib.machinery.ModuleSpec]:
         root = fullname.split(".")[0]
-        if root not in ROOTS:
+        if root not in ROOT_PACKAGES:
             return None
-        if fullname != root and root in ("com", "io", "me", "de") \
-                and not fullname.startswith(
-                    ("com.exteragram", "com.google.android", "com.chaquo",
-                     "de.robv", "me.", "io.")):
+        if fullname != root and root in ("com", "io", "me", "de") and not fullname.startswith(
+            ("org.oxdesktop", "com.exteragram", "com.google.android", "com.chaquo", "de.robv", "me.", "io.")
+        ):
             return None
         return importlib.machinery.ModuleSpec(fullname, self, is_package=True)
 
-    def create_module(self, spec):
-        module = _StubModule(spec.name)
-        module.__path__ = []
-        for key, value in SHIMS.get(spec.name, {}).items():
-            setattr(module, key, value)
-        return module
+    def create_module(self, spec: importlib.machinery.ModuleSpec) -> Any:
+        mod = _DynamicStubModule(spec.name)
+        mod.__path__ = []
+        for k, v in SHIMS.get(spec.name, {}).items():
+            setattr(mod, k, v)
+        return mod
 
-    def exec_module(self, module):
+    def exec_module(self, module: Any) -> None:
         pass
 
 
-def install():
-    if not any(isinstance(f, _Finder) for f in sys.meta_path):
+def install() -> None:
+    if not any(isinstance(f, _CompatImportFinder) for f in sys.meta_path):
         import android_views
-        for module, shims in _widget_shims().items():
-            SHIMS.setdefault(module, {}).update(shims)
+        for mod_name, mappings in _build_widget_shims().items():
+            SHIMS.setdefault(mod_name, {}).update(mappings)
+
         import tgnet_bridge
         tgnet_bridge.install(SHIMS)
+
         import exd_java
         exd_java.install(SHIMS)
+
         import exd_android
         exd_android.install(SHIMS)
+
         SHIMS["java"]["jclass"] = lambda name: exd_java.lookup(str(name)) or Stub(str(name))
-        android = SHIMS.setdefault("org.telegram.messenger", {})["AndroidUtilities"]
-        android.displaySize = android_views.displaySize
-        android.density = android_views.density()
-        sys.meta_path.append(_Finder())
+        android_util = SHIMS.setdefault("org.telegram.messenger", {})["AndroidUtilities"]
+        android_util.displaySize = android_views.displaySize
+        android_util.density = android_views.density()
+
+        sys.meta_path.append(_CompatImportFinder())
+
     if sys.platform == "win32" and "fcntl" not in sys.modules:
-        sys.modules["fcntl"] = _fcntl_module()
+        sys.modules["fcntl"] = _create_fcntl_mock()
 
 
-def _fcntl_module():
-    module = type(sys)("fcntl")
-    for index, name in enumerate(
-            ("LOCK_SH", "LOCK_EX", "LOCK_NB", "LOCK_UN", "F_GETFL", "F_SETFL",
-             "F_GETFD", "F_SETFD", "FD_CLOEXEC")):
-        setattr(module, name, 1 << index)
-    module.flock = lambda *args, **kwargs: None
-    module.lockf = lambda *args, **kwargs: None
-    module.fcntl = lambda *args, **kwargs: 0
-    module.ioctl = lambda *args, **kwargs: 0
-    return module
+def _create_fcntl_mock() -> Any:
+    mod = type(sys)("fcntl")
+    for idx, flag_name in enumerate(
+        (
+            "LOCK_SH", "LOCK_EX", "LOCK_NB", "LOCK_UN", "F_GETFL", "F_SETFL",
+            "F_GETFD", "F_SETFD", "FD_CLOEXEC",
+        )
+    ):
+        setattr(mod, flag_name, 1 << idx)
+    mod.flock = lambda *args, **kwargs: None
+    mod.lockf = lambda *args, **kwargs: None
+    mod.fcntl = lambda *args, **kwargs: 0
+    mod.ioctl = lambda *args, **kwargs: 0
+    return mod
 
-
-# Send params
 
 class SendMessageParams:
-    def __init__(self, peer=None, message="", reply_to=0):
+    def __init__(self, peer: Any = None, message: str = "", reply_to: int = 0):
         self.peer = peer
-        self.message = message
+        self.message = str(message or "")
         self.caption = None
         self.entities = []
         self.replyToMsg = _ReplyStub(reply_to) if reply_to else None
@@ -626,36 +670,36 @@ class SendMessageParams:
         self.path = None
 
     @property
-    def text(self):
+    def text(self) -> str:
         return self.message
 
     @text.setter
-    def text(self, val):
+    def text(self, val: Any) -> None:
         self.message = str(val or "")
 
     @property
-    def dialog_id(self):
+    def dialog_id(self) -> int:
         return to_dialog_id(self.peer)
 
     @dialog_id.setter
-    def dialog_id(self, val):
+    def dialog_id(self, val: Any) -> None:
         self.peer = val
 
     @property
-    def peer_id(self):
+    def peer_id(self) -> int:
         return self.dialog_id
 
     @peer_id.setter
-    def peer_id(self, val):
+    def peer_id(self, val: Any) -> None:
         self.peer = val
 
     @property
-    def reply_to_id(self):
+    def reply_to_id(self) -> int:
         if self.replyToMsg is not None:
             return getattr(self.replyToMsg, "id", 0)
         return 0
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         if key == "text":
             return self.message
         if key in ("dialog_id", "peer_id"):
@@ -666,7 +710,7 @@ class SendMessageParams:
             return getattr(self, key)
         raise KeyError(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         if key == "text":
             self.message = str(value or "")
         elif key in ("dialog_id", "peer_id"):
@@ -676,41 +720,41 @@ class SendMessageParams:
         else:
             setattr(self, key, value)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         if hasattr(self, key):
             setattr(self, key, None)
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         if key in ("text", "dialog_id", "peer_id", "reply_to_id"):
             return True
         return hasattr(self, key)
 
-    def get(self, key, default=None):
+    def get(self, key: str, default: Any = None) -> Any:
         try:
             return self[key]
         except KeyError:
             return default
 
-    def setdefault(self, key, default=None):
+    def setdefault(self, key: str, default: Any = None) -> Any:
         if key in self:
             return self[key]
         self[key] = default
         return default
 
-    def keys(self):
-        base_keys = [k for k in self.__dict__.keys() if not k.startswith("_")]
+    def keys(self) -> List[str]:
+        keys_list = [k for k in self.__dict__.keys() if not k.startswith("_")]
         for extra in ("text", "dialog_id", "peer_id", "reply_to_id"):
-            if extra not in base_keys:
-                base_keys.append(extra)
-        return base_keys
+            if extra not in keys_list:
+                keys_list.append(extra)
+        return keys_list
 
-    def values(self):
+    def values(self) -> List[Any]:
         return [self.get(k) for k in self.keys()]
 
-    def items(self):
+    def items(self) -> List[Tuple[str, Any]]:
         return [(k, self.get(k)) for k in self.keys()]
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "peer": self.peer,
             "message": self.message,
@@ -729,10 +773,10 @@ class SendMessageParams:
 
 
 class _ReplyStub(Stub):
-    def __init__(self, msg_id, text="", dialog_id=0, from_id=0):
-        Stub.__init__(self, "replyToMsg")
-        mid = int(msg_id or 0)
-        object.__setattr__(self, "id", mid)
+    def __init__(self, msg_id: Any, text: str = "", dialog_id: int = 0, from_id: int = 0):
+        super().__init__("replyToMsg")
+        parsed_id = int(msg_id or 0)
+        object.__setattr__(self, "id", parsed_id)
         object.__setattr__(self, "messageText", str(text or ""))
         object.__setattr__(self, "text", str(text or ""))
         object.__setattr__(self, "message", str(text or ""))
@@ -741,39 +785,44 @@ class _ReplyStub(Stub):
         object.__setattr__(self, "from_id", int(from_id or 0))
         object.__setattr__(self, "date", 0)
 
-    def __int__(self):
+    def __int__(self) -> int:
         return int(object.__getattribute__(self, "id") or 0)
 
 
-# Formatting
-
-def format_text(text, parse_mode):
+def format_text(text: Any, parse_mode: Optional[str]) -> Tuple[str, List[Any]]:
     from text_formatting import parse_text
     mode = (parse_mode or "").lower()
     if mode not in ("html", "markdown"):
-        return text, []
-    key = "message"
+        return str(text or ""), []
     parsed = parse_text(str(text or ""), mode, is_caption=False)
-    return parsed.get(key, str(text)), parsed.get("entities") or []
+    return parsed.get("message", str(text)), parsed.get("entities") or []
 
 
-def to_dialog_id(peer):
+def to_dialog_id(peer: Any) -> int:
     if isinstance(peer, Stub):
         return 0
     try:
         return int(peer)
     except Exception:
-        value = getattr(peer, "user_id", None) or getattr(peer, "channel_id", None) \
+        val = (
+            getattr(peer, "user_id", None)
+            or getattr(peer, "channel_id", None)
             or getattr(peer, "chat_id", None)
-        return int(value or 0)
+        )
+        return int(val or 0)
 
 
-def send(peer, text, parse_mode=None, reply_to=0):
-    plain, entities = format_text(str(text or ""), parse_mode)
+def send(peer: Any, text: Any, parse_mode: Optional[str] = None, reply_to: int = 0) -> None:
+    plain, entities = format_text(text, parse_mode)
     _extera.send_message(
-        to_dialog_id(peer), plain, json.dumps(entities), int(reply_to or 0))
+        to_dialog_id(peer),
+        plain,
+        json.dumps(entities),
+        int(reply_to or 0),
+    )
+
 
 try:
-    from markdown_utils import parse_markdown, parse_html, MarkdownEntity, ParsedText
+    from markdown_utils import MarkdownEntity, ParsedText, parse_html, parse_markdown
 except ImportError:
     pass

@@ -1,8 +1,19 @@
+"""
+oxDesktop Plugin Runtime Environment & Path Virtualization.
+Provides Android path mapping, filesystem isolation, and execution context tracking.
+"""
+
 import builtins
 import importlib.abc
 import os
 
 ANDROID_ROOTS = (
+    "/storage/emulated/0/android/data/org.oxdesktop.messenger/files",
+    "/storage/emulated/0/android/data/org.oxdesktop.messenger",
+    "/data/user/0/org.oxdesktop.messenger/files",
+    "/data/user/0/org.oxdesktop.messenger",
+    "/data/data/org.oxdesktop.messenger/files",
+    "/data/data/org.oxdesktop.messenger",
     "/storage/emulated/0/android/data/com.exteragram.messenger/files",
     "/storage/emulated/0/android/data/com.exteragram.messenger",
     "/data/user/0/com.exteragram.messenger/files",

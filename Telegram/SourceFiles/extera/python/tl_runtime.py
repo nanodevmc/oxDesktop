@@ -3,74 +3,88 @@ import re
 import struct
 import threading
 import zlib
+from typing import Any, Dict, List, Optional, Set, Union
 
 VECTOR_ID = 0x1CB5C415
 GZIP_ID = 0x3072CFA1
 BOOL_TRUE = 0x997275B5
 BOOL_FALSE = 0xBC799737
-PRIMITIVES = {"int", "long", "double", "string", "bytes", "Bool", "true",
-              "int128", "int256", "#"}
 
-_LINE = re.compile(r"^([\w.]+)#([0-9a-fA-F]+)\s*(.*?)\s*=\s*([\w.<>%]+)\s*;")
-_lock = threading.RLock()
+PRIMITIVES: Set[str] = {
+    "int", "long", "double", "string", "bytes", "Bool", "true",
+    "int128", "int256", "#",
+}
+
+_TL_LINE_REGEX = re.compile(r"^([\w.]+)#([0-9a-fA-F]+)\s*(.*?)\s*=\s*([\w.<>%]+)\s*;")
+
+_runtime_lock = threading.RLock()
+_is_schema_loaded = False
+_combinators_by_id: Dict[int, Any] = {}
+_combinators_by_name: Dict[str, Any] = {}
+_functions_by_name: Dict[str, Any] = {}
+_type_classes_by_name: Dict[str, type] = {}
+
+_by_id = _combinators_by_id
+_by_name = _combinators_by_name
+_functions = _functions_by_name
+_types = _type_classes_by_name
 _loaded = False
-_by_id = {}
-_by_name = {}
-_functions = {}
-_types = {}
 
 
 class ArrayList(list):
-    def add(self, *args):
+    def add(self, *args: Any) -> bool:
         if len(args) == 1:
             self.append(args[0])
         else:
             self.insert(args[0], args[1])
         return True
 
-    def size(self):
+    def size(self) -> int:
         return len(self)
 
-    def get(self, index):
+    def get(self, index: int) -> Any:
         return self[index]
 
-    def set(self, index, value):
-        old = self[index]
+    def set(self, index: int, value: Any) -> Any:
+        old_val = self[index]
         self[index] = value
-        return old
+        return old_val
 
-    def isEmpty(self):
+    def isEmpty(self) -> bool:
         return len(self) == 0
 
-    def contains(self, value):
+    def contains(self, value: Any) -> bool:
         return value in self
 
-    def clear(self):
+    def clear(self) -> None:
         del self[:]
 
-    def addAll(self, values):
+    def addAll(self, values: Any) -> bool:
         self.extend(values)
         return True
 
-    def toArray(self):
+    def toArray(self) -> List[Any]:
         return list(self)
 
 
 class _ClassInfo:
-    def __init__(self, name):
-        self._name = name
+    def __init__(self, class_name: str):
+        self._name = class_name
 
-    def getSimpleName(self):
+    def getSimpleName(self) -> str:
         return self._name
 
-    def getName(self):
-        return "org.telegram.tgnet.TLRPC$" + self._name
+    def getName(self) -> str:
+        return f"org.telegram.tgnet.TLRPC${self._name}"
+
+
+_ClassDescriptor = _ClassInfo
 
 
 class Param:
     __slots__ = ("name", "type", "flag_field", "flag_bit")
 
-    def __init__(self, name, type_, flag_field=None, flag_bit=None):
+    def __init__(self, name: str, type_: str, flag_field: Optional[str] = None, flag_bit: Optional[int] = None):
         self.name = name
         self.type = type_
         self.flag_field = flag_field
@@ -80,81 +94,81 @@ class Param:
 class Combinator:
     __slots__ = ("name", "id", "params", "result", "is_function", "cls")
 
-    def __init__(self, name, id_, params, result, is_function):
+    def __init__(self, name: str, id_: int, params: List[Param], result: str, is_function: bool):
         self.name = name
         self.id = id_
         self.params = params
         self.result = result
         self.is_function = is_function
-        self.cls = None
+        self.cls: Optional[type] = None
 
 
 class TLObject:
-    _tl = None
+    _tl: Optional[Combinator] = None
 
-    def __init__(self, **kwargs):
-        combinator = type(self)._tl
-        if combinator is not None:
-            for param in combinator.params:
-                object.__setattr__(self, param.name, _default(param))
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    def __init__(self, **kwargs: Any):
+        comb = type(self)._tl
+        if comb is not None:
+            for p in comb.params:
+                object.__setattr__(self, p.name, _get_param_default(p))
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @property
-    def constructor(self):
-        combinator = type(self)._tl
-        return combinator.id if combinator else 0
+    def constructor(self) -> int:
+        comb = type(self)._tl
+        return comb.id if comb else 0
 
-    def getClass(self):
-        return _ClassInfo(type(self).__name__)
+    def getClass(self) -> _ClassDescriptor:
+        return _ClassDescriptor(type(self).__name__)
 
-    def getObjectSize(self):
+    def getObjectSize(self) -> int:
         return len(serialize(self))
 
-    def serializeToStream(self, stream=None):
+    def serializeToStream(self, stream: Any = None) -> bytes:
         data = serialize(self)
         if stream is not None and hasattr(stream, "write"):
             stream.write(data)
         return data
 
-    def to_dict(self):
-        combinator = type(self)._tl
-        result = {"_": combinator.name if combinator else type(self).__name__}
-        if combinator:
-            for param in combinator.params:
-                value = getattr(self, param.name, None)
-                result[param.name] = _to_plain(value)
-        return result
+    def to_dict(self) -> Dict[str, Any]:
+        comb = type(self)._tl
+        out: Dict[str, Any] = {"_": comb.name if comb else type(self).__name__}
+        if comb:
+            for p in comb.params:
+                out[p.name] = _convert_to_plain(getattr(self, p.name, None))
+        return out
 
-    def __repr__(self):
-        combinator = type(self)._tl
-        return f"<{type(self).__name__} {combinator.name if combinator else ''}>"
+    def __repr__(self) -> str:
+        comb = type(self)._tl
+        descriptor = comb.name if comb else ""
+        return f"<{type(self).__name__} {descriptor}>".rstrip() + ">" if not descriptor else f"<{type(self).__name__} {descriptor}>"
 
 
 class Vector(TLObject):
-    def __init__(self, objects=None):
+    def __init__(self, objects: Optional[Any] = None):
         super().__init__()
         self.objects = ArrayList(objects or [])
 
 
 class TL_error(TLObject):
-    def __init__(self, code=0, text=""):
+    def __init__(self, code: int = 0, text: str = ""):
         super().__init__()
         self.code = code
         self.text = text
 
 
-def _to_plain(value):
-    if isinstance(value, TLObject):
-        return value.to_dict()
-    if isinstance(value, list):
-        return [_to_plain(v) for v in value]
-    if isinstance(value, bytes):
-        return value.hex()
-    return value
+def _convert_to_plain(val: Any) -> Any:
+    if isinstance(val, TLObject):
+        return val.to_dict()
+    if isinstance(val, list):
+        return [_convert_to_plain(v) for v in val]
+    if isinstance(val, bytes):
+        return val.hex()
+    return val
 
 
-def _default(param):
+def _get_param_default(param: Param) -> Any:
     t = param.type
     if param.flag_field is not None:
         return False if t == "true" else None
@@ -172,106 +186,121 @@ def _default(param):
         return False
     if t in ("int128", "int256"):
         return b"\x00" * (16 if t == "int128" else 32)
-    if t.startswith("Vector<") or t.startswith("vector<"):
+    if t.startswith(("Vector<", "vector<")):
         return ArrayList()
     return None
 
 
-def class_name(name):
+def class_name(name: str) -> str:
     return "TL_" + name.replace(".", "_")
 
 
-def type_class_name(name):
+def type_class_name(name: str) -> str:
     return name.replace(".", "_")
 
 
-def _parse_param(token):
+def _parse_param_definition(token: str) -> Optional[Param]:
     if ":" not in token:
         return None
-    name, type_ = token.split(":", 1)
-    flag_field = flag_bit = None
-    match = re.match(r"^(\w+)\.(\d+)\?(.+)$", type_)
+    name, type_str = token.split(":", 1)
+    flag_field = None
+    flag_bit = None
+    match = re.match(r"^(\w+)\.(\d+)\?(.+)$", type_str)
     if match:
-        flag_field, flag_bit, type_ = match.group(1), int(match.group(2)), match.group(3)
-    type_ = type_.lstrip("!%")
-    return Param(name, type_, flag_field, flag_bit)
+        flag_field, flag_bit, type_str = match.group(1), int(match.group(2)), match.group(3)
+    clean_type = type_str.lstrip("!%")
+    return Param(name, clean_type, flag_field, flag_bit)
 
 
-def _type_class(name):
-    cls_name = type_class_name(name)
-    cls = _types.get(cls_name)
+def _get_or_create_type_class(name: str) -> type:
+    target_name = type_class_name(name)
+    cls = _type_classes_by_name.get(target_name)
     if cls is None:
-        cls = type(cls_name, (TLObject,), {"_tl": None})
-        _types[cls_name] = cls
+        cls = type(target_name, (TLObject,), {"_tl": None})
+        _type_classes_by_name[target_name] = cls
     return cls
 
 
-def _load_text(text, is_function_section):
-    functions = is_function_section
-    for raw in text.splitlines():
-        line = raw.strip()
+def _parse_schema_definitions(text: str, start_as_functions: bool) -> None:
+    is_function_mode = start_as_functions
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
         if line.startswith("---functions---"):
-            functions = True
+            is_function_mode = True
             continue
         if line.startswith("---types---"):
-            functions = False
+            is_function_mode = False
             continue
         if not line or line.startswith("//"):
             continue
-        match = _LINE.match(line)
+
+        match = _TL_LINE_REGEX.match(line)
         if not match:
             continue
-        name, hex_id, params_text, result = match.groups()
-        if name in ("vector", "true", "boolTrue", "boolFalse", "gzip_packed"):
+
+        def_name, hex_id_str, raw_params, result_type_name = match.groups()
+        if def_name in ("vector", "true", "boolTrue", "boolFalse", "gzip_packed"):
             continue
-        if "{" in params_text:
+        if "{" in raw_params:
             continue
-        params = []
-        for token in params_text.split():
-            param = _parse_param(token)
+
+        parsed_params: List[Param] = []
+        for token in raw_params.split():
+            param = _parse_param_definition(token)
             if param is not None:
-                params.append(param)
-        combinator = Combinator(name, int(hex_id, 16), params, result, functions)
-        base = TLObject if functions else _type_class(result)
-        cls = type(class_name(name), (base,), {"_tl": combinator})
-        combinator.cls = cls
-        _by_id[combinator.id] = combinator
-        _by_name[cls.__name__] = combinator
-        if functions:
-            _functions[name] = combinator
+                parsed_params.append(param)
+
+        comb = Combinator(
+            def_name,
+            int(hex_id_str, 16),
+            parsed_params,
+            result_type_name,
+            is_function_mode,
+        )
+        base_class = TLObject if is_function_mode else _get_or_create_type_class(result_type_name)
+        new_class = type(class_name(def_name), (base_class,), {"_tl": comb})
+        comb.cls = new_class
+
+        _combinators_by_id[comb.id] = comb
+        _combinators_by_name[new_class.__name__] = comb
+        if is_function_mode:
+            _functions_by_name[def_name] = comb
 
 
-def _scheme_paths():
+def _resolve_tl_paths() -> List[str]:
     here = os.path.dirname(os.path.abspath(__file__))
-    candidates = [
+    search_dirs = [
         os.path.join(here, "tl"),
         os.path.normpath(os.path.join(here, "..", "..", "mtproto", "scheme")),
     ]
-    for folder in candidates:
-        api = os.path.join(folder, "api.tl")
-        if os.path.exists(api):
-            return [api]
+    for folder in search_dirs:
+        api_path = os.path.join(folder, "api.tl")
+        if os.path.exists(api_path):
+            return [api_path]
     return []
 
 
-def ensure_loaded():
-    global _loaded
-    with _lock:
-        if _loaded:
+def ensure_loaded() -> None:
+    global _is_schema_loaded
+    with _runtime_lock:
+        if _is_schema_loaded:
             return
-        for path in _scheme_paths():
-            with open(path, encoding="utf-8") as f:
-                _load_text(f.read(), False)
-        _loaded = True
+        for file_path in _resolve_tl_paths():
+            try:
+                with open(file_path, encoding="utf-8") as handle:
+                    _parse_schema_definitions(handle.read(), False)
+            except Exception:
+                pass
+        _is_schema_loaded = True
 
 
-def lookup(name):
+def lookup(name: str) -> Optional[type]:
     ensure_loaded()
-    combinator = _by_name.get(name)
-    if combinator is not None:
-        return combinator.cls
-    if name in _types:
-        return _types[name]
+    comb = _combinators_by_name.get(name)
+    if comb is not None:
+        return comb.cls
+    if name in _type_classes_by_name:
+        return _type_classes_by_name[name]
     if name == "Vector":
         return Vector
     if name == "TL_error":
@@ -279,275 +308,287 @@ def lookup(name):
     return None
 
 
-# Writing
-
-class _Writer:
+class _BinaryWriter:
     def __init__(self):
-        self.parts = []
+        self._buffers: List[bytes] = []
 
-    def int(self, value):
-        self.parts.append(struct.pack("<i", _to_int32(value)))
+    def int(self, val: Any) -> None:
+        self._buffers.append(struct.pack("<i", _normalize_int32(val)))
 
-    def uint(self, value):
-        self.parts.append(struct.pack("<I", int(value) & 0xFFFFFFFF))
+    def uint(self, val: Any) -> None:
+        self._buffers.append(struct.pack("<I", int(val) & 0xFFFFFFFF))
 
-    def long(self, value):
-        self.parts.append(struct.pack("<q", _to_int64(value)))
+    def long(self, val: Any) -> None:
+        self._buffers.append(struct.pack("<q", _normalize_int64(val)))
 
-    def double(self, value):
-        self.parts.append(struct.pack("<d", float(value or 0)))
+    def double(self, val: Any) -> None:
+        self._buffers.append(struct.pack("<d", float(val or 0)))
 
-    def bytes(self, value):
-        if isinstance(value, str):
-            value = value.encode("utf-8")
-        value = bytes(value or b"")
-        length = len(value)
-        if length < 254:
-            header = bytes([length])
+    def bytes(self, val: Any) -> None:
+        if isinstance(val, str):
+            val = val.encode("utf-8")
+        payload = bytes(val or b"")
+        size = len(payload)
+        if size < 254:
+            prefix = bytes([size])
         else:
-            header = bytes([254]) + struct.pack("<I", length)[:3]
-        total = len(header) + length
-        padding = (-total) % 4
-        self.parts.append(header + value + b"\x00" * padding)
+            prefix = bytes([254]) + struct.pack("<I", size)[:3]
+        total_len = len(prefix) + size
+        padding_len = (-total_len) % 4
+        self._buffers.append(prefix + payload + (b"\x00" * padding_len))
 
-    def raw(self, value):
-        self.parts.append(bytes(value))
+    def raw(self, val: Any) -> None:
+        self._buffers.append(bytes(val))
 
-    def data(self):
-        return b"".join(self.parts)
-
-
-def _to_int32(value):
-    value = int(value or 0)
-    value &= 0xFFFFFFFF
-    return value - 0x100000000 if value >= 0x80000000 else value
+    def build(self) -> bytes:
+        return b"".join(self._buffers)
 
 
-def _to_int64(value):
-    value = int(value or 0)
-    value &= 0xFFFFFFFFFFFFFFFF
-    return value - 0x10000000000000000 if value >= 0x8000000000000000 else value
+def _normalize_int32(v: Any) -> int:
+    val = int(v or 0) & 0xFFFFFFFF
+    return val - 0x100000000 if val >= 0x80000000 else val
 
 
-def _inner_type(type_):
-    match = re.match(r"^[Vv]ector<(.+)>$", type_)
+def _normalize_int64(v: Any) -> int:
+    val = int(v or 0) & 0xFFFFFFFFFFFFFFFF
+    return val - 0x10000000000000000 if val >= 0x8000000000000000 else val
+
+
+def _extract_vector_inner_type(type_name: str) -> Optional[str]:
+    match = re.match(r"^[Vv]ector<(.+)>$", type_name)
     return match.group(1) if match else None
 
 
-def _write_value(writer, type_, value):
-    inner = _inner_type(type_)
-    if inner is not None:
-        if type_.startswith("Vector"):
+def _write_typed_value(writer: _BinaryWriter, type_str: str, val: Any) -> None:
+    inner_t = _extract_vector_inner_type(type_str)
+    if inner_t is not None:
+        if type_str.startswith("Vector"):
             writer.uint(VECTOR_ID)
-        items = list(value or [])
+        items = list(val or [])
         writer.int(len(items))
-        for item in items:
-            _write_value(writer, inner, item)
+        for it in items:
+            _write_typed_value(writer, inner_t, it)
         return
-    if type_ == "int":
-        writer.int(value)
-    elif type_ == "long":
-        writer.long(value)
-    elif type_ == "double":
-        writer.double(value)
-    elif type_ in ("string", "bytes"):
-        writer.bytes(value)
-    elif type_ == "Bool":
-        writer.uint(BOOL_TRUE if value else BOOL_FALSE)
-    elif type_ == "int128":
-        writer.raw((bytes(value or b"") + b"\x00" * 16)[:16])
-    elif type_ == "int256":
-        writer.raw((bytes(value or b"") + b"\x00" * 32)[:32])
-    elif type_ == "true":
+
+    if type_str == "int":
+        writer.int(val)
+    elif type_str == "long":
+        writer.long(val)
+    elif type_str == "double":
+        writer.double(val)
+    elif type_str in ("string", "bytes"):
+        writer.bytes(val)
+    elif type_str == "Bool":
+        writer.uint(BOOL_TRUE if val else BOOL_FALSE)
+    elif type_str == "int128":
+        writer.raw((bytes(val or b"") + b"\x00" * 16)[:16])
+    elif type_str == "int256":
+        writer.raw((bytes(val or b"") + b"\x00" * 32)[:32])
+    elif type_str == "true":
         return
     else:
-        if value is None:
-            raise ValueError(f"missing value of type {type_}")
-        _write_object(writer, value)
+        if val is None:
+            raise ValueError(f"missing value of type {type_str}")
+        _write_tl_object(writer, val)
 
 
-def _write_object(writer, obj):
-    if isinstance(obj, (bool,)):
+def _write_tl_object(writer: _BinaryWriter, obj: Any) -> None:
+    if isinstance(obj, bool):
         writer.uint(BOOL_TRUE if obj else BOOL_FALSE)
         return
-    combinator = type(obj)._tl
-    if combinator is None:
+
+    comb = type(obj)._tl
+    if comb is None:
         raise ValueError(f"cannot serialize {type(obj).__name__}")
-    writer.uint(combinator.id)
-    flags = {}
-    for param in combinator.params:
-        if param.type == "#":
-            flags[param.name] = int(getattr(obj, param.name, 0) or 0)
-    for param in combinator.params:
-        if param.flag_field is None:
+
+    writer.uint(comb.id)
+    bitmask_map: Dict[str, int] = {}
+
+    for p in comb.params:
+        if p.type == "#":
+            bitmask_map[p.name] = int(getattr(obj, p.name, 0) or 0)
+
+    for p in comb.params:
+        if p.flag_field is None:
             continue
-        value = getattr(obj, param.name, None)
-        bit = 1 << param.flag_bit
-        explicit = flags.get(param.flag_field, 0)
-        if param.type == "true":
-            present = bool(value) or bool(explicit & bit)
+        attr_val = getattr(obj, p.name, None)
+        bit = 1 << p.flag_bit
+        curr_mask = bitmask_map.get(p.flag_field, 0)
+
+        if p.type == "true":
+            is_present = bool(attr_val) or bool(curr_mask & bit)
         else:
-            present = value is not None and not (
-                isinstance(value, list) and not value and not (explicit & bit))
-        if present:
-            flags[param.flag_field] = explicit | bit
+            is_present = attr_val is not None and not (
+                isinstance(attr_val, list) and not attr_val and not (curr_mask & bit)
+            )
+
+        if is_present:
+            bitmask_map[p.flag_field] = curr_mask | bit
         else:
-            flags[param.flag_field] = explicit & ~bit
-    for param in combinator.params:
-        if param.type == "#":
-            writer.uint(flags.get(param.name, 0))
+            bitmask_map[p.flag_field] = curr_mask & ~bit
+
+    for p in comb.params:
+        if p.type == "#":
+            writer.uint(bitmask_map.get(p.name, 0))
             continue
-        if param.flag_field is not None:
-            if not flags.get(param.flag_field, 0) & (1 << param.flag_bit):
+        if p.flag_field is not None:
+            if not (bitmask_map.get(p.flag_field, 0) & (1 << p.flag_bit)):
                 continue
-            if param.type == "true":
+            if p.type == "true":
                 continue
-        _write_value(writer, param.type, getattr(obj, param.name, None))
+        _write_typed_value(writer, p.type, getattr(obj, p.name, None))
 
 
-def serialize(obj):
+def serialize(obj: Any) -> bytes:
     ensure_loaded()
-    writer = _Writer()
-    _write_object(writer, obj)
-    return writer.data()
+    w = _BinaryWriter()
+    _write_tl_object(w, obj)
+    return w.build()
 
 
-# Reading
+class _BinaryReader:
+    def __init__(self, data: bytes):
+        self._data = data
+        self._offset = 0
 
-class _Reader:
-    def __init__(self, data):
-        self.data = data
-        self.pos = 0
-
-    def take(self, count):
-        if self.pos + count > len(self.data):
+    def consume(self, count: int) -> bytes:
+        if self._offset + count > len(self._data):
             raise ValueError("unexpected end of data")
-        chunk = self.data[self.pos:self.pos + count]
-        self.pos += count
+        chunk = self._data[self._offset:self._offset + count]
+        self._offset += count
         return chunk
 
-    def int(self):
-        return struct.unpack("<i", self.take(4))[0]
+    def int(self) -> int:
+        return struct.unpack("<i", self.consume(4))[0]
 
-    def uint(self):
-        return struct.unpack("<I", self.take(4))[0]
+    def uint(self) -> int:
+        return struct.unpack("<I", self.consume(4))[0]
 
-    def long(self):
-        return struct.unpack("<q", self.take(8))[0]
+    def long(self) -> int:
+        return struct.unpack("<q", self.consume(8))[0]
 
-    def double(self):
-        return struct.unpack("<d", self.take(8))[0]
+    def double(self) -> float:
+        return struct.unpack("<d", self.consume(8))[0]
 
-    def bytes(self):
-        first = self.take(1)[0]
+    def bytes(self) -> bytes:
+        first = self.consume(1)[0]
         if first == 254:
-            length = int.from_bytes(self.take(3), "little")
-            header = 4
+            size = int.from_bytes(self.consume(3), "little")
+            header_len = 4
         else:
-            length = first
-            header = 1
-        value = self.take(length)
-        self.take((-(header + length)) % 4)
-        return value
+            size = first
+            header_len = 1
+        content = self.consume(size)
+        padding = (-(header_len + size)) % 4
+        self.consume(padding)
+        return content
 
 
-def _read_value(reader, type_, top_level=False):
-    inner = _inner_type(type_)
+def _read_typed_value(reader: _BinaryReader, type_str: str, is_top: bool = False) -> Any:
+    inner = _extract_vector_inner_type(type_str)
     if inner is not None:
-        if type_.startswith("Vector"):
-            constructor = reader.uint()
-            if constructor != VECTOR_ID:
-                raise ValueError(f"expected vector, got {constructor:#x}")
-        count = reader.int()
-        items = ArrayList(_read_value(reader, inner) for _ in range(count))
-        return Vector(items) if top_level else items
-    if type_ == "int":
+        if type_str.startswith("Vector"):
+            ctor = reader.uint()
+            if ctor != VECTOR_ID:
+                raise ValueError(f"expected vector, got {ctor:#x}")
+        length = reader.int()
+        elements = ArrayList(_read_typed_value(reader, inner) for _ in range(length))
+        return Vector(elements) if is_top else elements
+
+    if type_str == "int":
         return reader.int()
-    if type_ == "long":
+    if type_str == "long":
         return reader.long()
-    if type_ == "double":
+    if type_str == "double":
         return reader.double()
-    if type_ == "string":
+    if type_str == "string":
         return reader.bytes().decode("utf-8", "replace")
-    if type_ == "bytes":
+    if type_str == "bytes":
         return reader.bytes()
-    if type_ == "int128":
-        return reader.take(16)
-    if type_ == "int256":
-        return reader.take(32)
-    if type_ == "Bool":
-        value = reader.uint() == BOOL_TRUE
-        if top_level:
-            return lookup("TL_boolTrue" if value else "TL_boolFalse")()
-        return value
-    if type_ == "true":
+    if type_str == "int128":
+        return reader.consume(16)
+    if type_str == "int256":
+        return reader.consume(32)
+    if type_str == "Bool":
+        flag = reader.uint() == BOOL_TRUE
+        if is_top:
+            bool_cls = lookup("TL_boolTrue" if flag else "TL_boolFalse")
+            return bool_cls() if bool_cls else flag
+        return flag
+    if type_str == "true":
         return True
-    return _read_object(reader)
+    return _read_tl_object(reader)
 
 
-def _read_object(reader):
-    constructor = reader.uint()
-    if constructor == GZIP_ID:
-        packed = reader.bytes()
-        return _read_object(_Reader(zlib.decompress(packed, 16 + zlib.MAX_WBITS)))
-    if constructor == BOOL_TRUE:
+def _read_tl_object(reader: _BinaryReader) -> Any:
+    constructor_id = reader.uint()
+    if constructor_id == GZIP_ID:
+        packed_bytes = reader.bytes()
+        decompressed = zlib.decompress(packed_bytes, 16 + zlib.MAX_WBITS)
+        return _read_tl_object(_BinaryReader(decompressed))
+    if constructor_id == BOOL_TRUE:
         return True
-    if constructor == BOOL_FALSE:
+    if constructor_id == BOOL_FALSE:
         return False
-    if constructor == VECTOR_ID:
+    if constructor_id == VECTOR_ID:
         count = reader.int()
-        return ArrayList(_read_object(reader) for _ in range(count))
-    combinator = _by_id.get(constructor)
-    if combinator is None:
-        raise ValueError(f"unknown constructor {constructor:#x}")
-    obj = combinator.cls.__new__(combinator.cls)
-    flags = {}
-    for param in combinator.params:
-        if param.type == "#":
-            value = reader.uint()
-            flags[param.name] = value
-            object.__setattr__(obj, param.name, value)
+        return ArrayList(_read_tl_object(reader) for _ in range(count))
+
+    comb = _combinators_by_id.get(constructor_id)
+    if comb is None:
+        raise ValueError(f"unknown constructor {constructor_id:#x}")
+
+    instance = comb.cls.__new__(comb.cls)
+    bitmask_fields: Dict[str, int] = {}
+
+    for p in comb.params:
+        if p.type == "#":
+            mask_val = reader.uint()
+            bitmask_fields[p.name] = mask_val
+            object.__setattr__(instance, p.name, mask_val)
             continue
-        if param.flag_field is not None:
-            if not flags.get(param.flag_field, 0) & (1 << param.flag_bit):
-                object.__setattr__(obj, param.name, False if param.type == "true" else None)
+        if p.flag_field is not None:
+            if not (bitmask_fields.get(p.flag_field, 0) & (1 << p.flag_bit)):
+                object.__setattr__(instance, p.name, False if p.type == "true" else None)
                 continue
-        object.__setattr__(obj, param.name, _read_value(reader, param.type))
-    return obj
+        object.__setattr__(instance, p.name, _read_typed_value(reader, p.type))
+
+    return instance
 
 
-def deserialize(data, result_type=None):
+def deserialize(data: bytes, result_type: Optional[str] = None) -> Any:
     ensure_loaded()
-    reader = _Reader(data)
+    reader = _BinaryReader(data)
     if result_type:
-        return _read_value(reader, result_type, top_level=True)
-    return _read_object(reader)
+        return _read_typed_value(reader, result_type, is_top=True)
+    return _read_tl_object(reader)
 
 
-def result_type(request):
-    combinator = type(request)._tl
-    return combinator.result if combinator else None
+def result_type(request: Any) -> Optional[str]:
+    comb = getattr(type(request), "_tl", None)
+    return comb.result if comb else None
 
 
-def is_request(obj):
-    combinator = getattr(type(obj), "_tl", None)
-    return combinator is not None and combinator.is_function
+def is_request(obj: Any) -> bool:
+    comb = getattr(type(obj), "_tl", None)
+    return comb is not None and comb.is_function
 
 
 class _Namespace:
-    def __init__(self, name):
-        self._name = name
+    def __init__(self, namespace_name: str):
+        self._name = namespace_name
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         if item.startswith("__"):
             raise AttributeError(item)
-        cls = lookup(item)
-        if cls is None and not item.startswith("TL_"):
-            cls = lookup("TL_" + item[0].lower() + item[1:]) if item else None
-        if cls is None:
+        target_cls = lookup(item)
+        if target_cls is None and not item.startswith("TL_"):
+            target_cls = lookup("TL_" + item[0].lower() + item[1:]) if item else None
+        if target_cls is None:
             import _compat
-            return _compat.Stub(self._name + "." + item)
-        return cls
+            return _compat.Stub(f"{self._name}.{item}")
+        return target_cls
 
 
+_TLRPCNamespace = _Namespace
 TLRPC = _Namespace("TLRPC")

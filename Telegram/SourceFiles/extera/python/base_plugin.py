@@ -1,3 +1,9 @@
+"""
+oxDesktop Plugin SDK Base Plugin & Hook Framework.
+Provides BasePlugin life-cycle abstractions, HookResult semantics, and
+interception hooks for desktop plugins.
+"""
+
 import json
 import sys
 from dataclasses import dataclass
@@ -672,8 +678,11 @@ class BasePlugin:
         if method_name:
             short = "%s.%s" % (short, method_name)
         notes = self.__dict__.setdefault("_exd_unsupported", [])
+        ox_notes = self.__dict__.setdefault("_oxd_unsupported", [])
         if short not in notes and len(notes) < 32:
             notes.append(short)
+        if short not in ox_notes and len(ox_notes) < 32:
+            ox_notes.append(short)
 
     def _exd_virtual_hook(self, target, method_name, handler_obj, priority):
         key = self._exd_target(target, method_name)

@@ -9,6 +9,20 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/const_string.h"
 
+#if __has_include("version_generated.h")
+#include "version_generated.h"
+#elif __has_include("../version_generated.h")
+#include "../version_generated.h"
+#endif
+
+#ifndef APP_VERSION
+#define APP_VERSION "7.4.3.3"
+#endif
+
+#ifndef APP_VERSION_FULL
+#define APP_VERSION_FULL 7004003
+#endif
+
 #define TDESKTOP_REQUESTED_ALPHA_VERSION (0ULL)
 
 #ifdef TDESKTOP_ALLOW_CLOSED_ALPHA
@@ -22,7 +36,7 @@ constexpr auto AppId = "{807217DA-C54D-493B-89AB-4B0315C07B88}"_cs;
 constexpr auto AppNameOld = "Telegram Win (Unofficial)"_cs;
 constexpr auto AppName = "oxDesktop"_cs;
 constexpr auto AppFile = "Telegram"_cs;
-constexpr auto AppVersion = 7003003;
-constexpr auto AppVersionStr = "7.3.3";
+constexpr auto AppVersion = APP_VERSION_FULL;
+constexpr auto AppVersionStr = APP_VERSION;
 constexpr auto AppBetaVersion = false;
 constexpr auto AppAlphaVersion = TDESKTOP_ALPHA_VERSION;
