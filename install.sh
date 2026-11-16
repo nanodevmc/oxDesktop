@@ -130,6 +130,31 @@ esac
 
 log_step "Detected: $OS ($ARCH)" "Определено: $OS ($ARCH)"
 
+# Detect currently installed version
+INSTALLED_VER=""
+if [ "$IS_LINUX" = 1 ]; then
+	if command -v oxdesktop >/dev/null 2>&1; then
+		INSTALLED_VER="$(oxdesktop --version 2>/dev/null | head -n 1 || true)"
+	fi
+	if [ -z "$INSTALLED_VER" ] && [ -f "$PREFIX/changelog.txt" ]; then
+		INSTALLED_VER="$(head -n 1 "$PREFIX/changelog.txt" 2>/dev/null || true)"
+	fi
+elif [ "$IS_WIN" = 1 ]; then
+	if [ -f "$PREFIX/changelog.txt" ]; then
+		INSTALLED_VER="$(head -n 1 "$PREFIX/changelog.txt" 2>/dev/null || true)"
+	fi
+elif [ "$IS_MAC" = 1 ]; then
+	if [ -f "$PREFIX/oxDesktop.app/Contents/Info.plist" ]; then
+		INSTALLED_VER="$(defaults read "$PREFIX/oxDesktop.app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || true)"
+	fi
+fi
+
+if [ -n "$INSTALLED_VER" ]; then
+	log_step "Current installation: $INSTALLED_VER" "Текущая установленная версия: $INSTALLED_VER"
+else
+	log_step "Clean install: no previous version detected" "Чистая установка: предыдущая версия не найдена"
+fi
+
 # Temporary working directory
 TMP="$(mktemp -d 2>/dev/null || mktemp -d -t 'oxd_inst')"
 trap 'rm -rf "$TMP"' EXIT INT TERM

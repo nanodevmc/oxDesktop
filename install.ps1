@@ -1,4 +1,4 @@
-# oxDesktop Windows Native Installer
+﻿# oxDesktop Windows Native Installer
 # Usage:
 #   irm https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.ps1 | iex
 
@@ -59,6 +59,31 @@ function Write-Err($ruText, $enText) {
 
 Write-Title "Установщик oxDesktop" "oxDesktop Installer"
 Write-Step "Определено: Windows x64" "Detected: Windows x64"
+
+# Check currently installed version
+$installedVer = $null
+try {
+    $regKey = Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\oxDesktop" -ErrorAction SilentlyContinue
+    if ($regKey -and $regKey.DisplayVersion) {
+        $installedVer = $regKey.DisplayVersion
+    }
+} catch {}
+
+if (-not $installedVer) {
+    $appDataLog = Join-Path $env:APPDATA "oxDesktop\changelog.txt"
+    if (Test-Path $appDataLog) {
+        try {
+            $firstLine = (Get-Content -Path $appDataLog -TotalCount 1).Trim()
+            if ($firstLine) { $installedVer = $firstLine }
+        } catch {}
+    }
+}
+
+if ($installedVer) {
+    Write-Step "Текущая установленная версия: $installedVer" "Currently installed version: $installedVer"
+} else {
+    Write-Step "Чистая установка: предыдущая версия не найдена" "Clean install: no previous version detected"
+}
 
 $repo = "nanodevmc/oxDesktop"
 $headers = @{ "User-Agent" = "oxDesktop-Installer" }

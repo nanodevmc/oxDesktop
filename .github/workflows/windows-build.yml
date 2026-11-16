@@ -328,15 +328,6 @@ jobs:
           Copy-Item nuget\tools\include "$dest\include" -Recurse -Force
           Copy-Item nuget\tools\libs "$dest\libs" -Recurse -Force
 
-      - name: Install Inno Setup
-        shell: pwsh
-        run: |
-          if (!(Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
-            choco install innosetup --yes --no-progress
-          } else {
-            Write-Host "Inno Setup already present on runner."
-          }
-
       - name: Restore Compiler cache (sccache)
         if: steps.diff_check.outputs.skip_cpp_build != 'true'
         uses: actions/cache/restore@v4
@@ -540,21 +531,20 @@ jobs:
           }
           $portableZip = "oxDesktop-portable-x64.$packageVersion.zip"
           Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $env:GITHUB_WORKSPACE $portableZip) -Force
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          $setup = Join-Path $env:GITHUB_WORKSPACE 'tdesktop\Telegram\build\setup.iss'
-          Get-ChildItem -Path $release -Filter "oxDesktop-setup-x64.*.exe" -ErrorAction SilentlyContinue | Remove-Item -Force
-          $setupArgs = @(
-            '/dSkipSign',
-            "/dMyAppVersion=$version",
-            "/dMyAppVersionZero=$version.0",
-            "/dMyAppVersionFull=$packageVersion",
-            "/dMyOutputBaseFilename=oxDesktop-setup-x64.$packageVersion",
-            "/dReleasePath=$release",
-            '/dMyBuildTarget=win64',
-            $setup
-          )
-          & $iscc @setupArgs
-          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
+          Write-Host "Building custom Rust oxDesktop installer..."
+          $installerDir = Join-Path $env:GITHUB_WORKSPACE 'tdesktop\tools\ox_installer'
+          $payloadDir = Join-Path $installerDir 'payload'
+          if (Test-Path $payloadDir) { Remove-Item -Recurse -Force $payloadDir }
+          New-Item -ItemType Directory -Path $payloadDir -Force | Out-Null
+          Copy-Item (Join-Path $portable '*') $payloadDir -Recurse -Force
+          
+          Push-Location $installerDir
+          cargo build --release
+          Pop-Location
+          
+          $builtInstaller = Join-Path $installerDir 'target\release\ox_installer.exe'
+          $finalInstaller = Join-Path $release "oxDesktop-setup-x64.$packageVersion.exe"
+          Copy-Item $builtInstaller $finalInstaller -Force
           "BUILD_VERSION=$packageVersion" >> $env:GITHUB_ENV
 
       - name: Prune older sccache entries
@@ -589,6 +579,13 @@ jobs:
         with:
           name: oxDesktop-windows-portable
           path: oxDesktop-portable-x64.${{ env.BUILD_VERSION }}.zip
+          compression-level: 9
+
+      - name: Upload oxWsProxy Windows binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxWsProxy-windows-x64
+          path: tdesktop/out/Release/oxWsProxy.exe
           compression-level: 9
 
       - name: Publish out build tree to Release (4 volumes)

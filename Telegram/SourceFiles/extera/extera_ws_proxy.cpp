@@ -359,7 +359,8 @@ void CleanOurProxies() {
 }
 
 void Start() {
-	if (Enabled()) {
+	if (Available()) {
+		Extera::Config::Instance().setBool(u"ws_proxy"_q, true);
 		Instance().restarts = 0;
 		Launch();
 	}

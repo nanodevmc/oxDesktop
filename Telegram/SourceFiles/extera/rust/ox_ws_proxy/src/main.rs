@@ -33,11 +33,11 @@ const SNI_CANDIDATES: &[&str] = &["vk.com", "sprinthost.ru"];
 
 fn get_dc_ips(dc: u8) -> &'static [&'static str] {
     match dc {
-        1 => &["149.154.167.220", "149.154.175.50", "149.154.175.53"],
-        2 => &["149.154.167.220", "149.154.167.50"],
-        3 => &["149.154.167.220", "149.154.175.100"],
-        4 => &["149.154.167.220", "149.154.167.91"],
-        5 => &["149.154.167.220", "149.154.171.5"],
+        1 => &["149.154.175.50", "149.154.175.53", "149.154.167.220"],
+        2 => &["149.154.167.50", "149.154.167.220"],
+        3 => &["149.154.175.100", "149.154.167.220"],
+        4 => &["149.154.167.91", "149.154.167.220"],
+        5 => &["149.154.171.5", "149.154.167.220"],
         _ => &["149.154.167.220"],
     }
 }
@@ -466,6 +466,14 @@ async fn handle_client(
     let ips = get_dc_ips(actual_dc);
 
     let candidate_hosts: Vec<String> = match actual_dc {
+        1 => if is_media {
+            vec![
+                "kws1-1.web.telegram.org".to_string(),
+                "kws1.web.telegram.org".to_string(),
+            ]
+        } else {
+            vec!["kws1.web.telegram.org".to_string()]
+        },
         2 => if is_media {
             vec![
                 "kws2-1.web.telegram.org".to_string(),
@@ -473,6 +481,14 @@ async fn handle_client(
             ]
         } else {
             vec!["kws2.web.telegram.org".to_string()]
+        },
+        3 => if is_media {
+            vec![
+                "kws3-1.web.telegram.org".to_string(),
+                "kws3.web.telegram.org".to_string(),
+            ]
+        } else {
+            vec!["kws3.web.telegram.org".to_string()]
         },
         4 => if is_media {
             vec![
@@ -485,14 +501,15 @@ async fn handle_client(
                 "vesta-1.web.telegram.org".to_string(),
             ]
         },
-        _ => if is_media {
+        5 => if is_media {
             vec![
-                "kws2-1.web.telegram.org".to_string(),
-                "kws2.web.telegram.org".to_string(),
+                "kws5-1.web.telegram.org".to_string(),
+                "kws5.web.telegram.org".to_string(),
             ]
         } else {
-            vec!["kws2.web.telegram.org".to_string()]
+            vec!["kws5.web.telegram.org".to_string()]
         },
+        _ => vec![format!("kws{}.web.telegram.org", actual_dc)],
     };
 
     // 1. Primary: TLS Domain Fronting directly to Telegram DC IP

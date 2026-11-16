@@ -69,7 +69,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p release_assets/windows release_assets/linux
+          mkdir -p release_assets/windows release_assets/linux release_assets/proxy
           
           echo "Fetching latest successful Windows build artifacts..."
           WIN_RUN=$(gh run list --workflow="Windows build" --status=success --limit=1 --json databaseId -q '.[0].databaseId')
@@ -77,6 +77,7 @@ jobs:
             echo "Latest Windows run ID: $WIN_RUN"
             gh run download "$WIN_RUN" -n oxDesktop-windows-installer --dir release_assets/windows || true
             gh run download "$WIN_RUN" -n oxDesktop-windows-portable --dir release_assets/windows || true
+            gh run download "$WIN_RUN" -n oxWsProxy-windows-x64 --dir release_assets/proxy || true
           else
             echo "Warning: No successful Windows run found."
           fi
@@ -86,12 +87,21 @@ jobs:
           if [ -n "$LINUX_RUN" ]; then
             echo "Latest Linux run ID: $LINUX_RUN"
             gh run download "$LINUX_RUN" -n oxDesktop-linux-x64 --dir release_assets/linux || true
+            gh run download "$LINUX_RUN" -n oxWsProxy-linux-x64 --dir release_assets/proxy || true
           else
             echo "Warning: No successful Linux run found."
           fi
 
+          VERSION="${{ steps.meta.outputs.VERSION }}"
+          if [ -f "release_assets/proxy/oxWsProxy.exe" ]; then
+            cp "release_assets/proxy/oxWsProxy.exe" "release_assets/proxy/oxWsProxy-windows-x64.$VERSION.exe"
+          fi
+          if [ -f "release_assets/proxy/oxWsProxy" ]; then
+            cp "release_assets/proxy/oxWsProxy" "release_assets/proxy/oxWsProxy-linux-x64.$VERSION"
+          fi
+
           echo "Collected assets:"
-          ls -la release_assets/windows release_assets/linux || true
+          ls -la release_assets/windows release_assets/linux release_assets/proxy || true
 
       - name: Prepare Release Notes
         id: notes
@@ -107,11 +117,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.meta.outputs.TAG }}
           TITLE: ${{ steps.meta.outputs.TITLE }}
+          VERSION: ${{ steps.meta.outputs.VERSION }}
         run: |
           # Flatten assets into a single directory for upload
           mkdir -p final_assets
           find release_assets -type f -exec cp {} final_assets/ \;
           
+          echo "Generating SHA-256 release hashes..."
+          python3 .github/scripts/generate_release_hashes.py final_assets "$VERSION"
+
           echo "Files to attach:"
           ls -lh final_assets/
           

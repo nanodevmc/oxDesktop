@@ -760,10 +760,10 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 
 		const auto self = controller->session().user();
 		const auto selfNumber = Extera::BadgeNumber(self);
-		const auto badgeNumStr = (selfNumber > 0)
-			? QString::number(selfNumber)
-			: u"8162"_q;
-		const auto badgeTag = u"#"_q + badgeNumStr;
+		const auto isPurchased = (selfNumber > 0);
+		const auto badgeStatusStr = isPurchased
+			? (u"Куплен (#"_q + QString::number(selfNumber) + u")"_q)
+			: u"Не куплен"_q;
 
 		constexpr auto kHeaderHeight = 90;
 		const auto header = box->addRow(
@@ -795,8 +795,8 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			p.drawText(textX, avY + 22, tr::lng_exd_badge_get(tr::now));
 
 			p.setFont(st::normalFont);
-			p.setPen(QColor(255, 120, 50));
-			p.drawText(textX, avY + 44, u"Персональный номер: "_q + badgeTag);
+			p.setPen(isPurchased ? QColor(72, 199, 116) : QColor(255, 120, 50));
+			p.drawText(textX, avY + 44, u"Статус бейджа: "_q + badgeStatusStr);
 		}, header->lifetime());
 
 		box->addRow(
@@ -864,7 +864,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 		const auto button = box->addRow(
 			object_ptr<Ui::RoundButton>(
 				box,
-				rpl::single(u"Купить стрелочку"_q),
+				rpl::single(isPurchased ? u"Подробнее о бейдже"_q : u"Получить бейдж"_q),
 				st::defaultBoxButton),
 			style::margins(16, 8, 16, 16),
 			style::al_center);

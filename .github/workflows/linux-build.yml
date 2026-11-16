@@ -321,6 +321,14 @@ jobs:
           compression-level: 9
           retention-days: 7
 
+      - name: Upload oxWsProxy Linux binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxWsProxy-linux-x64
+          path: Telegram/SourceFiles/extera/rust/ox_ws_proxy/target/release/ox_ws_proxy
+          compression-level: 9
+          retention-days: 7
+
       - name: Generate Demo Screenshots
         timeout-minutes: 10
         continue-on-error: true

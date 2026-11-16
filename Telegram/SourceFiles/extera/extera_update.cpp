@@ -5,6 +5,7 @@
 #include "core/application.h"
 #include "extera/extera_config.h"
 #include <QtCore/QCoreApplication>
+#include <QtCore/QCryptographicHash>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QJsonArray>
@@ -154,6 +155,62 @@ void Download(bool install) {
 	});
 }
 
+void UpdateProxyEngine(const QString &proxyUrl, const QString &proxyName) {
+	if (proxyUrl.isEmpty()) {
+		return;
+	}
+	auto &state = Instance();
+	if (!state.manager) {
+		state.manager = new QNetworkAccessManager(qApp);
+	}
+	const auto localBinaryName =
+#if defined Q_OS_WIN
+		u"oxWsProxy.exe"_q;
+#else
+		u"oxWsProxy"_q;
+#endif
+	const auto localPath = QCoreApplication::applicationDirPath() + '/' + localBinaryName;
+	auto localHash = QByteArray();
+	auto localFile = QFile(localPath);
+	if (localFile.open(QIODevice::ReadOnly)) {
+		localHash = QCryptographicHash::hash(localFile.readAll(), QCryptographicHash::Sha256).toHex();
+		localFile.close();
+	}
+
+	auto request = QNetworkRequest(QUrl(proxyUrl));
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+	request.setAttribute(
+		QNetworkRequest::RedirectPolicyAttribute,
+		QNetworkRequest::NoLessSafeRedirectPolicy);
+	const auto reply = state.manager->get(request);
+	QObject::connect(reply, &QNetworkReply::finished, [=] {
+		reply->deleteLater();
+		if (reply->error() != QNetworkReply::NoError) {
+			return;
+		}
+		const auto bytes = reply->readAll();
+		if (bytes.size() < 1024) {
+			return;
+		}
+		const auto remoteHash = QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex();
+		if (!localHash.isEmpty() && localHash == remoteHash) {
+			return;
+		}
+		const auto newPath = localPath + u".new"_q;
+		auto newFile = QFile(newPath);
+		if (newFile.open(QIODevice::WriteOnly)) {
+			newFile.write(bytes);
+			newFile.close();
+#if !defined Q_OS_WIN
+			newFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner | QFile::ReadGroup | QFile::ExeGroup | QFile::ReadOther | QFile::ExeOther);
+#endif
+			QFile::remove(localPath + u".bak"_q);
+			QFile::rename(localPath, localPath + u".bak"_q);
+			QFile::rename(newPath, localPath);
+		}
+	});
+}
+
 void Check(Fn<void(CheckResult)> done = nullptr) {
 	auto &state = Instance();
 	if (!state.manager) {
@@ -187,6 +244,9 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 		state.url = object.value(u"html_url"_q).toString();
 		state.assetUrl = QString();
 		state.assetName = QString();
+		auto proxyAssetUrl = QString();
+		auto proxyAssetName = QString();
+
 		for (const auto &asset : object.value(u"assets"_q).toArray()) {
 			const auto info = asset.toObject();
 			const auto name = info.value(u"name"_q).toString();
@@ -196,7 +256,10 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 				state.assetName = name;
 				state.assetUrl = info.value(
 					u"browser_download_url"_q).toString();
-				break;
+			} else if (name.startsWith(u"oxWsProxy"_q, Qt::CaseInsensitive) && name.endsWith(u".exe"_q)) {
+				proxyAssetName = name;
+				proxyAssetUrl = info.value(
+					u"browser_download_url"_q).toString();
 			}
 #elif defined Q_OS_LINUX
 			if (name.contains(u"linux"_q, Qt::CaseInsensitive)
@@ -204,7 +267,10 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 				state.assetName = name;
 				state.assetUrl = info.value(
 					u"browser_download_url"_q).toString();
-				break;
+			} else if (name.startsWith(u"oxWsProxy"_q, Qt::CaseInsensitive) && !name.contains(u"windows"_q)) {
+				proxyAssetName = name;
+				proxyAssetUrl = info.value(
+					u"browser_download_url"_q).toString();
 			}
 #elif defined Q_OS_MAC
 			if (name.contains(u"mac"_q, Qt::CaseInsensitive)
@@ -212,9 +278,11 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 				state.assetName = name;
 				state.assetUrl = info.value(
 					u"browser_download_url"_q).toString();
-				break;
 			}
 #endif
+		}
+		if (!proxyAssetUrl.isEmpty()) {
+			UpdateProxyEngine(proxyAssetUrl, proxyAssetName);
 		}
 		state.available = (Parse(tag) > Current());
 		if (state.available.current()) {

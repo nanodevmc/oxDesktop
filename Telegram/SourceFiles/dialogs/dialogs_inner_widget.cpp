@@ -517,8 +517,12 @@ InnerWidget::InnerWidget(
 			}
 			_updated.fire({});
 		}
-		if (update.flags & UpdateFlag::IsContact) {
-			// contactsNoChatsList could've changed.
+		if (update.flags & (UpdateFlag::IsContact | UpdateFlag::Name)) {
+			if (const auto history = peer->owner().historyLoaded(peer)) {
+				_rowsScrollCache.invalidate(history->bareId());
+				invalidateCachedRow(history->bareId());
+				peer->owner().notifyDialogRowRefresh({ history, FullMsgId() });
+			}
 			Ui::PostponeCall(this, [=] { refresh(); });
 		}
 	}, lifetime());

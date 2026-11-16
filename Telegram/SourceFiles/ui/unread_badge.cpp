@@ -258,7 +258,8 @@ int PeerBadge::drawGetWidth(Painter &p, Descriptor &&descriptor) {
 	const auto result = drawGetWidthInner(p, std::move(descriptor));
 	const auto gap = (result ? style::ConvertScale(4) : 0)
 		+ st::normalFont->spacew;
-	copy.nameWidth += result + gap;
+	const auto maxNameW = std::max(descriptor.rectForName.width() - result - gap - st::emojiSize, 0);
+	copy.nameWidth = std::min(descriptor.nameWidth, maxNameW) + result + gap;
 	if (trusted) {
 		if (const auto emoji = Extera::PluginTrust::TrustedEmoji()) {
 			return result + gap + drawEmojiStatus(

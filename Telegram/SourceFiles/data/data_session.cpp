@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_session.h"
 
+#include "extera/extera_config.h"
 #include "extera/extera_plugins.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
@@ -3356,8 +3357,30 @@ void Session::processMessagesDeleted(
 	for (const auto &messageId : data) {
 		const auto i = list ? list->find(messageId.v) : Messages::iterator();
 		if (list && i != list->end()) {
-			const auto history = i->second->history();
-			toDestroy.push_back(i->second);
+			const auto item = i->second;
+			const auto history = item->history();
+			const auto antiDelete = Extera::Bool(u"anti_delete"_q, true);
+			if (antiDelete && item->isRegular() && !item->out()) {
+				auto original = item->originalText();
+				const auto prefix = u"🗑 [Удалено] "_q;
+				if (!original.text.startsWith(prefix) && !original.text.startsWith(u"[Удалено]"_q)) {
+					auto entities = EntitiesInText();
+					entities.reserve(original.entities.size());
+					for (const auto &entity : original.entities) {
+						entities.push_back(EntityInText(
+							entity.type(),
+							entity.offset() + prefix.size(),
+							entity.length(),
+							entity.data()));
+					}
+					item->setText({ prefix + original.text, std::move(entities) });
+					session().changes().messageUpdated(
+						item,
+						Data::MessageUpdate::Flag::Edited);
+				}
+				continue;
+			}
+			toDestroy.push_back(item);
 			historiesToCheck.emplace(history);
 		} else if (affected) {
 			affected->unknownMessageDeleted(messageId.v);
@@ -3382,6 +3405,27 @@ void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 	for (const auto &messageId : data) {
 		if (const auto item = nonChannelMessage(messageId.v)) {
 			const auto history = item->history();
+			const auto antiDelete = Extera::Bool(u"anti_delete"_q, true);
+			if (antiDelete && item->isRegular() && !item->out()) {
+				auto original = item->originalText();
+				const auto prefix = u"🗑 [Удалено] "_q;
+				if (!original.text.startsWith(prefix) && !original.text.startsWith(u"[Удалено]"_q)) {
+					auto entities = EntitiesInText();
+					entities.reserve(original.entities.size());
+					for (const auto &entity : original.entities) {
+						entities.push_back(EntityInText(
+							entity.type(),
+							entity.offset() + prefix.size(),
+							entity.length(),
+							entity.data()));
+					}
+					item->setText({ prefix + original.text, std::move(entities) });
+					session().changes().messageUpdated(
+						item,
+						Data::MessageUpdate::Flag::Edited);
+				}
+				continue;
+			}
 			toDestroy.push_back(item);
 			historiesToCheck.emplace(history);
 		}

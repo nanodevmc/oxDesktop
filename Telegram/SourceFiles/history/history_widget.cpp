@@ -4920,7 +4920,10 @@ void HistoryWidget::newItemAdded(not_null<HistoryItem*> item) {
 	// - on second we get wrong markingMessagesRead() and read both.
 	session().data().sendHistoryChangeNotifications();
 
-	if (item->isSending()) {
+	const auto isMyItem = item->isSending()
+		|| item->out()
+		|| (item->from() && item->from()->id == session().user()->id);
+	if (isMyItem) {
 		synteticScrollToY(_scroll->scrollTopMax());
 	} else if (_scroll->scrollTop() < _scroll->scrollTopMax()) {
 		return;
@@ -6255,6 +6258,7 @@ void HistoryWidget::sendTextWithTags(
 		Fn<void()> done) {
 	if (!options.scheduled) {
 		_cornerButtons.clearReplyReturns();
+		synteticScrollToY(_scroll->scrollTopMax());
 	}
 
 	auto message = Api::MessageToSend(prepareSendAction(options));

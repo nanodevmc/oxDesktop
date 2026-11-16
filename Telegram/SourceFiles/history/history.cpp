@@ -1695,7 +1695,9 @@ void History::newItemAdded(not_null<HistoryItem*> item, NewAddType type) {
 	if (stillShow) {
 		Core::App().notifications().schedule(notification);
 	}
-	if (item->out()) {
+	const auto isMyMessage = item->out()
+		|| (item->from() && item->from()->id == session().user()->id);
+	if (isMyMessage) {
 		if (item->isFromScheduled() && unreadCountRefreshNeeded(item->id)) {
 			if (unreadCountKnown()) {
 				setUnreadCount(unreadCount() + 1);
