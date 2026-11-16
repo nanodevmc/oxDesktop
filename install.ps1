@@ -2,17 +2,28 @@
 # Usage:
 #   irm https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.ps1 | iex
 
-[CmdletBinding()]
-param(
-    [Parameter(ValueFromPipeline = $false)]
-    [switch]$Portable,
-    [Parameter(ValueFromPipeline = $false)]
-    [string]$Prefix = "",
-    [Parameter(ValueFromPipeline = $false)]
-    [switch]$Quiet
-)
-
 $ErrorActionPreference = 'Stop'
+
+$Portable = $false
+$Prefix = ""
+$Quiet = $false
+
+if ($args) {
+    for ($i = 0; $i -lt $args.Count; $i++) {
+        $arg = "$($args[$i])"
+        if ($arg -eq "-Portable" -or $arg -eq "--portable") {
+            $Portable = $true
+        } elseif ($arg -eq "-Quiet" -or $arg -eq "--quiet") {
+            $Quiet = $true
+        } elseif ($arg -eq "-Prefix" -or $arg -eq "--prefix") {
+            if ($i + 1 -lt $args.Count) {
+                $Prefix = "$($args[++$i])"
+            }
+        } elseif ($arg.StartsWith("-Prefix=")) {
+            $Prefix = $arg.Substring(8)
+        }
+    }
+}
 $null = $input
 
 try {

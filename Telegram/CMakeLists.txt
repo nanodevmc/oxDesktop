@@ -2861,7 +2861,7 @@ if (MSVC)
         /DELAYLOAD:propsys.dll
         /DELAYLOAD:uiautomationcore.dll
     )
-    if (QT_VERSION GREATER 6)
+    if (QT_VERSION_MAJOR GREATER_EQUAL 6)
         if (NOT build_winarm)
             target_link_options(Telegram PRIVATE
                 /DELAYLOAD:API-MS-Win-EventLog-Legacy-l1-1-0.dll

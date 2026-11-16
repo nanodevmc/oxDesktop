@@ -233,6 +233,28 @@ fn load_embedded_icon() -> HICON {
 
 #[cfg(windows)]
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let is_silent = args.iter().any(|a| {
+        let l = a.to_lowercase();
+        l == "/silent" || l == "/verysilent" || l == "--silent" || l == "-s" || l == "/s"
+    });
+    if is_silent {
+        let app_data = std::env::var("APPDATA").unwrap_or_else(|_| "C:\\".to_string());
+        let default_target = std::path::PathBuf::from(app_data).join("oxDesktop");
+        let options = unpacker::InstallOptions {
+            target_dir: default_target,
+            create_desktop_shortcut: true,
+            create_start_menu_shortcut: true,
+            hwnd: unpacker::SendHwnd(std::ptr::null_mut()),
+        };
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        if unpacker::run_install(&options, &cancel).is_ok() {
+            std::process::exit(0);
+        } else {
+            std::process::exit(1);
+        }
+    }
+
     let _gdi = match GdiContext::new() {
         Some(g) => g,
         None => return,

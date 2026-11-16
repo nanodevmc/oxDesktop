@@ -40,7 +40,7 @@ pub fn start_installation(options: InstallOptions, cancel_flag: Arc<AtomicBool>)
     });
 }
 
-fn run_install(options: &InstallOptions, cancel_flag: &AtomicBool) -> Result<(), ()> {
+pub fn run_install(options: &InstallOptions, cancel_flag: &AtomicBool) -> Result<(), ()> {
     if PAYLOAD_ZIP.is_empty() {
         return Err(());
     }
@@ -88,8 +88,10 @@ fn run_install(options: &InstallOptions, cancel_flag: &AtomicBool) -> Result<(),
             90
         };
 
-        unsafe {
-            PostMessageW(options.hwnd.0, WM_APP_PROGRESS, pct, 0);
+        if !options.hwnd.0.is_null() {
+            unsafe {
+                PostMessageW(options.hwnd.0, WM_APP_PROGRESS, pct, 0);
+            }
         }
     }
 
@@ -129,10 +131,12 @@ fn run_install(options: &InstallOptions, cancel_flag: &AtomicBool) -> Result<(),
         }
     }
 
-    crate::registry::register_uninstall(&options.target_dir, &target_exe, "7.4.3.3.1");
+    crate::registry::register_uninstall(&options.target_dir, &target_exe, crate::app::INSTALLER_VERSION);
 
-    unsafe {
-        PostMessageW(options.hwnd.0, WM_APP_PROGRESS, 100, 0);
+    if !options.hwnd.0.is_null() {
+        unsafe {
+            PostMessageW(options.hwnd.0, WM_APP_PROGRESS, 100, 0);
+        }
     }
 
     thread::sleep(std::time::Duration::from_millis(300));

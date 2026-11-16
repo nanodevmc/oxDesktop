@@ -74,8 +74,6 @@ pub enum ButtonId {
     Cancel,
     Browse,
     Finish,
-    CheckDesktop,
-    CheckStartMenu,
     CheckLaunch,
     LinkTelegram,
     LinkGitHub,
@@ -317,10 +315,10 @@ impl InstallerApp {
             }
         }
 
-        // --- 2. Центр: Дельта логотип, заголовок и подзаголовок (без рамки версии, сдвинут чуть вниз) ---
+        // --- 2. Центр: Дельта логотип, заголовок и подзаголовок (сдвинуты вниз для лучшего баланса) ---
         let logo_size = 64;
         let logo_x = (width - logo_size) / 2;
-        let logo_y = 18;
+        let logo_y = 20;
 
         if let Some(logo) = &self.logo_img {
             logo.draw(graphics.raw(), logo_x, logo_y, logo_size, logo_size);
@@ -333,18 +331,18 @@ impl InstallerApp {
             let title_str = to_wide_null("oxDesktop");
             DrawTextW(hdc, title_str.as_ptr(), -1, &mut r_title, 0x00000001 | 0x00000020);
 
-            // Подзаголовок сдвинут на пару пикселей вниз
+            // Подзаголовок сдвинут заметно ниже под заголовок
             SelectObject(hdc, self.fonts.body);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_SECONDARY));
-            let mut r_sub = Rect::new(0, logo_y + logo_size + 38, width, 20).to_win32_rect();
+            let mut r_sub = Rect::new(0, logo_y + logo_size + 42, width, 22).to_win32_rect();
             let sub_str = to_wide_null("Быстрый и безопасный клиент Telegram с обходом блокировок");
             DrawTextW(hdc, sub_str.as_ptr(), -1, &mut r_sub, 0x00000001 | 0x00000020);
         }
 
-        // --- 3. Поле выбора пути (сдвинуто на пару пикселей вверх) ---
+        // --- 3. Поле выбора пути ---
         let form_w = 460;
         let form_x = (width - form_w) / 2;
-        let path_y = 168;
+        let path_y = 176;
         let path_h = 36;
 
         graphics.fill_rounded_rect(form_x, path_y, form_w, path_h, 6, COLOR_SURFACE);
@@ -371,42 +369,20 @@ impl InstallerApp {
             );
         }
 
-        self.draw_button(
+        self.draw_button_ex(
             hdc,
             graphics,
             ButtonId::Browse,
             Rect::new(form_x + form_w - 74, path_y + 6, 66, 24),
             "Обзор...",
             false,
+            true,
         );
 
-        // --- 4. Левый угол: галочки чуть выше ссылок ---
-        // (Сначала внизу ярлык а выше него в пуск)
-        let chk_x = 40;
-        let chk_startmenu_y = 224;
-        let chk_desktop_y = 254;
-
-        self.draw_checkbox(
-            hdc,
-            graphics,
-            ButtonId::CheckStartMenu,
-            Rect::new(chk_x, chk_startmenu_y, 200, 22),
-            "В меню «Пуск»",
-            self.create_start_menu_shortcut,
-        );
-
-        self.draw_checkbox(
-            hdc,
-            graphics,
-            ButtonId::CheckDesktop,
-            Rect::new(chk_x, chk_desktop_y, 200, 22),
-            "Ярлык на рабочем столе",
-            self.create_desktop_shortcut,
-        );
-
-        // --- 5. Ссылки в левом нижнем углу (под галочками, друг под другом) ---
-        let tg_y = 296;
-        let gh_y = 324;
+        // --- 4. Ссылки в левом нижнем углу (пониже, друг под другом) ---
+        let link_x = 32;
+        let tg_y = 320;
+        let gh_y = 344;
 
         unsafe {
             let tg_hover = self.hovered_btn == Some(ButtonId::LinkTelegram);
@@ -422,12 +398,12 @@ impl InstallerApp {
             let mut tg_icon_w = [0u16; 3];
             let tg_icon_len = tg_icon_char.encode_utf16(&mut tg_icon_w).len();
             tg_icon_w[tg_icon_len] = 0;
-            let mut r_tg_icon = Rect::new(chk_x, tg_y + 1, 16, 18).to_win32_rect();
+            let mut r_tg_icon = Rect::new(link_x, tg_y + 1, 16, 18).to_win32_rect();
             DrawTextW(hdc, tg_icon_w.as_ptr(), -1, &mut r_tg_icon, 0x00000000 | 0x00000004);
 
             // Текст Telegram
             SelectObject(hdc, self.fonts.small);
-            let mut r_tg = Rect::new(chk_x + 20, tg_y + 1, 110, 18).to_win32_rect();
+            let mut r_tg = Rect::new(link_x + 20, tg_y + 1, 110, 18).to_win32_rect();
             let tg = to_wide_null("t.me/oxDesktop");
             DrawTextW(hdc, tg.as_ptr(), -1, &mut r_tg, 0x00000000 | 0x00000004);
 
@@ -441,12 +417,12 @@ impl InstallerApp {
             let mut gh_icon_w = [0u16; 3];
             let gh_icon_len = gh_icon_char.encode_utf16(&mut gh_icon_w).len();
             gh_icon_w[gh_icon_len] = 0;
-            let mut r_gh_icon = Rect::new(chk_x, gh_y + 1, 16, 18).to_win32_rect();
+            let mut r_gh_icon = Rect::new(link_x, gh_y + 1, 16, 18).to_win32_rect();
             DrawTextW(hdc, gh_icon_w.as_ptr(), -1, &mut r_gh_icon, 0x00000000 | 0x00000004);
 
             // Текст GitHub
             SelectObject(hdc, self.fonts.small);
-            let mut r_gh = Rect::new(chk_x + 20, gh_y + 1, 90, 18).to_win32_rect();
+            let mut r_gh = Rect::new(link_x + 20, gh_y + 1, 90, 18).to_win32_rect();
             let gh = to_wide_null("GitHub");
             DrawTextW(hdc, gh.as_ptr(), -1, &mut r_gh, 0x00000000 | 0x00000004);
         }
@@ -575,6 +551,19 @@ impl InstallerApp {
         text: &str,
         is_primary: bool,
     ) {
+        self.draw_button_ex(hdc, graphics, id, rect, text, is_primary, false);
+    }
+
+    fn draw_button_ex(
+        &self,
+        hdc: HDC,
+        graphics: &GdiGraphics,
+        id: ButtonId,
+        rect: Rect,
+        text: &str,
+        is_primary: bool,
+        small_font: bool,
+    ) {
         let is_hovered = self.hovered_btn == Some(id);
 
         let (bg_color, text_color, border_color) = if is_primary {
@@ -595,7 +584,7 @@ impl InstallerApp {
         graphics.draw_rounded_rect(rect.x, rect.y, rect.w, rect.h, 6, border_color, 1.0);
 
         unsafe {
-            SelectObject(hdc, self.fonts.button);
+            SelectObject(hdc, if small_font { self.fonts.small } else { self.fonts.button });
             SetTextColor(hdc, argb_to_colorref(text_color));
             let mut win_rect = rect.to_win32_rect();
             let text_wide = to_wide_null(text);
@@ -689,14 +678,6 @@ impl InstallerApp {
                     false
                 }
             }
-            ButtonId::CheckDesktop => {
-                self.create_desktop_shortcut = !self.create_desktop_shortcut;
-                true
-            }
-            ButtonId::CheckStartMenu => {
-                self.create_start_menu_shortcut = !self.create_start_menu_shortcut;
-                true
-            }
             ButtonId::CheckLaunch => {
                 self.launch_after_install = !self.launch_after_install;
                 true
@@ -761,33 +742,24 @@ impl InstallerApp {
         let h = WIN_HEIGHT;
         let form_w = 460;
         let form_x = (w - form_w) / 2;
-        let path_y = 168;
-        let chk_x = 40;
-        let chk_startmenu_y = 224;
-        let chk_desktop_y = 254;
-        let tg_y = 296;
-        let gh_y = 324;
+        let path_y = 176;
+        let link_x = 32;
+        let tg_y = 320;
+        let gh_y = 344;
         let footer_y = h - 54;
 
         match self.screen {
             Screen::Welcome => {
-                // Ссылки в левом нижнем углу под галочками (друг под другом)
-                if Rect::new(chk_x, tg_y - 2, 130, 22).contains(x, y) {
+                // Ссылки в левом нижнем углу (друг под другом)
+                if Rect::new(link_x, tg_y - 2, 130, 22).contains(x, y) {
                     return Some(ButtonId::LinkTelegram);
                 }
-                if Rect::new(chk_x, gh_y - 2, 110, 22).contains(x, y) {
+                if Rect::new(link_x, gh_y - 2, 110, 22).contains(x, y) {
                     return Some(ButtonId::LinkGitHub);
                 }
                 // Кнопка Обзор пути
                 if Rect::new(form_x + form_w - 74, path_y + 6, 66, 24).contains(x, y) {
                     return Some(ButtonId::Browse);
-                }
-                // Чекбоксы в левом нижнем углу друг над другом (чуть выше ссылок)
-                if Rect::new(chk_x, chk_startmenu_y, 200, 22).contains(x, y) {
-                    return Some(ButtonId::CheckStartMenu);
-                }
-                if Rect::new(chk_x, chk_desktop_y, 200, 22).contains(x, y) {
-                    return Some(ButtonId::CheckDesktop);
                 }
                 // Кнопки в правом нижнем углу
                 if Rect::new(w - 216, footer_y, 88, 36).contains(x, y) {

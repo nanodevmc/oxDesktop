@@ -1713,6 +1713,9 @@ void History::newItemAdded(not_null<HistoryItem*> item, NewAddType type) {
 		if (item->changesWallPaper()) {
 			peer->updateFullForced();
 		}
+		if (!item->isFromScheduled() || !unreadCountRefreshNeeded(item->id)) {
+			owner().histories().readInbox(this, true);
+		}
 	} else {
 		if (item->unread(this)) {
 			if (unreadCountKnown()) {

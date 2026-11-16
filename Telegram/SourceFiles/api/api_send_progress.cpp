@@ -146,14 +146,14 @@ void SendProgressManager::send(const Key &key, int progress) {
 	}).send();
 	_requests.emplace(key, requestId);
 
-	if (key.type == Type::Typing) {
+	if (key.type == SendProgressType::Typing) {
 		_stopTypingHistory = key.history;
 		_stopTypingTimer.callOnce(kCancelTypingActionTimeout);
 	}
 }
 
 bool SendProgressManager::skipRequest(const Key &key) const {
-	if (key.type == Type::Typing && Extera::Bool(u"ghost_hide_typing"_q, true)) {
+	if (key.type == SendProgressType::Typing && Extera::Bool(u"ghost_hide_typing"_q)) {
 		return true;
 	}
 	const auto user = key.history->peer->asUser();

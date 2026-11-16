@@ -52,6 +52,7 @@ jobs:
         run: |
           cd /d "%GITHUB_WORKSPACE%\tdesktop"
           git submodule update --init --recursive --depth 1 --jobs 8
+          python tools/patch_qt_schannel.py
 
       - name: Set up Python
         uses: actions/setup-python@v5

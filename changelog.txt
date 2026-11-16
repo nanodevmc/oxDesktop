@@ -1,16 +1,28 @@
 7.4.3.3.2 (16.11.2026)
 
 Ru:
+- Исправлена работа кнопки «Прочитать» при включенном режиме призрака (Smart Ghost)
+- Добавлена автоматическая отметка прочитанными входящих сообщений при отправке ответа собеседнику
+- Исправлено отображение стрелочек и категорий во вкладке «Что нового»
+- Восстановлен TLS Schannel бэкенд на Windows (устранены ошибки ИИ-чата и встроенного апдейтера)
 - Исправлена загрузка реакций, аватарок ботов и миниаппов (мгновенная маршрутизация к рабочим шлюзам DC)
 - Оптимизирован сетевой движок oxWsProxy (устранены зависания на таймаутах недоступных DC)
+- Исправлен запуск скрипта установки через Invoke-Expression (irm ... | iex)
 - Убрана лишняя кнопка «Открыть канал» в шапках и профилях каналов
 - Улучшено визуальное оформление и центрирование кнопки в окне tg://support
+- Обновлен дизайн инсталлятора (улучшены отступы, убраны лишние чекбоксы)
 
 En:
+- Fixed "Mark as read" button when Smart Ghost mode is enabled
+- Added automatic marking of incoming messages as read upon sending a reply
+- Fixed display of category toggle arrows in "What's New" modal
+- Restored Windows TLS Schannel backend in Qt build (resolved AI chat and updater errors)
 - Fixed loading of reactions, bot avatars and mini apps (instant routing to active DC gateways)
 - Optimized oxWsProxy network engine (eliminated hangs and timeouts on blocked DCs)
+- Fixed PowerShell install script when executed via Invoke-Expression (irm ... | iex)
 - Removed redundant "View Channel" button from channel headers and profiles
 - Improved visual layout and button centering in tg://support modal
+- Updated installer layout (improved spacing and removed redundant checkboxes)
 
 7.4.3.3.1 (15.11.2026)
 

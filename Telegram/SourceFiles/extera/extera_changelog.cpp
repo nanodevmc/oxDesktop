@@ -471,7 +471,7 @@ void FillReleaseContent(
 				object_ptr<Ui::SettingsButton>(
 					content,
 					langExpanded->value() | rpl::map([=](bool toggled) {
-						return langTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q);
+						return langTitle + (toggled ? u"  \u25BE"_q : u"  \u25B8"_q);
 					}),
 					st::settingsButtonNoIcon))
 			: nullptr;
@@ -519,7 +519,7 @@ void FillReleaseContent(
 				object_ptr<Ui::SettingsButton>(
 					langInner,
 					subExpanded->value() | rpl::map([=](bool toggled) {
-						return baseTitle + (toggled ? u"  \xE2\x96\xBE"_q : u"  \xE2\x96\xB8"_q);
+						return baseTitle + (toggled ? u"  \u25BE"_q : u"  \u25B8"_q);
 					}),
 					st::settingsButtonNoIcon));
 

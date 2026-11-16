@@ -219,7 +219,7 @@ void WriteKeyData(
 	file.writeData(data.openSalt);
 	file.writeData(data.openKeyEncrypted);
 	file.writeData(infoEncrypted);
-	if (data.legacy) {
+	if (data.legacy || data.passcodeWraps.empty()) {
 		return;
 	}
 	auto trailer = QByteArray();
@@ -471,9 +471,13 @@ void Domain::migrateFromLegacy(const QByteArray &passcode) {
 	Expects(_localKey != nullptr);
 
 	if (passcode.isEmpty()) {
-		installOpenWrap(*_keyData);
+		// When no local passcode is used, maintain legacy 3-blob key_datas structure.
+		// This preserves full bidirectional compatibility with AyuGram and other tdesktop forks.
 		_keyData->passcodeWraps.clear();
 		_keyData->committed = 0;
+		_keyData->legacy = true;
+		_keyData->legacyPasscode = false;
+		return;
 	} else {
 		auto fresh = prepareNewWrap(passcode);
 		if (!installPasscodeWrap(*_keyData, fresh, 1)) {
