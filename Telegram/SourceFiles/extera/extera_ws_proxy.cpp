@@ -359,8 +359,7 @@ void CleanOurProxies() {
 }
 
 void Start() {
-	if (Available()) {
-		Extera::Config::Instance().setBool(u"ws_proxy"_q, true);
+	if (Enabled()) {
 		Instance().restarts = 0;
 		Launch();
 	}
@@ -377,10 +376,10 @@ void Stop() {
 		process->waitForFinished(1000);
 		process->deleteLater();
 	}
-	const auto &settings = Core::App().settings().proxy();
-	if (settings.isEnabled() && IsOurs(settings.selected())) {
+	auto &settings = Core::App().settings().proxy();
+	if (IsOurs(settings.selected())) {
 		Core::App().setCurrentProxy(
-			settings.selected(),
+			MTP::ProxyData(),
 			MTP::ProxyData::Settings::Disabled);
 	}
 	CleanOurProxies();
@@ -390,7 +389,8 @@ void Stop() {
 void SetEnabled(bool enabled) {
 	Extera::Config::Instance().setBool(u"ws_proxy"_q, enabled);
 	if (enabled) {
-		Start();
+		Instance().restarts = 0;
+		Launch();
 	} else {
 		Stop();
 	}

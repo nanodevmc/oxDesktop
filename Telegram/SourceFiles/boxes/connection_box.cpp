@@ -1322,6 +1322,14 @@ void ProxiesBox::setupContent() {
 		st::proxyRowPadding.bottom()));
 
 	_proxySettings->setChangedCallback([=](ProxyData::Settings value) {
+		if (value == ProxyData::Settings::Disabled || value == ProxyData::Settings::System) {
+			if (Extera::WsProxy::Enabled()) {
+				Extera::WsProxy::SetEnabled(false);
+				_controller->deleteMatching([](const ProxyData &p) {
+					return Extera::WsProxy::IsOurs(p);
+				});
+			}
+		}
 		if (!_controller->setProxySettings(value)) {
 			_proxySettings->setValue(_settings.settings());
 			addNewProxy();
@@ -2340,6 +2348,10 @@ void ProxiesBoxController::applyItem(int id) {
 		return;
 	}
 
+	if (!Extera::WsProxy::IsOurs(item->data) && Extera::WsProxy::Enabled()) {
+		Extera::WsProxy::SetEnabled(false);
+	}
+
 	auto j = findByProxy(_settings.selected());
 
 	Core::App().setCurrentProxy(
@@ -2370,6 +2382,9 @@ void ProxiesBoxController::setDeleted(int id, bool deleted) {
 	item->deleted = deleted;
 
 	if (deleted) {
+		if (Extera::WsProxy::IsOurs(item->data) && Extera::WsProxy::Enabled()) {
+			Extera::WsProxy::SetEnabled(false);
+		}
 		_settings.removeFromList(item->data);
 
 		if (item->data == _settings.selected()) {
