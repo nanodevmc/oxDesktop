@@ -3359,7 +3359,7 @@ void Session::processMessagesDeleted(
 		if (list && i != list->end()) {
 			const auto item = i->second;
 			const auto history = item->history();
-			const auto antiDelete = Extera::Bool(u"anti_delete"_q, true);
+			const auto antiDelete = Extera::Bool(u"anti_delete"_q);
 			if (antiDelete && item->isRegular() && !item->out()) {
 				auto original = item->originalText();
 				const auto prefix = u"🗑 [Удалено] "_q;
@@ -3405,7 +3405,7 @@ void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 	for (const auto &messageId : data) {
 		if (const auto item = nonChannelMessage(messageId.v)) {
 			const auto history = item->history();
-			const auto antiDelete = Extera::Bool(u"anti_delete"_q, true);
+			const auto antiDelete = Extera::Bool(u"anti_delete"_q);
 			if (antiDelete && item->isRegular() && !item->out()) {
 				auto original = item->originalText();
 				const auto prefix = u"🗑 [Удалено] "_q;

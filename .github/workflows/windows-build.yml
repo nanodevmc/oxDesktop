@@ -426,10 +426,14 @@ jobs:
             echo No API secrets, using TEST ONLY credentials
             set "CREDS=-D TDESKTOP_API_TEST=ON"
           )
-          rem If out cache is hit and build-Release.ninja exists, skip configure.bat to preserve build tree timestamps
+          rem If out cache is hit and build-Release.ninja exists, verify it links qschannelbackend before skipping configure.bat
           if "%OUT_CACHE_HIT%"=="true" if exist "tdesktop\out\build-Release.ninja" (
-            echo Using restored out build tree configuration.
-            goto do_build
+            findstr /i "qschannelbackend" tdesktop\out\build-Release.ninja >nul 2>&1
+            if not errorlevel 1 (
+              echo Using restored out build tree configuration with qschannelbackend.
+              goto do_build
+            )
+            echo Restored out build tree lacks qschannelbackend link, reconfiguring...
           )
           cd tdesktop\Telegram
           call configure.bat %CREDS% ^

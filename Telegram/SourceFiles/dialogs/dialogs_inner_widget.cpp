@@ -498,6 +498,7 @@ InnerWidget::InnerWidget(
 		| UpdateFlag::FullInfo
 		| UpdateFlag::EmojiStatus
 	) | rpl::on_next([=](const Data::PeerUpdate &update) {
+		const auto peer = update.peer;
 		if (update.flags
 			& (UpdateFlag::Name
 				| UpdateFlag::Photo
@@ -506,7 +507,6 @@ InnerWidget::InnerWidget(
 			if (update.flags & UpdateFlag::Photo) {
 				invalidateLoadedUserpics();
 			}
-			const auto peer = update.peer;
 			const auto history = peer->owner().historyLoaded(peer);
 			if (_state == WidgetState::Default) {
 				if (history) {
