@@ -1298,6 +1298,13 @@ void Call::handleControllerStateChange(tgcalls::State state) {
 		handleControllerError(error);
 	} break;
 
+	case tgcalls::State::Reconnecting: {
+		DEBUG_LOG(("Call Info: State changed to Reconnecting."));
+		if (_state.current() == State::ExchangingKeys) {
+			setState(State::WaitingInit);
+		}
+	} break;
+
 	default: LOG(("Call Error: Unexpected state in handleStateChange: %1"
 		).arg(int(state)));
 	}

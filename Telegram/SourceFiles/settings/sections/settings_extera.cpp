@@ -760,15 +760,19 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 
 		const auto self = controller->session().user();
 		const auto selfNumber = Extera::BadgeNumber(self);
-		const auto isPurchased = (selfNumber > 0);
-		const auto badgeStatusStr = isPurchased
-			? (u"Куплен (#"_q + QString::number(selfNumber) + u")"_q)
-			: u"Не куплен"_q;
+		const auto kind = Extera::BadgeKindFor(self);
+		const auto isTeam = (kind == Extera::BadgeKind::Owner || kind == Extera::BadgeKind::Developer || kind == Extera::BadgeKind::Bughunter);
+		const auto isPurchased = (selfNumber > 0) || (kind != Extera::BadgeKind::None);
+		const auto badgeStatusStr = (selfNumber > 0)
+			? (u"Активен (#"_q + QString::number(selfNumber) + u")"_q)
+			: (isTeam
+				? u"Активен (Команда oxDesktop)"_q
+				: (isPurchased ? u"Активен"_q : u"Не активен"_q));
 
-		constexpr auto kHeaderHeight = 90;
+		constexpr auto kHeaderHeight = 76;
 		const auto header = box->addRow(
 			object_ptr<Ui::FixedHeightWidget>(box, kHeaderHeight),
-			style::margins(16, 4, 16, 4));
+			style::margins(16, 2, 16, 2));
 
 		header->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(header);
@@ -776,7 +780,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			const auto w = header->width();
 			const auto h = header->height();
 
-			const auto avSize = 56;
+			const auto avSize = 50;
 			const auto avX = 16;
 			const auto avY = (h - avSize) / 2;
 			const auto avRect = QRect(avX, avY, avSize, avSize);
@@ -792,11 +796,11 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			const auto textX = avX + avSize + 16;
 			p.setFont(st::semiboldFont);
 			p.setPen(st::windowActiveTextFg->c);
-			p.drawText(textX, avY + 22, tr::lng_exd_badge_get(tr::now));
+			p.drawText(textX, avY + 20, tr::lng_exd_badge_get(tr::now));
 
 			p.setFont(st::normalFont);
 			p.setPen(isPurchased ? QColor(72, 199, 116) : QColor(255, 120, 50));
-			p.drawText(textX, avY + 44, u"Статус бейджа: "_q + badgeStatusStr);
+			p.drawText(textX, avY + 40, u"Статус бейджа: "_q + badgeStatusStr);
 		}, header->lifetime());
 
 		box->addRow(
@@ -804,11 +808,11 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 				box,
 				rpl::single(u"Бейдж поддержки подтверждает ваш вклад в разработку клиента oxDesktop и серверов обхода блокировок."_q),
 				st::boxLabel),
-			style::margins(16, 4, 16, 8));
+			style::margins(16, 2, 16, 6));
 
 		const auto card = box->addRow(
 			object_ptr<Ui::VerticalLayout>(box),
-			style::margins(16, 2, 16, 12));
+			style::margins(16, 2, 16, 8));
 		card->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(card);
 			auto hq = PainterHighQualityEnabler(p);
@@ -824,7 +828,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 				const QString &desc) {
 			const auto item = card->add(
 				object_ptr<Ui::VerticalLayout>(card),
-				style::margins(14, 8, 14, 8));
+				style::margins(14, 5, 14, 5));
 			item->add(
 				object_ptr<Ui::FlatLabel>(
 					item,
@@ -866,7 +870,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 				box,
 				rpl::single(isPurchased ? u"Подробнее о бейдже"_q : u"Получить бейдж"_q),
 				st::defaultBoxButton),
-			style::margins(16, 8, 16, 16),
+			style::margins(16, 6, 16, 8),
 			style::al_center);
 		button->setClickedCallback([=] {
 			UrlClickHandler::Open(u"https://t.me/exteraAuthBot/donate"_q);
@@ -2301,11 +2305,16 @@ void PartOther1(SectionBuilder &builder) {
 		wallet(
 			u"ton"_q,
 			tr::lng_exd_donate_ton(),
-			u"UQBBklguWPdtllk0jUozVZm6DLqbEzqsXUZ0lK6tiKGxAS0T"_q);
-		wallet(
-			u"usdt"_q,
-			tr::lng_exd_donate_usdt(),
-			u"TPbiCARyfZpUgFtQsuHsKVikphB6viD2jk"_q);
+			u"UQA8QlH0yECWALtLlaOI5Uulwwe0Wm1SPBbPzJ18AkvEKxCF"_q);
+		builder.addButton({
+			.id = u"extera/donate_other"_q,
+			.title = rpl::single(u"Другие методы"_q),
+			.icon = { &st::menuIconLike },
+			.onClick = [=] {
+				UrlClickHandler::Open(u"https://t.me/radoqi"_q);
+			},
+			.keywords = { u"donate"_q, u"author"_q, u"other"_q },
+		});
 	});
 	AddAbout(builder, tr::lng_exd_donate_about());
 }
@@ -2335,6 +2344,10 @@ void PartOther2(SectionBuilder &builder) {
 					case Result::Latest:
 						strong->showToast(
 							tr::lng_extera_updates_latest(tr::now));
+						break;
+					case Result::Beta:
+						strong->showToast(
+							u"У вас установлена предварительная версия (бета/dev)!"_q);
 						break;
 					case Result::Failed:
 						strong->showToast(

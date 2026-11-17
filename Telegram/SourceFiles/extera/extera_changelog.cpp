@@ -626,18 +626,6 @@ void ShowLoaded(not_null<Window::SessionController*> controller) {
 		box->setMaxHeight(st::boxMaxListHeight);
 		Fill(box, controller);
 		box->addButton(tr::lng_close(), [=] { box->closeBox(); });
-		if (!Instance().releases.empty()) {
-			box->addLeftButton(tr::lng_exd_changelog_translate(), [=] {
-				controller->show(
-					Box(
-						Ui::TranslateBox,
-						controller->session().user(),
-						MsgId(),
-						TranslationText(),
-						false),
-					Ui::LayerOption::KeepOther);
-			});
-		}
 	}));
 }
 

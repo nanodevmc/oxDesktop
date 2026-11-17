@@ -522,9 +522,12 @@ TopBar::TopBar(
 			std::move(badgeUpdates),
 			_badge->updated());
 
-		_badge->setPremiumClickCallback([controller, peer = _peer] {
-			::Settings::ShowEmojiStatusPremium(controller, peer);
-		});
+		const auto isCustomBadge = (_peer->isSelf() && Extera::BadgeKindFor(_peer) != Extera::BadgeKind::None);
+		if (!isCustomBadge) {
+			_badge->setPremiumClickCallback([controller, peer = _peer] {
+				::Settings::ShowEmojiStatusPremium(controller, peer);
+			});
+		}
 	}
 	if (_verified) {
 		const auto weak = base::make_weak(controller);

@@ -12,6 +12,7 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QTimer>
 #include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkProxy>
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
 
@@ -201,8 +202,10 @@ void SaveToCache() {
 }
 
 void RefreshProfiles(QNetworkAccessManager *manager) {
+	manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	const auto fetchUrl = [=](const QString &url, bool incremental) {
 		auto request = QNetworkRequest(QUrl(url));
+		request.setAttribute(QNetworkRequest::BypassProxy, true);
 		request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 		request.setRawHeader("Accept", "application/json");
 		const auto reply = manager->get(request);
@@ -244,7 +247,33 @@ void StartBadges() {
 		}
 	}
 
+	if (!loadedLocal) {
+		static const auto kFallbackJson = R"({
+  "types": {
+    "owner": { "emoji": "5425060246269736415", "text": "Создатель oxDesktop" },
+    "developer": { "emoji": "5395339798430919126", "text": "Разработчик oxDesktop" },
+    "bughunter": { "emoji": "5416037430513936515", "text": "Охотник за багами" },
+    "helper": { "emoji": "5415603784845926997", "text": "Помощник" },
+    "donor": { "emoji": "5413871448441793380", "text": "Поддержка oxDesktop" },
+    "trusted": { "emoji": "5420443203671208138", "text": "Доверенный источник" }
+  },
+  "users": [
+    { "id": 6486689289, "type": "owner", "number": 1, "emoji": "5425060246269736415", "text": "Ведущий разработчик oxDesktop" },
+    { "id": 6296191170, "type": "developer", "number": 2, "text": "Второй в этой компании, друг разработчика oxDesktop." }
+  ],
+  "channels": [
+    { "id": 4364437246, "type": "developer" },
+    { "id": 4469639949, "type": "developer" }
+  ],
+  "trusted": [
+    { "id": 4469639949, "username": "oxDesktop", "name": "oxDesktop" }
+  ]
+})";
+		ApplyProfiles(QByteArray(kFallbackJson), false);
+	}
+
 	const auto manager = new QNetworkAccessManager(qApp);
+	manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	RefreshProfiles(manager);
 
 	const auto timer = new QTimer(manager);

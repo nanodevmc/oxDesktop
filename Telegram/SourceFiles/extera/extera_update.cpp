@@ -18,6 +18,7 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkProxy>
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
 
@@ -121,9 +122,11 @@ void Download(bool install) {
 	state.downloading = true;
 	if (!state.manager) {
 		state.manager = new QNetworkAccessManager(qApp);
+		state.manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	}
 	auto request = QNetworkRequest(QUrl(state.assetUrl));
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+	request.setAttribute(QNetworkRequest::BypassProxy, true);
 	request.setAttribute(
 		QNetworkRequest::RedirectPolicyAttribute,
 		QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -162,6 +165,7 @@ void UpdateProxyEngine(const QString &proxyUrl, const QString &proxyName) {
 	auto &state = Instance();
 	if (!state.manager) {
 		state.manager = new QNetworkAccessManager(qApp);
+		state.manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	}
 	const auto localBinaryName =
 #if defined Q_OS_WIN
@@ -179,6 +183,7 @@ void UpdateProxyEngine(const QString &proxyUrl, const QString &proxyName) {
 
 	auto request = QNetworkRequest(QUrl(proxyUrl));
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+	request.setAttribute(QNetworkRequest::BypassProxy, true);
 	request.setAttribute(
 		QNetworkRequest::RedirectPolicyAttribute,
 		QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -215,11 +220,14 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 	auto &state = Instance();
 	if (!state.manager) {
 		state.manager = new QNetworkAccessManager(qApp);
+		state.manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	}
 	auto request = QNetworkRequest(QUrl(
 		u"https://api.github.com/repos/nanodevmc/oxDesktop/releases/latest"_q));
 	request.setRawHeader("Accept", "application/vnd.github+json");
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+	request.setAttribute(QNetworkRequest::BypassProxy, true);
+	request.setTransferTimeout(12000);
 	const auto reply = state.manager->get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {
 		reply->deleteLater();
@@ -284,7 +292,9 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 		if (!proxyAssetUrl.isEmpty()) {
 			UpdateProxyEngine(proxyAssetUrl, proxyAssetName);
 		}
-		state.available = (Parse(tag) > Current());
+		const auto remoteVer = Parse(tag);
+		const auto currentVer = Current();
+		state.available = (remoteVer > currentVer);
 		if (state.available.current()) {
 			const auto mode = Extera::Int(u"auto_update"_q);
 			if (mode == 0 || mode == 1) {
@@ -292,9 +302,13 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 			}
 		}
 		if (done) {
-			done(state.available.current()
-				? CheckResult::Available
-				: CheckResult::Latest);
+			if (remoteVer > currentVer) {
+				done(CheckResult::Available);
+			} else if (currentVer > remoteVer) {
+				done(CheckResult::Beta);
+			} else {
+				done(CheckResult::Latest);
+			}
 		}
 	});
 }

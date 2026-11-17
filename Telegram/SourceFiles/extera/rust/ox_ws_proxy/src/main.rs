@@ -16,7 +16,7 @@ use rustls_pki_types::{CertificateDer, ServerName, UnixTime};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
 use tokio_rustls::TlsConnector;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
@@ -28,8 +28,6 @@ type Aes256Ctr = Ctr128BE<Aes256>;
 const PROTO_TAG_ABRIDGED: [u8; 4] = [0xef, 0xef, 0xef, 0xef];
 const PROTO_TAG_INTERMEDIATE: [u8; 4] = [0xee, 0xee, 0xee, 0xee];
 const PROTO_TAG_SECURE: [u8; 4] = [0xdd, 0xdd, 0xdd, 0xdd];
-
-const SNI_CANDIDATES: &[&str] = &["vk.com", "sprinthost.ru"];
 
 fn get_dc_ips(dc: u8) -> &'static [&'static str] {
     match dc {
@@ -390,6 +388,126 @@ fn generate_relay_init(proto_tag: [u8; 4], dc_idx: i16) -> (Vec<u8>, Aes256Ctr, 
     (result, tg_enc, tg_dec)
 }
 
+enum BackendStream {
+    Ws(WebSocketStream<MaybeTlsStream<TcpStream>>),
+    Tcp(TcpStream),
+}
+
+async fn race_backend_connection(
+    actual_dc: u8,
+    ips: &'static [&'static str],
+    candidate_hosts: &[String],
+    cf_domains: Arc<Vec<String>>,
+    tls_connector: Arc<TlsConnector>,
+    logger: &Logger,
+    peer: SocketAddr,
+) -> Option<BackendStream> {
+    let (tx, mut rx) = mpsc::channel::<BackendStream>(1);
+
+    // 1. Parallel Direct TCP probes to DC IPs (fastest path: ~30ms)
+    for &ip in ips {
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            if let Ok(Ok(tcp)) = tokio::time::timeout(
+                Duration::from_millis(1200),
+                TcpStream::connect(format!("{}:443", ip)),
+            )
+            .await
+            {
+                let _ = tcp.set_nodelay(true);
+                let _ = tx.send(BackendStream::Tcp(tcp)).await;
+            }
+        });
+    }
+
+    // 2. Parallel Direct WS probes
+    for host in candidate_hosts {
+        let tx = tx.clone();
+        let direct_url = format!("wss://{}/apiws", host);
+        tokio::spawn(async move {
+            if let Ok(mut req) = direct_url.into_client_request() {
+                req.headers_mut().insert(
+                    "Sec-WebSocket-Protocol",
+                    HeaderValue::from_static("binary"),
+                );
+                if let Ok(Ok((ws, _))) = tokio::time::timeout(
+                    Duration::from_millis(1500),
+                    tokio_tungstenite::connect_async(req),
+                )
+                .await
+                {
+                    let _ = tx.send(BackendStream::Ws(ws)).await;
+                }
+            }
+        });
+    }
+
+    // 3. Parallel TLS Domain Fronting probes to DC IPs (using genuine Telegram SNI)
+    let primary_target_host = candidate_hosts[0].clone();
+    for &ip in ips {
+        let connector = tls_connector.clone();
+        let target_host = primary_target_host.clone();
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            if let Ok(Ok(ws)) = tokio::time::timeout(
+                Duration::from_millis(1500),
+                connect_fronted_ws(ip, &target_host, "web.telegram.org", &connector),
+            )
+            .await
+            {
+                let _ = tx.send(BackendStream::Ws(ws)).await;
+            }
+        });
+    }
+
+    // 4. Staggered Cloudflare fallback (starts after 180ms if direct paths haven't won)
+    let primary_ip = ips[0];
+    let cf_domains_clone = cf_domains.clone();
+    let tx_cf = tx.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(180)).await;
+        for cf_domain in cf_domains_clone.iter().take(2) {
+            let cf_url = format!("wss://{}/apiws?dst={}&dc={}", cf_domain, primary_ip, actual_dc);
+            if let Ok(mut req) = cf_url.into_client_request() {
+                req.headers_mut().insert(
+                    "Sec-WebSocket-Protocol",
+                    HeaderValue::from_static("binary"),
+                );
+                if let Ok(Ok((ws, _))) = tokio::time::timeout(
+                    Duration::from_millis(1800),
+                    tokio_tungstenite::connect_async(req),
+                )
+                .await
+                {
+                    let _ = tx_cf.send(BackendStream::Ws(ws)).await;
+                    break;
+                }
+            }
+        }
+    });
+
+    drop(tx);
+
+    match tokio::time::timeout(Duration::from_millis(2500), rx.recv()).await {
+        Ok(Some(backend)) => {
+            match &backend {
+                BackendStream::Tcp(_) => {
+                    logger
+                        .log(&format!("[{}] Connected via fast parallel TCP to DC{}", peer, actual_dc))
+                        .await;
+                }
+                BackendStream::Ws(_) => {
+                    logger
+                        .log(&format!("[{}] Connected via fast parallel WS to DC{}", peer, actual_dc))
+                        .await;
+                }
+            }
+            Some(backend)
+        }
+        _ => None,
+    }
+}
+
 async fn handle_client(
     mut client_socket: TcpStream,
     peer: SocketAddr,
@@ -461,8 +579,7 @@ async fn handle_client(
         ))
         .await;
 
-    // Connect to Telegram WebSocket endpoint
-    let mut ws_stream = None;
+    // Connect to Telegram backend
     let ips = get_dc_ips(actual_dc);
 
     let candidate_hosts: Vec<String> = match actual_dc {
@@ -512,177 +629,78 @@ async fn handle_client(
         _ => vec![format!("kws{}.web.telegram.org", actual_dc)],
     };
 
-    // 1. Primary: TLS Domain Fronting directly to Telegram DC IP
-    'fronting: for target_host in &candidate_hosts {
-        for &ip in ips {
-            for sni in SNI_CANDIDATES {
-                match tokio::time::timeout(
-                    Duration::from_millis(1500),
-                    connect_fronted_ws(ip, target_host, sni, &tls_connector),
-                )
-                .await
-                {
-                    Ok(Ok(ws)) => {
-                        logger
-                            .log(&format!(
-                                "[{}] Connected via TLS Domain Fronting to {} (SNI: {}, IP: {})",
-                                peer, target_host, sni, ip
-                            ))
-                            .await;
-                        ws_stream = Some(ws);
-                        break 'fronting;
-                    }
-                    Ok(Err(e)) => {
-                        logger
-                            .warn(&format!(
-                                "[{}] Fronting attempt to {} via {} ({}) failed: {}",
-                                peer, target_host, sni, ip, e
-                            ))
-                            .await;
-                    }
-                    Err(_) => {
-                        logger
-                            .warn(&format!(
-                                "[{}] Fronting attempt to {} via {} ({}) timed out",
-                                peer, target_host, sni, ip
-                            ))
-                            .await;
-                    }
-                }
-            }
-        }
-    }
+    let backend = race_backend_connection(
+        actual_dc,
+        ips,
+        &candidate_hosts,
+        cf_domains,
+        tls_connector,
+        &logger,
+        peer,
+    ).await;
 
-    // 2. Direct fallback (in case user is outside censored network)
-    if ws_stream.is_none() {
-        for target_host in &candidate_hosts {
-            let direct_url = format!("wss://{}/apiws", target_host);
-            match tokio::time::timeout(
-                Duration::from_millis(1500),
-                tokio_tungstenite::connect_async(&direct_url),
-            )
-            .await
-            {
-                Ok(Ok((ws, _))) => {
-                    logger
-                        .log(&format!("[{}] Connected to direct WS: {}", peer, direct_url))
-                        .await;
-                    ws_stream = Some(ws);
-                    break;
-                }
-                _ => continue,
-            }
-        }
-    }
-
-    // 3. Fallback to Cloudflare workers if direct fails
-    if ws_stream.is_none() {
-        let primary_ip = ips[0];
-        for cf_domain in cf_domains.iter().take(2) {
-            let cf_url = format!("wss://{}/apiws?dst={}&dc={}", cf_domain, primary_ip, actual_dc);
-            match tokio::time::timeout(
-                Duration::from_millis(1500),
-                tokio_tungstenite::connect_async(&cf_url),
-            )
-            .await
-            {
-                Ok(Ok((ws, _))) => {
-                    logger
-                        .log(&format!("[{}] Connected to CF fallback: {}", peer, cf_url))
-                        .await;
-                    ws_stream = Some(ws);
-                    break;
-                }
-                _ => continue,
-            }
-        }
-    }
-
-    // Direct MTProto TCP Fallback to Telegram DC if WS is blocked
-    if ws_stream.is_none() {
-        let mut connected_tcp = None;
-        let mut connected_ip = "";
-        for &fallback_ip in ips {
-            logger.log(&format!("[{}] Trying direct TCP fallback to {}:443 for DC{}", peer, fallback_ip, actual_dc)).await;
-            if let Ok(Ok(tcp_stream)) = tokio::time::timeout(Duration::from_millis(1500), TcpStream::connect(format!("{}:443", fallback_ip))).await {
-                logger.log(&format!("[{}] Connected via direct TCP fallback to {}:443", peer, fallback_ip)).await;
-                connected_tcp = Some(tcp_stream);
-                connected_ip = fallback_ip;
-                break;
-            }
-        }
-        if let Some(mut tcp_stream) = connected_tcp {
+    match backend {
+        Some(BackendStream::Tcp(mut tcp_stream)) => {
             if let Err(e) = tcp_stream.write_all(&relay_init).await {
-                logger.warn(&format!("[{}] TCP fallback failed to send relay_init to {}: {}", peer, connected_ip, e)).await;
+                logger.warn(&format!("[{}] TCP fallback failed to send relay_init: {}", peer, e)).await;
                 return;
             }
-                let (mut tcp_reader, mut tcp_writer) = tcp_stream.into_split();
-                let (mut client_reader, mut client_writer) = client_socket.into_split();
+            let (mut tcp_reader, mut tcp_writer) = tcp_stream.into_split();
+            let (mut client_reader, mut client_writer) = client_socket.into_split();
 
-                let client_to_tcp = async {
-                    let mut buf = vec![0u8; 65536];
-                    loop {
-                        let n = match client_reader.read(&mut buf).await {
-                            Ok(0) => break,
-                            Ok(n) => n,
-                            Err(_) => break,
-                        };
-                        let chunk = &buf[..n];
-                        let mut plain = chunk.to_vec();
-                        clt_dec.apply_keystream(&mut plain);
-                        let mut cipher_chunk = plain;
-                        tg_enc.apply_keystream(&mut cipher_chunk);
-                        if let Err(_) = tcp_writer.write_all(&cipher_chunk).await {
-                            break;
-                        }
+            let client_to_tcp = async {
+                let mut buf = vec![0u8; 65536];
+                loop {
+                    let n = match client_reader.read(&mut buf).await {
+                        Ok(0) => break,
+                        Ok(n) => n,
+                        Err(_) => break,
+                    };
+                    let chunk = &buf[..n];
+                    let mut plain = chunk.to_vec();
+                    clt_dec.apply_keystream(&mut plain);
+                    let mut cipher_chunk = plain;
+                    tg_enc.apply_keystream(&mut cipher_chunk);
+                    if let Err(_) = tcp_writer.write_all(&cipher_chunk).await {
+                        break;
                     }
-                };
-
-                let tcp_to_client = async {
-                    let mut buf = vec![0u8; 65536];
-                    loop {
-                        let n = match tcp_reader.read(&mut buf).await {
-                            Ok(0) => break,
-                            Ok(n) => n,
-                            Err(_) => break,
-                        };
-                        let chunk = &buf[..n];
-                        let mut plain = chunk.to_vec();
-                        tg_dec.apply_keystream(&mut plain);
-                        let mut cipher_chunk = plain;
-                        clt_enc.apply_keystream(&mut cipher_chunk);
-                        if let Err(_) = client_writer.write_all(&cipher_chunk).await {
-                            break;
-                        }
-                    }
-                };
-
-                tokio::select! {
-                    _ = client_to_tcp => {},
-                    _ = tcp_to_client => {},
                 }
-                return;
-            }
-        }
+            };
 
-    let mut ws = match ws_stream {
-        Some(w) => w,
-        None => {
-            logger
-                .warn(&format!("[{}] Failed to connect to any backend for DC{}", peer, actual_dc))
-                .await;
+            let tcp_to_client = async {
+                let mut buf = vec![0u8; 65536];
+                loop {
+                    let n = match tcp_reader.read(&mut buf).await {
+                        Ok(0) => break,
+                        Ok(n) => n,
+                        Err(_) => break,
+                    };
+                    let chunk = &buf[..n];
+                    let mut plain = chunk.to_vec();
+                    tg_dec.apply_keystream(&mut plain);
+                    let mut cipher_chunk = plain;
+                    clt_enc.apply_keystream(&mut cipher_chunk);
+                    if let Err(_) = client_writer.write_all(&cipher_chunk).await {
+                        break;
+                    }
+                }
+            };
+
+            tokio::select! {
+                _ = client_to_tcp => {},
+                _ = tcp_to_client => {},
+            }
             return;
         }
-    };
+        Some(BackendStream::Ws(mut ws)) => {
+            // Send initial relay frame
+            if let Err(e) = ws.send(Message::Binary(relay_init.into())).await {
+                logger.warn(&format!("[{}] Failed to send relay init: {}", peer, e)).await;
+                return;
+            }
 
-    // Send initial relay frame
-    if let Err(e) = ws.send(Message::Binary(relay_init.into())).await {
-        logger.warn(&format!("[{}] Failed to send relay init: {}", peer, e)).await;
-        return;
-    }
-
-    let (mut ws_sink, mut ws_src) = ws.split();
-    let (mut client_reader, mut client_writer) = client_socket.into_split();
+            let (mut ws_sink, mut ws_src) = ws.split();
+            let (mut client_reader, mut client_writer) = client_socket.into_split();
 
     let mut splitter = MsgSplitter::new(proto_tag);
 
@@ -739,6 +757,14 @@ async fn handle_client(
     tokio::select! {
         _ = client_to_ws => {},
         _ = ws_to_client => {},
+    }
+        }
+        None => {
+            logger
+                .warn(&format!("[{}] Failed to connect to any backend for DC{}", peer, actual_dc))
+                .await;
+            return;
+        }
     }
 }
 

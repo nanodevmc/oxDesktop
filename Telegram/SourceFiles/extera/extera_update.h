@@ -9,6 +9,7 @@ namespace Extera::Update {
 enum class CheckResult {
 	Available,
 	Latest,
+	Beta,
 	Failed,
 };
 

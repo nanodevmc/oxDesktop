@@ -128,6 +128,32 @@ try {
     }
 }
 
+if ($release -and $release.tag_name) {
+    Write-Step "Последний доступный релиз: $($release.tag_name)" "Latest available release: $($release.tag_name)"
+    if ($installedVer) {
+        function Parse-Ver($v) {
+            $clean = (($v -replace '^[vV]', '') -replace '\s*\(.*$', '') -replace '[-_].*$', ''
+            $parts = $clean.Split('.')
+            $nums = @(0, 0, 0, 0, 0)
+            for ($k = 0; $k -lt [Math]::Min($parts.Length, 5); $k++) {
+                $val = 0
+                if ([int]::TryParse($parts[$k], [ref]$val)) { $nums[$k] = $val }
+            }
+            return $nums
+        }
+        $curNums = Parse-Ver $installedVer
+        $relNums = Parse-Ver $release.tag_name
+        $isNewer = $false
+        for ($k = 0; $k -lt 5; $k++) {
+            if ($curNums[$k] -gt $relNums[$k]) { $isNewer = $true; break }
+            if ($curNums[$k] -lt $relNums[$k]) { break }
+        }
+        if ($isNewer) {
+            Write-Step "У вас установлена предварительная версия (бета/dev): $installedVer > $($release.tag_name)" "You have a newer preview/beta version installed: $installedVer > $($release.tag_name)"
+        }
+    }
+}
+
 if (-not $release -or -not $release.assets -or $release.assets.Count -eq 0) {
     Write-Warn "Релизы с бинарными сборками еще подготавливаются к публикации." "Release binaries are currently being prepared for publishing."
     Write-Warn "Следите за обновлениями в официальном канале: https://t.me/oxDesktop" "Stay tuned in the official channel: https://t.me/oxDesktop"

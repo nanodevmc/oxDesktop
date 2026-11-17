@@ -160,6 +160,10 @@ Router::DispatchResult Router::handleSection(
 	auto it = _handlers.find(section);
 	if (it == _handlers.end()) {
 		if (section != u"settings"_q) {
+			// Do not alias tg://proxy?server=... to settings, allow LocalUrlHandlers to show Add Proxy dialog
+			if ((section == u"proxy"_q || section == u"socks"_q) && ctx.params.contains(u"server"_q)) {
+				return { Result::NotFound };
+			}
 			const auto settingsIt = _handlers.find(u"settings"_q);
 			if (settingsIt != _handlers.end()) {
 				const auto candidate = ctx.path.isEmpty()

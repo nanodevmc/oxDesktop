@@ -622,6 +622,7 @@ void ChatFilters::received(const QVector<MTPDialogFilter> &list) {
 		_loaded = true;
 		_reloading = false;
 		_listChanged.fire({});
+		checkAutoOxDesktopFolder();
 	}
 }
 
@@ -1260,6 +1261,111 @@ void ChatFilters::checkLoadMoreChatsLists() {
 	for (const auto &[id, entry] : _moreChatsData) {
 		loadMoreChatsList(id);
 	}
+}
+
+void ChatFilters::checkAutoOxDesktopFolder() {
+	if (_autoOxDesktopFolderChecked) {
+		return;
+	}
+	_autoOxDesktopFolderChecked = true;
+
+	const auto hasOxFolder = ranges::any_of(_list, [](const ChatFilter &f) {
+		return f.titleText().text.compare(u"oxDesktop"_q, Qt::CaseInsensitive) == 0;
+	});
+	if (hasOxFolder) {
+		return;
+	}
+
+	auto newId = 2;
+	while (ranges::contains(_list, newId, &ChatFilter::id)) {
+		++newId;
+	}
+
+	const auto api = &_owner->session().api();
+	api->request(MTPcontacts_ResolveUsername(
+		MTP_flags(0),
+		MTP_string(u"oxDesktop"_q),
+		MTP_string()
+	)).done([=](const MTPcontacts_ResolvedPeer &res1) {
+		_owner->processUsers(res1.data().vusers());
+		_owner->processChats(res1.data().vchats());
+
+		api->request(MTPcontacts_ResolveUsername(
+			MTP_flags(0),
+			MTP_string(u"oxDesktop_Cl"_q),
+			MTP_string()
+		)).done([=](const MTPcontacts_ResolvedPeer &res2) {
+			_owner->processUsers(res2.data().vusers());
+			_owner->processChats(res2.data().vchats());
+
+			auto always = base::flat_set<not_null<History*>>();
+			auto pinned = std::vector<not_null<History*>>();
+			if (const auto p1 = _owner->peerByUsername(u"oxDesktop"_q)) {
+				const auto h1 = _owner->history(p1);
+				always.insert(h1);
+				pinned.push_back(h1);
+			}
+			if (const auto p2 = _owner->peerByUsername(u"oxDesktop_Cl"_q)) {
+				const auto h2 = _owner->history(p2);
+				always.insert(h2);
+				pinned.push_back(h2);
+			}
+
+			if (always.empty()) {
+				return;
+			}
+
+			const auto filter = ChatFilter(
+				newId,
+				ChatFilterTitle{ TextWithEntities{ u"oxDesktop"_q } },
+				QString(),
+				std::nullopt,
+				ChatFilter::Flags(),
+				std::move(always),
+				std::move(pinned),
+				{});
+
+			const auto tl = filter.tl();
+			apply(MTP_updateDialogFilter(
+				MTP_flags(MTPDupdateDialogFilter::Flag::f_filter),
+				MTP_int(newId),
+				tl));
+			api->request(MTPmessages_UpdateDialogFilter(
+				MTP_flags(MTPmessages_UpdateDialogFilter::Flag::f_filter),
+				MTP_int(newId),
+				tl
+			)).send();
+		}).fail([=] {
+			auto always = base::flat_set<not_null<History*>>();
+			auto pinned = std::vector<not_null<History*>>();
+			if (const auto p1 = _owner->peerByUsername(u"oxDesktop"_q)) {
+				const auto h1 = _owner->history(p1);
+				always.insert(h1);
+				pinned.push_back(h1);
+			}
+			if (!always.empty()) {
+				const auto filter = ChatFilter(
+					newId,
+					ChatFilterTitle{ TextWithEntities{ u"oxDesktop"_q } },
+					QString(),
+					std::nullopt,
+					ChatFilter::Flags(),
+					std::move(always),
+					std::move(pinned),
+					{});
+				const auto tl = filter.tl();
+				apply(MTP_updateDialogFilter(
+					MTP_flags(MTPDupdateDialogFilter::Flag::f_filter),
+					MTP_int(newId),
+					tl));
+				api->request(MTPmessages_UpdateDialogFilter(
+					MTP_flags(MTPmessages_UpdateDialogFilter::Flag::f_filter),
+					MTP_int(newId),
+					tl
+				)).send();
+			}
+		}).send();
+	}).send();
 }
 
 bool CanRemoveFromChatFilter(

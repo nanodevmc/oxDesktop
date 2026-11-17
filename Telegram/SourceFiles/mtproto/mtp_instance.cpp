@@ -608,6 +608,8 @@ void Instance::Private::requestCDNConfig() {
 			dcOptions().setCDNConfig(data);
 		});
 		Local::writeSettings();
+	}).fail([this] {
+		_cdnConfigLoadRequestId = 0;
 	}).send();
 }
 

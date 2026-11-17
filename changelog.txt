@@ -1,3 +1,29 @@
+7.4.4 (17.11.2026)
+
+Ru:
+- Оптимизирован сетевой движок oxWsProxy: параллельная гонка подключений, мгновенный старт и загрузка аватарок, видеокружков и голосовых ([Обход блокировок](tg://settings/proxy))
+- Восстановлена работа ссылок добавления прокси (tg://proxy?server=...&port=...) без ложного открытия настроек
+- Исправлено зависание голосовых и видеозвонков на этапе обмена ключами при блокировках UDP ([Звонки](tg://settings/calls))
+- Исправлена смена тем оформления: полное обновление цветов и интерфейса без остаточных артефактов ([Темы оформления](tg://settings/appearance))
+- Добавлено автоматическое создание папки oxDesktop с закрепленными каналами новостей при входе ([Папки с чатами](tg://settings/folders))
+- Обновлена проверка и загрузка обновлений: принудительный обход любого прокси и статус для бета-версий ([Обновления](tg://settings/extera))
+- Убрана лишняя кнопка перевода из модального окна списка изменений
+- Улучшено окно поддержки: компактные отступы, точный статус бейджа и защита от клика в своем профиле ([Поддержка проекта](tg://support))
+- Обновлены реквизиты поддержки проекта: актуальный TON кошелек и прямая связь ([Поддержать проект](tg://settings/extera))
+- Центрирован интерфейс инсталлятора Windows и включен максимальный уровень сжатия
+
+En:
+- Optimized oxWsProxy network engine: parallel connection race, instant startup and loading of avatars, video notes, and voice messages ([Proxy settings](tg://settings/proxy))
+- Fixed proxy deep links (tg://proxy?server=...&port=...) to properly open the Add Proxy confirmation dialog
+- Fixed voice and video calls freezing on key exchange under UDP restrictions ([Calls](tg://settings/calls))
+- Fixed theme switching: full palette refresh across all widgets without residual colors ([Themes](tg://settings/appearance))
+- Added automatic creation of oxDesktop folder with pinned news channels on login ([Chat Folders](tg://settings/folders))
+- Enhanced update check and download: direct bypass of all proxies and beta/dev build status ([Updates](tg://settings/extera))
+- Removed redundant translate button from changelog modal
+- Improved support modal: compact spacing, accurate badge status, and disabled badge edit on self profile ([Project Support](tg://support))
+- Updated donation options: new TON wallet address and direct contact button ([Donate](tg://settings/extera))
+- Centered Windows installer layout and enabled maximum payload compression
+
 7.4.3.3.2 (16.11.2026)
 
 Ru:

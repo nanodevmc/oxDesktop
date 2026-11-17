@@ -23,6 +23,7 @@ fn main() {
     let mut zip = ZipWriter::new(file);
     let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
+        .compression_level(Some(9))
         .unix_permissions(0o755);
 
     let payload_dir = Path::new("payload");

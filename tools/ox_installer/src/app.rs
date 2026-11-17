@@ -315,10 +315,10 @@ impl InstallerApp {
             }
         }
 
-        // --- 2. Центр: Дельта логотип, заголовок и подзаголовок (сдвинуты вниз для лучшего баланса) ---
+        // --- 2. Центр: Дельта логотип, заголовок и подзаголовок (центрированы и сбалансированы) ---
         let logo_size = 64;
         let logo_x = (width - logo_size) / 2;
-        let logo_y = 20;
+        let logo_y = 30;
 
         if let Some(logo) = &self.logo_img {
             logo.draw(graphics.raw(), logo_x, logo_y, logo_size, logo_size);
@@ -327,20 +327,19 @@ impl InstallerApp {
         unsafe {
             SelectObject(hdc, self.fonts.title);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_PRIMARY));
-            let mut r_title = Rect::new(0, logo_y + logo_size + 6, width, 28).to_win32_rect();
+            let mut r_title = Rect::new(0, logo_y + logo_size + 8, width, 28).to_win32_rect();
             let title_str = to_wide_null("oxDesktop");
             DrawTextW(hdc, title_str.as_ptr(), -1, &mut r_title, 0x00000001 | 0x00000020);
 
-            // Подзаголовок сдвинут заметно ниже под заголовок
             SelectObject(hdc, self.fonts.body);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_SECONDARY));
-            let mut r_sub = Rect::new(0, logo_y + logo_size + 42, width, 22).to_win32_rect();
+            let mut r_sub = Rect::new(0, logo_y + logo_size + 36, width, 22).to_win32_rect();
             let sub_str = to_wide_null("Быстрый и безопасный клиент Telegram с обходом блокировок");
             DrawTextW(hdc, sub_str.as_ptr(), -1, &mut r_sub, 0x00000001 | 0x00000020);
         }
 
         // --- 3. Поле выбора пути ---
-        let form_w = 460;
+        let form_w = 480;
         let form_x = (width - form_w) / 2;
         let path_y = 176;
         let path_h = 36;
@@ -379,10 +378,10 @@ impl InstallerApp {
             true,
         );
 
-        // --- 4. Ссылки в левом нижнем углу (пониже, друг под другом) ---
+        // --- 4. Ссылки в левом нижнем углу ---
         let link_x = 32;
-        let tg_y = 320;
-        let gh_y = 344;
+        let tg_y = 312;
+        let gh_y = 336;
 
         unsafe {
             let tg_hover = self.hovered_btn == Some(ButtonId::LinkTelegram);

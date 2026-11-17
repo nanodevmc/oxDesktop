@@ -236,6 +236,7 @@ private:
 
 	void checkLoadMoreChatsLists();
 	void loadMoreChatsList(FilterId id);
+	void checkAutoOxDesktopFolder();
 
 	const not_null<Session*> _owner;
 
@@ -250,6 +251,7 @@ private:
 	mtpRequestId _toggleTagsRequestId = 0;
 	bool _loaded = false;
 	bool _reloading = false;
+	bool _autoOxDesktopFolderChecked = false;
 
 	mtpRequestId _suggestedRequestId = 0;
 	std::vector<SuggestedFilter> _suggested;
