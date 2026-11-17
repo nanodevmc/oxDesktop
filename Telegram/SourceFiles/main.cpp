@@ -19,7 +19,7 @@ Q_IMPORT_PLUGIN(QWebpPlugin)
 Q_IMPORT_PLUGIN(QJpegPlugin)
 Q_IMPORT_PLUGIN(QGifPlugin)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-Q_IMPORT_PLUGIN(QSchannelBackendPlugin)
+Q_IMPORT_PLUGIN(QSchannelBackend)
 #endif
 #endif
 
