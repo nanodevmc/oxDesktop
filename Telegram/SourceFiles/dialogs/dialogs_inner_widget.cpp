@@ -519,9 +519,8 @@ InnerWidget::InnerWidget(
 		}
 		if (update.flags & (UpdateFlag::IsContact | UpdateFlag::Name)) {
 			if (const auto history = peer->owner().historyLoaded(peer)) {
-				_rowsScrollCache.invalidate(history->bareId());
-				invalidateCachedRow(history->bareId());
-				peer->owner().notifyDialogRowRefresh({ history, FullMsgId() });
+				invalidateCachedRow(RowsCacheKey(history));
+				updateDialogRow({ history, FullMsgId() });
 			}
 			Ui::PostponeCall(this, [=] { refresh(); });
 		}
