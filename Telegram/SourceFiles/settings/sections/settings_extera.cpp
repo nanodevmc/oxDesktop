@@ -777,7 +777,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 		header->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(header);
 			auto hq = PainterHighQualityEnabler(p);
-			const auto w = header->width();
+			[[maybe_unused]] const auto w = header->width();
 			const auto h = header->height();
 
 			const auto avSize = 50;
@@ -866,7 +866,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			u"Помощь серверной инфраструктуре TgWsProxy и разработке новых функций."_q);
 
 		box->addButton(
-			isPurchased ? u"Подробнее о бейдже"_q : u"Получить бейдж"_q,
+			rpl::single(isPurchased ? u"Подробнее о бейдже"_q : u"Получить бейдж"_q),
 			[=] {
 				UrlClickHandler::Open(u"https://t.me/exteraAuthBot/donate"_q);
 			});
@@ -3442,6 +3442,7 @@ void BuildPlugins(SectionBuilder &builder) {
 }
 
 void PartSmartGhost(SectionBuilder &builder) {
+	const auto controller = builder.controller();
 	builder.addSkip();
 	builder.addSubsectionTitle(rpl::single(u"Smart Ghost Mode (\u041F\u0440\u0438\u0437\u0440\u0430\u043A)"_q));
 	builder.card([&] {
