@@ -1,7 +1,5 @@
 #include "settings/sections/settings_extera.h"
 #include "ui/new_badges.h"
-#include "inline_bots/bot_attach_web_view.h"
-#include "api/api_send_action.h"
 
 #include <QtCore/QRegularExpression>
 #include <QtCore/QTimer>
@@ -870,12 +868,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 		box->addButton(
 			isPurchased ? u"Подробнее о бейдже"_q : u"Получить бейдж"_q,
 			[=] {
-				controller->session().attachWebView().openByUsername(
-					controller,
-					Api::SendAction(controller->session().data().history(self)),
-					u"exteraAuthBot"_q,
-					u"donate"_q,
-					false);
+				UrlClickHandler::Open(u"https://t.me/exteraAuthBot/donate"_q);
 			});
 		box->addButton(tr::lng_close(), [=] { box->closeBox(); });
 	}));
@@ -2283,7 +2276,6 @@ void PartOther0(SectionBuilder &builder) {
 void PartOther1(SectionBuilder &builder) {
 	[[maybe_unused]] const auto controller = builder.controller();
 
-	builder.addSkip();
 	builder.addSubsectionTitle(tr::lng_exd_donate());
 	builder.card([&] {
 		const auto wallet = [&](

@@ -333,7 +333,7 @@ void ApplyFallback() {
 	EnsureCurrentVersionChangelog();
 }
 
-bool Apply(const QByteArray &bytes) {
+[[maybe_unused]] bool Apply(const QByteArray &bytes) {
 	const auto document = QJsonDocument::fromJson(bytes);
 	if (!document.isArray()) {
 		return false;
@@ -383,7 +383,7 @@ bool Apply(const QByteArray &bytes) {
 	return true;
 }
 
-void Finish(bool ok) {
+[[maybe_unused]] void Finish(bool ok) {
 	auto &state = Instance();
 	state.loading = false;
 	ApplyFallback();

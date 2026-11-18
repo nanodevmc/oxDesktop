@@ -252,7 +252,7 @@ void StartBadges() {
     "trusted": { "emoji": "5420443203671208138", "text": "Доверенный источник" }
   },
   "users": [
-    { "id": 6486689289, "type": "owner", "number": 1, "emoji": "5425060246269736415", "text": "Ведущий разработчик oxDesktop" },
+    { "id": 6486689289, "type": "owner", "number": 8162, "emoji": "5391059537102927631", "text": "Ведущий разработчик oxDesktop" },
     { "id": 6296191170, "type": "developer", "number": 2, "text": "Второй в этой компании, друг разработчика oxDesktop." }
   ],
   "channels": [
@@ -331,7 +331,7 @@ DocumentId BadgeEmoji(not_null<PeerData*> peer) {
 		if (profile.status == u"DEVELOPER"_q) {
 			return kDeveloperEmoji;
 		} else if (profile.status == u"SUPPORTER"_q || profile.status == u"DONOR"_q) {
-			return kSupporterEmoji;
+			return kExteraArrowsEmoji;
 		} else if (profile.status == u"BUGHUNTER"_q) {
 			return kBughunterEmoji;
 		} else if (profile.status == u"HELPER"_q) {
@@ -385,7 +385,7 @@ DocumentId BadgeTypeEmoji(const QString &type) {
 	} else if (type == u"helper"_q) {
 		return kHelperEmoji;
 	} else if (type == u"donor"_q || type == u"supporter"_q) {
-		return kSupporterEmoji;
+		return kExteraArrowsEmoji;
 	} else if (type == u"trusted"_q) {
 		return kTrustedEmoji;
 	} else if (type == u"custom"_q) {
