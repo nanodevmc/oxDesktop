@@ -394,39 +394,10 @@ void Finish(bool ok) {
 }
 
 void Load(Fn<void()> done) {
-	auto &state = Instance();
+	ApplyFallback();
 	if (done) {
-		state.waiting.push_back(std::move(done));
+		done();
 	}
-	if (state.loading) {
-		return;
-	}
-	state.loading = true;
-	if (!state.manager) {
-		state.manager = new QNetworkAccessManager(qApp);
-	}
-	auto request = QNetworkRequest(QUrl(
-		u"https://api.github.com/repos/nanodevmc/oxDesktop/releases?per_page=%1"_q
-			.arg(kMaxReleases)));
-	request.setRawHeader("Accept", "application/vnd.github+json");
-	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
-	const auto reply = state.manager->get(request);
-	QObject::connect(reply, &QNetworkReply::finished, [=] {
-		reply->deleteLater();
-		if (reply->error() != QNetworkReply::NoError) {
-			Finish(false);
-		} else {
-			const auto bytes = reply->readAll();
-			const auto ok = Apply(bytes);
-			if (ok) {
-				auto file = QFile(CachePath());
-				if (file.open(QIODevice::WriteOnly)) {
-					file.write(bytes);
-				}
-			}
-			Finish(ok);
-		}
-	});
 }
 
 void FillReleaseContent(
@@ -582,16 +553,13 @@ void Fill(
 		return;
 	}
 
-	auto first = true;
-	for (const auto &release : state.releases) {
-		if (!first) {
-			Ui::AddSkip(content);
-			Ui::AddDivider(content);
-			Ui::AddSkip(content);
-		}
-		first = false;
-		FillReleaseContent(content, release, false);
-	}
+	const auto currentVer = QString::fromUtf8(AppVersionStr).trimmed();
+	const auto it = ranges::find_if(state.releases, [&](const StructuredRelease &rel) {
+		return rel.version.trimmed().startsWith(currentVer)
+			|| currentVer.startsWith(rel.version.trimmed());
+	});
+	const auto &release = (it != end(state.releases)) ? *it : state.releases.front();
+	FillReleaseContent(content, release, false);
 }
 
 [[nodiscard]] TextWithEntities TranslationText() {
@@ -646,16 +614,7 @@ void Start() {
 		return;
 	}
 	started = true;
-	auto file = QFile(CachePath());
-	if (!file.exists() && QFile::exists(LegacyCachePath())) {
-		file.setFileName(LegacyCachePath());
-	}
-	if (file.open(QIODevice::ReadOnly)) {
-		Apply(file.readAll());
-	}
-	if (Instance().releases.empty()) {
-		ApplyFallback();
-	}
+	ApplyFallback();
 	Core::App().domain().activeSessionValue(
 	) | rpl::filter([](Main::Session *session) {
 		return session != nullptr;

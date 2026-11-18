@@ -2762,7 +2762,7 @@ void HistoryInner::mouseDoubleClickEvent(QMouseEvent *e) {
 		&& !inSelectionMode().inSelectionMode
 		&& !_emptyPainter
 		&& e->button() == Qt::LeftButton) {
-		if (const auto view = Element::Moused()) {
+		if (const auto view = Element::Hovered()) {
 			mouseActionCancel();
 			const auto item = view->data();
 			switch (Extera::Int(item->out()

@@ -3179,6 +3179,20 @@ void Message::paintText(
 	if (appearingClip) {
 		p.restore();
 	}
+
+	const auto customMark = Extera::String(u"deleted_mark_text"_q);
+	const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
+	if (data()->originalText().text.endsWith(mark)) {
+		const auto customColorHex = Extera::String(u"deleted_mark_color"_q);
+		const auto color = QColor(customColorHex.isEmpty() ? u"#e53935"_q : customColorHex);
+		p.save();
+		p.setFont(st::defaultTextStyle.font);
+		p.setPen(color.isValid() ? color : QColor(229, 57, 53));
+		const auto fontH = st::defaultTextStyle.font->height;
+		const auto markY = trect.y() + trect.height() - fontH;
+		p.drawText(QRect(trect.x(), markY, trect.width(), fontH), Qt::AlignLeft | Qt::AlignVCenter, mark);
+		p.restore();
+	}
 }
 
 void Message::paintRichText(

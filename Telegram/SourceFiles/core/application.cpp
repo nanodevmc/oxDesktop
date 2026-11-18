@@ -534,6 +534,7 @@ void Application::run() {
 
 	DEBUG_LOG(("Application Info: window created..."));
 
+	Extera::WsProxy::Start();
 	startDomain();
 	startTray();
 
@@ -582,7 +583,6 @@ void Application::run() {
 	Extera::StartBadges();
 	Extera::Plugins::Start();
 	Extera::Update::Start();
-	Extera::WsProxy::Start();
 	Extera::StartWelcome();
 	Extera::Changelog::Start();
 	Extera::Streamer::Start();

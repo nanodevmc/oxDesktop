@@ -1959,6 +1959,8 @@ PRIVATE
     extera/extera_cross_send.h
     extera/extera_menu.cpp
     extera/extera_menu.h
+    extera/extera_shot.cpp
+    extera/extera_shot.h
     extera/extera_plugins.cpp
     extera/extera_plugins.h
     extera/extera_plugins_ui.cpp

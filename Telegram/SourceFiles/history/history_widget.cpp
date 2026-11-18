@@ -8986,7 +8986,7 @@ void HistoryWidget::updateHistoryGeometry(
 		newScrollTop = countInitialScrollTop();
 		_historyInited = true;
 		_scrollToAnimation.stop();
-	} else if (wasAtBottom && !loadedDown && !_history->unreadBar()) {
+	} else if (wasAtBottom && !loadedDown) {
 		newScrollTop = countAutomaticScrollTop();
 	} else {
 		newScrollTop = std::min(
@@ -9047,7 +9047,7 @@ void HistoryWidget::revealItemsCallback() {
 		_itemsRevealHeight = height;
 		_list->changeItemsRevealHeight(_itemsRevealHeight);
 
-		const auto newScrollTop = (wasAtBottom && !_history->unreadBar())
+		const auto newScrollTop = (wasAtBottom)
 			? countAutomaticScrollTop()
 			: _list->historyScrollTop();
 		const auto toY = std::clamp(newScrollTop, 0, _scroll->scrollTopMax());

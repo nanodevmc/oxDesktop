@@ -24,6 +24,7 @@ namespace Extera {
 namespace {
 
 constexpr auto kDeveloperEmoji = DocumentId(5395339798430919126ULL);
+constexpr auto kExteraArrowsEmoji = DocumentId(5391059537102927631ULL);
 constexpr auto kBughunterEmoji = DocumentId(5416037430513936515ULL);
 constexpr auto kHelperEmoji = DocumentId(5415603784845926997ULL);
 constexpr auto kDonorEmoji = DocumentId(5413871448441793380ULL);
@@ -72,23 +73,13 @@ ProfilesState &State() {
 }
 
 [[nodiscard]] uint64 BareId(not_null<PeerData*> peer) {
-	if (peer->isUser()) {
-		return uint64(peerToUser(peer->id).bare);
-	} else if (peer->isChannel()) {
-		return uint64(peerToChannel(peer->id).bare);
-	} else if (peer->isChat()) {
-		return uint64(peerToChat(peer->id).bare);
-	}
-	return 0;
+	return uint64(peerToBareMTPInt(peer->id).v);
 }
 
 bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 	const auto document = QJsonDocument::fromJson(bytes);
 	QJsonArray array;
 	auto &state = State();
-	if (!incremental) {
-		state.items.clear();
-	}
 
 	if (document.isObject()) {
 		const auto rootObj = document.object();
@@ -334,6 +325,9 @@ DocumentId BadgeEmoji(not_null<PeerData*> peer) {
 		if (profile.badgeDocumentId != 0) {
 			return profile.badgeDocumentId;
 		}
+		if (profile.type == u"extera"_q || profile.type == u"arrows"_q || profile.type == u"exteragram"_q) {
+			return kExteraArrowsEmoji;
+		}
 		if (profile.status == u"DEVELOPER"_q) {
 			return kDeveloperEmoji;
 		} else if (profile.status == u"SUPPORTER"_q || profile.status == u"DONOR"_q) {
@@ -384,6 +378,8 @@ DocumentId BadgeTypeEmoji(const QString &type) {
 		return kCustomLeadDevEmoji;
 	} else if (type == u"developer"_q) {
 		return kDeveloperEmoji;
+	} else if (type == u"extera"_q || type == u"arrows"_q || type == u"exteragram"_q) {
+		return kExteraArrowsEmoji;
 	} else if (type == u"bughunter"_q) {
 		return kBughunterEmoji;
 	} else if (type == u"helper"_q) {

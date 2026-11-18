@@ -22,6 +22,7 @@
 #include <QtCore/QTimer>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
+#include "extera/extera_shot.h"
 #include "data/data_file_click_handler.h"
 #include "data/data_photo.h"
 #include "data/data_photo_media.h"
@@ -466,6 +467,10 @@ void AddMessageMenuActions(
 		not_null<Ui::PopupMenu*> menu,
 		not_null<HistoryItem*> item,
 		not_null<Window::SessionController*> controller) {
+	menu->addAction(u"Shot (Снимок сообщения)"_q, [=] {
+		Extera::TakeMessageShot(controller, item);
+	}, &st::menuIconCopy);
+
 	if (const auto media = item->media()) {
 		if (const auto photo = media->photo()) {
 			if (const auto image = photo->createMediaView(); image && image->loaded()) {

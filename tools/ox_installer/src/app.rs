@@ -290,7 +290,7 @@ impl InstallerApp {
                 None => "не установлена".to_string(),
             };
             SetTextColor(hdc, argb_to_colorref(if self.installed_version.is_some() { COLOR_TEXT_PRIMARY } else { COLOR_TEXT_MUTED }));
-            let mut r_cur_val = Rect::new(122, 14, 110, 16).to_win32_rect();
+            let mut r_cur_val = Rect::new(122, 14, 107, 16).to_win32_rect();
             let cur_val_w = to_wide_null(&cur_val_str);
             DrawTextW(hdc, cur_val_w.as_ptr(), -1, &mut r_cur_val, 0x00000000 | 0x00000004);
 
@@ -318,7 +318,7 @@ impl InstallerApp {
         // --- 2. Центр: Дельта логотип, заголовок и подзаголовок (центрированы и сбалансированы) ---
         let logo_size = 64;
         let logo_x = (width - logo_size) / 2;
-        let logo_y = 30;
+        let logo_y = 70;
 
         if let Some(logo) = &self.logo_img {
             logo.draw(graphics.raw(), logo_x, logo_y, logo_size, logo_size);
@@ -333,7 +333,7 @@ impl InstallerApp {
 
             SelectObject(hdc, self.fonts.body);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_SECONDARY));
-            let mut r_sub = Rect::new(0, logo_y + logo_size + 36, width, 22).to_win32_rect();
+            let mut r_sub = Rect::new(0, logo_y + logo_size + 45, width, 22).to_win32_rect();
             let sub_str = to_wide_null("Быстрый и безопасный клиент Telegram с обходом блокировок");
             DrawTextW(hdc, sub_str.as_ptr(), -1, &mut r_sub, 0x00000001 | 0x00000020);
         }
@@ -341,7 +341,7 @@ impl InstallerApp {
         // --- 3. Поле выбора пути ---
         let form_w = 480;
         let form_x = (width - form_w) / 2;
-        let path_y = 176;
+        let path_y = 206;
         let path_h = 36;
 
         graphics.fill_rounded_rect(form_x, path_y, form_w, path_h, 6, COLOR_SURFACE);
@@ -397,12 +397,12 @@ impl InstallerApp {
             let mut tg_icon_w = [0u16; 3];
             let tg_icon_len = tg_icon_char.encode_utf16(&mut tg_icon_w).len();
             tg_icon_w[tg_icon_len] = 0;
-            let mut r_tg_icon = Rect::new(link_x, tg_y + 1, 16, 18).to_win32_rect();
+            let mut r_tg_icon = Rect::new(link_x, tg_y + 25, 16, 18).to_win32_rect();
             DrawTextW(hdc, tg_icon_w.as_ptr(), -1, &mut r_tg_icon, 0x00000000 | 0x00000004);
 
             // Текст Telegram
             SelectObject(hdc, self.fonts.small);
-            let mut r_tg = Rect::new(link_x + 20, tg_y + 1, 110, 18).to_win32_rect();
+            let mut r_tg = Rect::new(link_x + 20, tg_y + 25, 110, 18).to_win32_rect();
             let tg = to_wide_null("t.me/oxDesktop");
             DrawTextW(hdc, tg.as_ptr(), -1, &mut r_tg, 0x00000000 | 0x00000004);
 
@@ -416,12 +416,12 @@ impl InstallerApp {
             let mut gh_icon_w = [0u16; 3];
             let gh_icon_len = gh_icon_char.encode_utf16(&mut gh_icon_w).len();
             gh_icon_w[gh_icon_len] = 0;
-            let mut r_gh_icon = Rect::new(link_x, gh_y + 1, 16, 18).to_win32_rect();
+            let mut r_gh_icon = Rect::new(link_x, gh_y + 25, 16, 18).to_win32_rect();
             DrawTextW(hdc, gh_icon_w.as_ptr(), -1, &mut r_gh_icon, 0x00000000 | 0x00000004);
 
             // Текст GitHub
             SelectObject(hdc, self.fonts.small);
-            let mut r_gh = Rect::new(link_x + 20, gh_y + 1, 90, 18).to_win32_rect();
+            let mut r_gh = Rect::new(link_x + 20, gh_y + 25, 90, 18).to_win32_rect();
             let gh = to_wide_null("GitHub");
             DrawTextW(hdc, gh.as_ptr(), -1, &mut r_gh, 0x00000000 | 0x00000004);
         }

@@ -1,5 +1,7 @@
 #include "settings/sections/settings_extera.h"
 #include "ui/new_badges.h"
+#include "inline_bots/bot_attach_web_view.h"
+#include "api/api_send_action.h"
 
 #include <QtCore/QRegularExpression>
 #include <QtCore/QTimer>
@@ -865,16 +867,17 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			u"Поддержка проекта"_q,
 			u"Помощь серверной инфраструктуре TgWsProxy и разработке новых функций."_q);
 
-		const auto button = box->addRow(
-			object_ptr<Ui::RoundButton>(
-				box,
-				rpl::single(isPurchased ? u"Подробнее о бейдже"_q : u"Получить бейдж"_q),
-				st::defaultBoxButton),
-			style::margins(16, 6, 16, 8),
-			style::al_center);
-		button->setClickedCallback([=] {
-			UrlClickHandler::Open(u"https://t.me/exteraAuthBot/donate"_q);
-		});
+		box->addButton(
+			isPurchased ? u"Подробнее о бейдже"_q : u"Получить бейдж"_q,
+			[=] {
+				controller->session().attachWebView().openByUsername(
+					controller,
+					Api::SendAction(controller->session().data().history(self)),
+					u"exteraAuthBot"_q,
+					u"donate"_q,
+					false);
+			});
+		box->addButton(tr::lng_close(), [=] { box->closeBox(); });
 	}));
 }
 
@@ -3471,6 +3474,75 @@ void PartSmartGhost(SectionBuilder &builder) {
 			{ u"ghost"_q, u"pm"_q, u"private"_q },
 			tr::lng_exd_smart_ghost_pms_about(),
 			true);
+		AddToggle(
+			builder,
+			u"anti_delete"_q,
+			rpl::single(u"Анти-удаление сообщений"_q),
+			{ u"anti"_q, u"delete"_q },
+			rpl::single(u"Сохранять удаленные собеседником сообщения с пометкой в конце."_q),
+			true);
+		builder.addButton({
+			.id = u"extera/deleted_mark_text"_q,
+			.title = rpl::single(u"Текст пометки удалённого"_q),
+			.icon = { &st::menuIconEdit },
+			.label = Config().stringChanges(u"deleted_mark_text"_q)
+				| rpl::map([](const QString &t) {
+					return t.isEmpty() ? u"[Удалено]"_q : t;
+				}),
+			.onClick = [=] {
+				if (controller) {
+					controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+						box->setTitle(rpl::single(u"Текст пометки удалённого сообщения"_q));
+						box->setWidth(st::boxWideWidth);
+						const auto current = Extera::String(u"deleted_mark_text"_q);
+						const auto field = box->addRow(object_ptr<Ui::InputField>(
+							box,
+							st::defaultInputField,
+							rpl::single(u"Текст пометки"_q),
+							current.isEmpty() ? u"[Удалено]"_q : current));
+						box->addButton(tr::lng_settings_save(), [=] {
+							const auto val = field->getLastText().trimmed();
+							Extera::Config::Instance().setString(
+								u"deleted_mark_text"_q,
+								val.isEmpty() ? u"[Удалено]"_q : val);
+							box->closeBox();
+						});
+						box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
+					}));
+				}
+			},
+		});
+		builder.addButton({
+			.id = u"extera/deleted_mark_color"_q,
+			.title = rpl::single(u"Цвет пометки удалённого"_q),
+			.icon = { &st::menuIconPalette },
+			.label = Config().stringChanges(u"deleted_mark_color"_q)
+				| rpl::map([](const QString &c) {
+					return c.isEmpty() ? u"#e53935"_q : c;
+				}),
+			.onClick = [=] {
+				if (controller) {
+					controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+						box->setTitle(rpl::single(u"Цвет пометки (HEX, например #e53935)"_q));
+						box->setWidth(st::boxWideWidth);
+						const auto current = Extera::String(u"deleted_mark_color"_q);
+						const auto field = box->addRow(object_ptr<Ui::InputField>(
+							box,
+							st::defaultInputField,
+							rpl::single(u"HEX цвет (#e53935)"_q),
+							current.isEmpty() ? u"#e53935"_q : current));
+						box->addButton(tr::lng_settings_save(), [=] {
+							const auto val = field->getLastText().trimmed();
+							Extera::Config::Instance().setString(
+								u"deleted_mark_color"_q,
+								val.isEmpty() ? u"#e53935"_q : val);
+							box->closeBox();
+						});
+						box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
+					}));
+				}
+			},
+		});
 	});
 }
 

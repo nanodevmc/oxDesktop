@@ -291,6 +291,7 @@ void Launch() {
 			}
 		});
 	process->start();
+	process->waitForStarted(300);
 }
 
 } // namespace

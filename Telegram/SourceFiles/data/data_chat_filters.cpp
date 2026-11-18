@@ -1300,20 +1300,13 @@ void ChatFilters::checkAutoOxDesktopFolder() {
 
 			auto always = base::flat_set<not_null<History*>>();
 			auto pinned = std::vector<not_null<History*>>();
-			if (const auto p1 = _owner->peerByUsername(u"oxDesktop"_q)) {
-				const auto h1 = _owner->history(p1);
-				always.insert(h1);
-				pinned.push_back(h1);
-			}
-			if (const auto p2 = _owner->peerByUsername(u"oxDesktop_Cl"_q)) {
-				const auto h2 = _owner->history(p2);
-				always.insert(h2);
-				pinned.push_back(h2);
-			}
+			const auto h1 = _owner->history(peerFromMTP(res1.data().vpeer()));
+			always.insert(h1);
+			pinned.push_back(h1);
 
-			if (always.empty()) {
-				return;
-			}
+			const auto h2 = _owner->history(peerFromMTP(res2.data().vpeer()));
+			always.insert(h2);
+			pinned.push_back(h2);
 
 			const auto filter = ChatFilter(
 				newId,
@@ -1338,32 +1331,29 @@ void ChatFilters::checkAutoOxDesktopFolder() {
 		}).fail([=] {
 			auto always = base::flat_set<not_null<History*>>();
 			auto pinned = std::vector<not_null<History*>>();
-			if (const auto p1 = _owner->peerByUsername(u"oxDesktop"_q)) {
-				const auto h1 = _owner->history(p1);
-				always.insert(h1);
-				pinned.push_back(h1);
-			}
-			if (!always.empty()) {
-				const auto filter = ChatFilter(
-					newId,
-					ChatFilterTitle{ TextWithEntities{ u"oxDesktop"_q } },
-					QString(),
-					std::nullopt,
-					ChatFilter::Flags(),
-					std::move(always),
-					std::move(pinned),
-					{});
-				const auto tl = filter.tl();
-				apply(MTP_updateDialogFilter(
-					MTP_flags(MTPDupdateDialogFilter::Flag::f_filter),
-					MTP_int(newId),
-					tl));
-				api->request(MTPmessages_UpdateDialogFilter(
-					MTP_flags(MTPmessages_UpdateDialogFilter::Flag::f_filter),
-					MTP_int(newId),
-					tl
-				)).send();
-			}
+			const auto h1 = _owner->history(peerFromMTP(res1.data().vpeer()));
+			always.insert(h1);
+			pinned.push_back(h1);
+
+			const auto filter = ChatFilter(
+				newId,
+				ChatFilterTitle{ TextWithEntities{ u"oxDesktop"_q } },
+				QString(),
+				std::nullopt,
+				ChatFilter::Flags(),
+				std::move(always),
+				std::move(pinned),
+				{});
+			const auto tl = filter.tl();
+			apply(MTP_updateDialogFilter(
+				MTP_flags(MTPDupdateDialogFilter::Flag::f_filter),
+				MTP_int(newId),
+				tl));
+			api->request(MTPmessages_UpdateDialogFilter(
+				MTP_flags(MTPmessages_UpdateDialogFilter::Flag::f_filter),
+				MTP_int(newId),
+				tl
+			)).send();
 		}).send();
 	}).send();
 }

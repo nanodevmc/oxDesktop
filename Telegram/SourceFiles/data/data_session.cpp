@@ -3362,18 +3362,18 @@ void Session::processMessagesDeleted(
 			const auto antiDelete = Extera::Bool(u"anti_delete"_q);
 			if (antiDelete && item->isRegular() && !item->out()) {
 				auto original = item->originalText();
-				const auto prefix = u"🗑 [Удалено] "_q;
-				if (!original.text.startsWith(prefix) && !original.text.startsWith(u"[Удалено]"_q)) {
-					auto entities = EntitiesInText();
-					entities.reserve(original.entities.size());
-					for (const auto &entity : original.entities) {
-						entities.push_back(EntityInText(
-							entity.type(),
-							entity.offset() + prefix.size(),
-							entity.length(),
-							entity.data()));
-					}
-					item->setText({ prefix + original.text, std::move(entities) });
+				const auto customMark = Extera::String(u"deleted_mark_text"_q);
+				const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
+				const auto tag = u"\n"_q + mark;
+				if (!original.text.endsWith(tag) && !original.text.endsWith(mark)) {
+					auto entities = original.entities;
+					const auto offset = int(original.text.size() + 1);
+					const auto length = int(mark.size());
+					entities.push_back(EntityInText(
+						EntityType::Italic,
+						offset,
+						length));
+					item->setText({ original.text + tag, std::move(entities) });
 					session().changes().messageUpdated(
 						item,
 						Data::MessageUpdate::Flag::Edited);
@@ -3408,18 +3408,18 @@ void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 			const auto antiDelete = Extera::Bool(u"anti_delete"_q);
 			if (antiDelete && item->isRegular() && !item->out()) {
 				auto original = item->originalText();
-				const auto prefix = u"🗑 [Удалено] "_q;
-				if (!original.text.startsWith(prefix) && !original.text.startsWith(u"[Удалено]"_q)) {
-					auto entities = EntitiesInText();
-					entities.reserve(original.entities.size());
-					for (const auto &entity : original.entities) {
-						entities.push_back(EntityInText(
-							entity.type(),
-							entity.offset() + prefix.size(),
-							entity.length(),
-							entity.data()));
-					}
-					item->setText({ prefix + original.text, std::move(entities) });
+				const auto customMark = Extera::String(u"deleted_mark_text"_q);
+				const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
+				const auto tag = u"\n"_q + mark;
+				if (!original.text.endsWith(tag) && !original.text.endsWith(mark)) {
+					auto entities = original.entities;
+					const auto offset = int(original.text.size() + 1);
+					const auto length = int(mark.size());
+					entities.push_back(EntityInText(
+						EntityType::Italic,
+						offset,
+						length));
+					item->setText({ original.text + tag, std::move(entities) });
 					session().changes().messageUpdated(
 						item,
 						Data::MessageUpdate::Flag::Edited);

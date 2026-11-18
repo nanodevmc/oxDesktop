@@ -11,7 +11,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../../version.txt");
 
     let version = fs::read_to_string("../../version.txt")
-        .unwrap_or_else(|_| "7.4.3.3.2".to_string())
+        .unwrap_or_else(|_| "7.4.4".to_string())
         .trim()
         .to_string();
     println!("cargo:rustc-env=OX_VERSION={}", version);
@@ -22,8 +22,8 @@ fn main() {
     let file = File::create(&zip_path).expect("Failed to create payload.zip");
     let mut zip = ZipWriter::new(file);
     let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated)
-        .compression_level(Some(9))
+        .compression_method(zip::CompressionMethod::Zstd)
+        .compression_level(Some(22))
         .unix_permissions(0o755);
 
     let payload_dir = Path::new("payload");
