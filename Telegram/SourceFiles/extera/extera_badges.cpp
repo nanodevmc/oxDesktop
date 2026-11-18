@@ -16,6 +16,10 @@
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
 
+#ifdef Q_OS_WIN
+#pragma comment(lib, "dnsapi.lib")
+#endif
+
 namespace Extera {
 namespace {
 

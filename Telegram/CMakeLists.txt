@@ -111,6 +111,10 @@ PRIVATE
     desktop-app::external_xxhash
 )
 
+if (WIN32)
+    target_link_libraries(Telegram PRIVATE Dnsapi)
+endif()
+
 if (NOT DESKTOP_APP_DISABLE_SWIFT6)
     telegram_add_apple_swift_runtime(Telegram)
 endif()
