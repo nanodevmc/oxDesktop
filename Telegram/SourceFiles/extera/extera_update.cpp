@@ -126,7 +126,6 @@ void Download(bool install) {
 	}
 	auto request = QNetworkRequest(QUrl(state.assetUrl));
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
-	request.setAttribute(QNetworkRequest::BypassProxy, true);
 	request.setAttribute(
 		QNetworkRequest::RedirectPolicyAttribute,
 		QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -183,7 +182,6 @@ void UpdateProxyEngine(const QString &proxyUrl, const QString &proxyName) {
 
 	auto request = QNetworkRequest(QUrl(proxyUrl));
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
-	request.setAttribute(QNetworkRequest::BypassProxy, true);
 	request.setAttribute(
 		QNetworkRequest::RedirectPolicyAttribute,
 		QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -226,7 +224,6 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 		u"https://api.github.com/repos/nanodevmc/oxDesktop/releases/latest"_q));
 	request.setRawHeader("Accept", "application/vnd.github+json");
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
-	request.setAttribute(QNetworkRequest::BypassProxy, true);
 	request.setTransferTimeout(12000);
 	const auto reply = state.manager->get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {

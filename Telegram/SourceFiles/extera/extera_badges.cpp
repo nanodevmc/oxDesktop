@@ -205,7 +205,6 @@ void RefreshProfiles(QNetworkAccessManager *manager) {
 	manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	const auto fetchUrl = [=](const QString &url, bool incremental) {
 		auto request = QNetworkRequest(QUrl(url));
-		request.setAttribute(QNetworkRequest::BypassProxy, true);
 		request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 		request.setRawHeader("Accept", "application/json");
 		const auto reply = manager->get(request);
