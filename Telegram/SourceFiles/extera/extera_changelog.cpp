@@ -80,11 +80,11 @@ State &Instance() {
 	return result;
 }
 
-[[nodiscard]] QString CachePath() {
+[[maybe_unused]] [[nodiscard]] QString CachePath() {
 	return cWorkingDir() + u"tdata/ox_releases.json"_q;
 }
 
-[[nodiscard]] QString LegacyCachePath() {
+[[maybe_unused]] [[nodiscard]] QString LegacyCachePath() {
 	return cWorkingDir() + u"tdata/exd_releases.json"_q;
 }
 
