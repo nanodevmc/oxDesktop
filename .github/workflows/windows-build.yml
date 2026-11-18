@@ -257,6 +257,7 @@ jobs:
           # fetch_archive.py queries the GitHub API, unauthenticated it hits the rate limit.
           GH_TOKEN: ${{ github.token }}
         run: |
+          del /s /q %GITHUB_WORKSPACE%\tdesktop\out\*.pch >nul 2>&1
           call "%VCVARS64%" -vcvars_ver=14.44
           if /I "%LIBS_CACHE_HIT%"=="true" goto skipAtlValidation
           if not exist "%VCToolsInstallDir%atlmfc\include\atlbase.h" (echo ATL for selected toolset is missing & exit /b 1)
@@ -418,6 +419,7 @@ jobs:
           API_ID: ${{ secrets.TDESKTOP_API_ID }}
           API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
         run: |
+          del /s /q %GITHUB_WORKSPACE%\tdesktop\out\*.pch >nul 2>&1
           call "%VCVARS64%" -vcvars_ver=14.44
           sccache --start-server
           sccache --show-stats
@@ -605,7 +607,7 @@ jobs:
           if (Test-Path $outDir) {
             Write-Host "Packaging out build tree into 4 volumes (~1000M each)..."
             $archiveBase = "oxDesktop-out-win64.7z"
-            $excludes = @('*.pdb', '*.tmp', '*.log', 'Telegram.exe', 'oxDesktop.exe')
+            $excludes = @('*.pdb', '*.tmp', '*.log', '*.pch', 'Telegram.exe', 'oxDesktop.exe')
             $excludes | Set-Content -Path 'exclude_out.txt' -Encoding utf8
             7z a -v1000m -mx=3 '-xr@exclude_out.txt' $archiveBase $outDir | Out-Null
             Remove-Item 'exclude_out.txt' -Force -ErrorAction SilentlyContinue
