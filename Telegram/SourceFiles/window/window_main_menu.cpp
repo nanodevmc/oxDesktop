@@ -884,7 +884,7 @@ void MainMenu::setupMenu() {
 		Extera::Config::Instance().boolChanges(u"ghost_mode"_q)
 	)->toggledChanges(
 	) | rpl::filter([](bool enabled) {
-		return enabled != Extera::Bool(u"ghost_mode"_q, true);
+		return enabled != Extera::Bool(u"ghost_mode"_q);
 	}) | rpl::on_next([](bool enabled) {
 		Extera::Config::Instance().setBool(u"ghost_mode"_q, enabled);
 	}, lifetime());

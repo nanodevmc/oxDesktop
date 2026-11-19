@@ -273,15 +273,15 @@ void Histories::readInboxTill(
 	Expects(IsServerMsgId(tillId) || (!tillId && !force));
 
 	const auto isGhostHidden = [&] {
-		if (!Extera::Bool(u"ghost_mode"_q, true)) {
+		if (!Extera::Bool(u"ghost_mode"_q)) {
 			return false;
 		}
 		if (history->peer->asChannel()) {
-			return Extera::Bool(u"ghost_hide_read_channels"_q, true);
+			return Extera::Bool(u"ghost_hide_read_channels"_q);
 		} else if (history->peer->isUser()) {
-			return Extera::Bool(u"ghost_hide_read_pms"_q, true);
+			return Extera::Bool(u"ghost_hide_read_pms"_q);
 		} else if (history->peer->isChat() || history->peer->isMegagroup()) {
-			return Extera::Bool(u"ghost_hide_read_groups"_q, true);
+			return Extera::Bool(u"ghost_hide_read_groups"_q);
 		}
 		return false;
 	}();
