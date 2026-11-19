@@ -148,7 +148,7 @@ bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 			auto typesMap = base::flat_map<QString, DocumentId>();
 			if (rootObj.contains(u"types"_q)) {
 				const auto typesObj = rootObj.value(u"types"_q).toObject();
-				for auto it = typesObj.begin(); it != typesObj.end(); ++it) {
+				for (auto it = typesObj.begin(); it != typesObj.end(); ++it) {
 					if (it.value().isObject()) {
 						const auto tObj = it.value().toObject();
 						typesMap[it.key()] = DocumentId(ReadId(tObj.value(u"emoji"_q)));
@@ -298,15 +298,21 @@ void MaybeFetchProfile(not_null<PeerData*> peer) {
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 	request.setRawHeader("Accept", "application/json");
 	const auto reply = state.manager->get(request);
-	QObject::connect(reply, &QNetworkReply::finished, [reply, peer] {
+	const auto userId = peer->asUser() ? peer->asUser()->id : UserId();
+	const auto session = &peer->session();
+	QObject::connect(reply, &QNetworkReply::finished, [reply, userId, session] {
 		reply->deleteLater();
 		if (reply->error() == QNetworkReply::NoError) {
 			const auto bytes = reply->readAll();
 			if (ApplyProfiles(bytes, true)) {
 				SaveToCache();
-				peer->session().changes().peerUpdated(
-					peer,
-					Data::PeerUpdate::Flag::EmojiStatus);
+				crl::on_main(session, [=] {
+					if (const auto user = session->data().user(userId)) {
+						session->changes().peerUpdated(
+							user,
+							Data::PeerUpdate::Flag::EmojiStatus);
+					}
+				});
 			}
 		}
 	});

@@ -1200,7 +1200,9 @@ void InitialLoadTheme() {
 		).arg(_themeKeyDay
 		).arg(_themeKeyNight));
 	if (!key) {
-		Window::Theme::SetNightModeValue(true);
+		if (!Core::App().domain().started()) {
+			Window::Theme::SetNightModeValue(true);
+		}
 		return;
 	} else if (const auto path = InitialLoadThemeUsingKey(key)) {
 		DEBUG_LOG(("Theme: loaded with result: %1").arg(*path));

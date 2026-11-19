@@ -3568,12 +3568,7 @@ void HistoryWidget::showHistory(
 					const auto to = std::clamp(countInitialScrollTop(), 0, _scroll->scrollTopMax());
 					const auto item = getItemFromHistoryOrMigrated(
 						_showAtMsgId);
-					if (params.animated == anim::type::instant
-						|| params.way == Window::SectionShow::Way::ClearStack) {
-						synteticScrollToY(to);
-					} else {
-						animatedScrollToY(to, item);
-					}
+					synteticScrollToY(to);
 				} else {
 					historyLoaded();
 				}
