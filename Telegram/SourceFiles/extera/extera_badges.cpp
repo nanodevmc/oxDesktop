@@ -2,6 +2,8 @@
 
 #include "data/data_changes.h"
 #include "data/data_peer.h"
+#include "data/data_session.h"
+#include "data/data_user.h"
 #include "main/main_session.h"
 #include "settings.h"
 #include "version_generated.h"
@@ -298,20 +300,17 @@ void MaybeFetchProfile(not_null<PeerData*> peer) {
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 	request.setRawHeader("Accept", "application/json");
 	const auto reply = state.manager->get(request);
-	const auto userId = peer->asUser() ? peer->asUser()->id : UserId();
 	const auto session = &peer->session();
-	QObject::connect(reply, &QNetworkReply::finished, [reply, userId, session] {
+	QObject::connect(reply, &QNetworkReply::finished, [reply, peer, session] {
 		reply->deleteLater();
 		if (reply->error() == QNetworkReply::NoError) {
 			const auto bytes = reply->readAll();
 			if (ApplyProfiles(bytes, true)) {
 				SaveToCache();
-				crl::on_main(session, [=] {
-					if (const auto user = session->data().user(userId)) {
-						session->changes().peerUpdated(
-							user,
-							Data::PeerUpdate::Flag::EmojiStatus);
-					}
+				crl::on_main(session, [peer, session] {
+					session->changes().peerUpdated(
+						peer,
+						Data::PeerUpdate::Flag::EmojiStatus);
 				});
 			}
 		}
