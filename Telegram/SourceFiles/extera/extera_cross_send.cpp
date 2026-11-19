@@ -190,7 +190,7 @@ void AddSendFromAccountActions(
 		}
 		const auto name = account->session().user()->name();
 		menu->addAction(
-			tr::lng_exd_send_from(tr::now, lt_name, name),
+			tr::lng_oxd_send_from(tr::now, lt_name, name),
 			[=] {
 				closeBox();
 				SendFromAccount(from, ids, account);

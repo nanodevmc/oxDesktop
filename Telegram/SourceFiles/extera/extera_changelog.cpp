@@ -546,8 +546,8 @@ void Fill(
 			object_ptr<Ui::FlatLabel>(
 				content,
 				(state.failed
-					? tr::lng_exd_changelog_failed()
-					: tr::lng_exd_changelog_loading()),
+					? tr::lng_oxd_changelog_failed()
+					: tr::lng_oxd_changelog_loading()),
 				st::boxLabel),
 			st::boxRowPadding);
 		return;
@@ -589,7 +589,7 @@ void Fill(
 
 void ShowLoaded(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
-		box->setTitle(tr::lng_exd_changelog_title());
+		box->setTitle(tr::lng_oxd_changelog_title());
 		box->setWidth(st::boxWideWidth * 3 / 2);
 		box->setMaxHeight(st::boxMaxListHeight);
 		Fill(box, controller);

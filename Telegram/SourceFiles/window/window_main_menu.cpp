@@ -878,6 +878,19 @@ void MainMenu::setupMenu() {
 	tag("settings");
 
 	addAction(
+		tr::lng_oxd_ghost_mode(),
+		{ &st::menuIconStealth }
+	)->toggleOn(
+		Extera::Config::Instance().boolChanges(u"ghost_mode"_q)
+	)->toggledChanges(
+	) | rpl::filter([](bool enabled) {
+		return enabled != Extera::Bool(u"ghost_mode"_q, true);
+	}) | rpl::on_next([](bool enabled) {
+		Extera::Config::Instance().setBool(u"ghost_mode"_q, enabled);
+	}, lifetime());
+	tag("ghost");
+
+	addAction(
 		tr::lng_extera_streamer_mode(),
 		{ &st::menuIconUserHide }
 	)->toggleOn(

@@ -1495,7 +1495,7 @@ void SendFilesBox::addMenuButton() {
 		_menu->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
 		const auto position = QCursor::pos();
 		if (const auto path = roundPath(); !path.isEmpty()) {
-			_menu->addAction(tr::lng_exd_round_video_send(tr::now), [=] {
+			_menu->addAction(tr::lng_oxd_round_video_send(tr::now), [=] {
 				const auto window = _show->resolveWindow();
 				if (!window) {
 					return;

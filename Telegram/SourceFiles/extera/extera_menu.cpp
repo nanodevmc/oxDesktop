@@ -158,7 +158,7 @@ struct QuickEntry {
 			u"reply"_q,
 			{
 				tr::lng_context_reply_msg,
-				tr::lng_exd_queue_reply_badge,
+				tr::lng_oxd_queue_reply_badge,
 				tr::lng_context_quote_and_reply,
 			},
 			&st::menuIconReply,
@@ -467,7 +467,7 @@ void AddMessageMenuActions(
 		not_null<Ui::PopupMenu*> menu,
 		not_null<HistoryItem*> item,
 		not_null<Window::SessionController*> controller) {
-	menu->addAction(u"Shot (Снимок сообщения)"_q, [=] {
+	menu->addAction(tr::lng_oxd_message_shot(tr::now), [=] {
 		Extera::TakeMessageShot(controller, item);
 	}, &st::menuIconCopy);
 

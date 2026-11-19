@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "extera/extera_config.h"
 #include "extera/extera_menu.h"
+#include "extera/extera_shot.h"
 
 #include "api/api_attached_stickers.h"
 #include "api/api_editing.h"
@@ -859,7 +860,7 @@ bool AddReplyToMessageAction(
 		: 0;
 	const auto &quote = request.quote;
 	auto text = (allowQueueReply
-		? tr::lng_exd_queue_reply_badge
+		? tr::lng_oxd_queue_reply_badge
 		: todoListTaskId
 		? tr::lng_context_reply_to_task
 		: !quote
@@ -1249,6 +1250,36 @@ void AddSaveRichHtmlAction(
 		list);
 }
 
+void AddShotSelectedAction(
+		not_null<Ui::PopupMenu*> menu,
+		const ContextMenuRequest &request,
+		not_null<ListWidget*> list) {
+	if (!request.overSelection || request.selectedItems.empty()) {
+		return;
+	}
+	const auto controller = request.navigation->parentController();
+	if (!controller) {
+		return;
+	}
+	auto items = std::vector<not_null<HistoryItem*>>();
+	items.reserve(request.selectedItems.size());
+	const auto owner = &controller->session().data();
+	for (const auto &selected : request.selectedItems) {
+		if (const auto item = owner->message(selected.msgId)) {
+			items.push_back(item);
+		}
+	}
+	if (items.empty()) {
+		return;
+	}
+	ranges::sort(items, {}, [](not_null<HistoryItem*> item) {
+		return item->fullId();
+	});
+	menu->addAction(tr::lng_oxd_message_shot(tr::now), [=] {
+		Extera::TakeMessagesShot(controller, items);
+	}, &st::menuIconCopy);
+}
+
 void AddReportAction(
 		not_null<Ui::PopupMenu*> menu,
 		const ContextMenuRequest &request,
@@ -1418,6 +1449,7 @@ void AddMessageActions(
 	AddDeleteAction(menu, request, list);
 	AddDownloadFilesAction(menu, request, list);
 	AddSaveRichHtmlAction(menu, request, list);
+	AddShotSelectedAction(menu, request, list);
 	AddReportAction(menu, request, list);
 	AddBlockSenderAction(menu, request, list);
 	if (request.item && request.selectedItems.empty()) {
@@ -2636,10 +2668,10 @@ void AddTagPackAction(
 					EmojiPacksSource::Tag,
 					controller);
 				const auto text = QString::number(custom);
-				menu->addAction(tr::lng_exd_copy_emoji_id(tr::now), [=] {
+				menu->addAction(tr::lng_oxd_copy_emoji_id(tr::now), [=] {
 					QGuiApplication::clipboard()->setText(text);
 					controller->showToast(
-						tr::lng_exd_emoji_id_copied(tr::now));
+						tr::lng_oxd_emoji_id_copied(tr::now));
 				}, &st::menuIconCopy);
 			}
 		}
@@ -2809,11 +2841,11 @@ void ShowWhoReactedMenu(
 							controller);
 						const auto text = QString::number(custom);
 						menu->get()->addAction(
-							tr::lng_exd_copy_emoji_id(tr::now),
+							tr::lng_oxd_copy_emoji_id(tr::now),
 							[=] {
 								QGuiApplication::clipboard()->setText(text);
 								controller->showToast(
-									tr::lng_exd_emoji_id_copied(tr::now));
+									tr::lng_oxd_emoji_id_copied(tr::now));
 							},
 							&st::menuIconCopy);
 					}
@@ -3008,9 +3040,9 @@ void AddEmojiPacksAction(
 		return;
 	}
 	const auto text = ids.join(QChar('\n'));
-	menu->addAction(tr::lng_exd_copy_emoji_id(tr::now), [=] {
+	menu->addAction(tr::lng_oxd_copy_emoji_id(tr::now), [=] {
 		QGuiApplication::clipboard()->setText(text);
-		controller->showToast(tr::lng_exd_emoji_id_copied(tr::now));
+		controller->showToast(tr::lng_oxd_emoji_id_copied(tr::now));
 	}, &st::menuIconCopy);
 }
 

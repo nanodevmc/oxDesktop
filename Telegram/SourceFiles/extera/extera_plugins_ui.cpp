@@ -152,8 +152,8 @@ void FillSettings(
 			object_ptr<Ui::FlatLabel>(
 				container,
 				(enabled
-					? tr::lng_exd_plugin_no_settings()
-					: tr::lng_exd_plugin_settings_off()),
+					? tr::lng_oxd_plugin_no_settings()
+					: tr::lng_oxd_plugin_settings_off()),
 				st::exteraAbout),
 			st::exteraAboutPadding);
 		return;
@@ -375,7 +375,7 @@ void FillSettings(
 	container->add(
 		object_ptr<Ui::FlatLabel>(
 			container,
-			tr::lng_exd_plugin_perm_none(),
+			tr::lng_oxd_plugin_perm_none(),
 			st::exteraAbout),
 		st::exteraAboutPadding);
 }
@@ -761,7 +761,7 @@ void FillPluginsList(
 			) | rpl::on_next([=](bool enabled) {
 				if (enabled && Extera::Bool(u"plugins_safe_mode"_q)) {
 					controller->showToast(
-						tr::lng_exd_safe_mode_blocked(tr::now));
+						tr::lng_oxd_safe_mode_blocked(tr::now));
 					crl::on_main(button, [=] {
 						toggled->force_assign(false);
 					});
@@ -782,7 +782,7 @@ void FillPluginsList(
 			const auto code = card->add(
 				object_ptr<Ui::LinkButton>(
 					card,
-					tr::lng_exd_plugin_view_code(tr::now)),
+					tr::lng_oxd_plugin_view_code(tr::now)),
 				st::exteraPluginMetaPadding + style::margins(shift, 0, 0, 0),
 				style::al_left);
 			code->setClickedCallback([=] {
@@ -865,27 +865,27 @@ void FillPluginsList(
 					more,
 					st::popupMenuWithIcons);
 				const auto raw = menu->get();
-				raw->addAction(tr::lng_exd_plugin_share(tr::now), [=] {
+				raw->addAction(tr::lng_oxd_plugin_share(tr::now), [=] {
 					SharePluginFile(controller, path);
 				}, &st::menuIconShare);
-				raw->addAction(tr::lng_exd_plugin_view_code(tr::now), [=] {
+				raw->addAction(tr::lng_oxd_plugin_view_code(tr::now), [=] {
 					ShowPluginCode(controller, name, path);
 				}, &st::exteraIconOpenCode);
-				raw->addAction(tr::lng_exd_guard_run(tr::now), [=] {
+				raw->addAction(tr::lng_oxd_guard_run(tr::now), [=] {
 					ShowThreatsBox(
 						controller,
 						path,
 						CollectThreats(info.value(u"capabilities"_q).toObject()));
 				}, &st::menuIconAntispam);
-				raw->addAction(tr::lng_exd_plugin_port(tr::now), [=] {
-					controller->showToast(tr::lng_exd_plugin_port(tr::now));
+				raw->addAction(tr::lng_oxd_plugin_port(tr::now), [=] {
+					controller->showToast(tr::lng_oxd_plugin_port(tr::now));
 				}, &st::menuIconTranslate);
 				if (developer) {
-					raw->addAction(tr::lng_exd_plugin_reload(tr::now), [=] {
+					raw->addAction(tr::lng_oxd_plugin_reload(tr::now), [=] {
 						crl::on_main(controller, [=] {
 							Call(u"reload"_q, QJsonObject{ { u"id"_q, id } });
 							notifyListChanged();
-							controller->showToast(tr::lng_exd_plugin_reloaded(
+							controller->showToast(tr::lng_oxd_plugin_reloaded(
 								tr::now,
 								lt_name,
 								name));
@@ -981,73 +981,73 @@ enum class Chevron {
 		Level::Danger,
 		st::exteraThreatCode,
 		st::exteraChipCode,
-		tr::lng_exd_threat_chip_code(tr::now),
-		tr::lng_exd_threat_native(tr::now),
-		tr::lng_exd_threat_native_about(tr::now));
+		tr::lng_oxd_threat_chip_code(tr::now),
+		tr::lng_oxd_threat_native(tr::now),
+		tr::lng_oxd_threat_native_about(tr::now));
 	add(
 		u"hooks"_q,
 		Level::Attention,
 		st::exteraThreatCode,
 		st::exteraChipCode,
-		tr::lng_exd_threat_chip_code(tr::now),
-		tr::lng_exd_threat_hooks(tr::now),
-		tr::lng_exd_threat_hooks_about(tr::now));
+		tr::lng_oxd_threat_chip_code(tr::now),
+		tr::lng_oxd_threat_hooks(tr::now),
+		tr::lng_oxd_threat_hooks_about(tr::now));
 	add(
 		u"files"_q,
 		Level::Attention,
 		st::exteraThreatFile,
 		st::exteraChipFile,
-		tr::lng_exd_threat_chip_files(tr::now),
-		tr::lng_exd_threat_files(tr::now),
-		tr::lng_exd_threat_files_about(tr::now));
+		tr::lng_oxd_threat_chip_files(tr::now),
+		tr::lng_oxd_threat_files(tr::now),
+		tr::lng_oxd_threat_files_about(tr::now));
 	add(
 		u"network"_q,
 		Level::Attention,
 		st::exteraThreatGlobe,
 		st::exteraChipGlobe,
-		tr::lng_exd_threat_chip_network(tr::now),
-		tr::lng_exd_threat_network(tr::now),
-		tr::lng_exd_threat_network_about(tr::now));
+		tr::lng_oxd_threat_chip_network(tr::now),
+		tr::lng_oxd_threat_network(tr::now),
+		tr::lng_oxd_threat_network_about(tr::now));
 	add(
 		u"messages.send"_q,
 		Level::Attention,
 		st::exteraThreatChat,
 		st::exteraChipChat,
-		tr::lng_exd_threat_chip_messages(tr::now),
-		tr::lng_exd_threat_send(tr::now),
-		tr::lng_exd_threat_send_about(tr::now));
+		tr::lng_oxd_threat_chip_messages(tr::now),
+		tr::lng_oxd_threat_send(tr::now),
+		tr::lng_oxd_threat_send_about(tr::now));
 	add(
 		u"messages.read"_q,
 		Level::Other,
 		st::exteraThreatChat,
 		st::exteraChipChat,
-		tr::lng_exd_threat_chip_messages(tr::now),
-		tr::lng_exd_threat_read(tr::now),
-		tr::lng_exd_threat_read_about(tr::now));
+		tr::lng_oxd_threat_chip_messages(tr::now),
+		tr::lng_oxd_threat_read(tr::now),
+		tr::lng_oxd_threat_read_about(tr::now));
 	add(
 		u"intents"_q,
 		Level::Other,
 		st::exteraThreatLink,
 		st::exteraChipLink,
-		tr::lng_exd_threat_chip_links(tr::now),
-		tr::lng_exd_threat_intents(tr::now),
-		tr::lng_exd_threat_intents_about(tr::now));
+		tr::lng_oxd_threat_chip_links(tr::now),
+		tr::lng_oxd_threat_intents(tr::now),
+		tr::lng_oxd_threat_intents_about(tr::now));
 	add(
 		u"settings"_q,
 		Level::Other,
 		st::exteraThreatTune,
 		st::exteraChipTune,
-		tr::lng_exd_threat_chip_settings(tr::now),
-		tr::lng_exd_threat_settings(tr::now),
-		tr::lng_exd_threat_settings_about(tr::now));
+		tr::lng_oxd_threat_chip_settings(tr::now),
+		tr::lng_oxd_threat_settings(tr::now),
+		tr::lng_oxd_threat_settings_about(tr::now));
 	add(
 		u"dex"_q,
 		Level::Other,
 		st::exteraThreatCode,
 		st::exteraChipCode,
-		tr::lng_exd_threat_chip_code(tr::now),
-		tr::lng_exd_threat_dex(tr::now),
-		tr::lng_exd_threat_dex_about(tr::now));
+		tr::lng_oxd_threat_chip_code(tr::now),
+		tr::lng_oxd_threat_dex(tr::now),
+		tr::lng_oxd_threat_dex_about(tr::now));
 	return result;
 }
 
@@ -1339,7 +1339,7 @@ public:
 		if (total > shown) {
 			_more.create(
 				this,
-				tr::lng_exd_threats_more(
+				tr::lng_oxd_threats_more(
 					tr::now,
 					lt_amount,
 					QString::number(total - shown)),
@@ -1456,9 +1456,9 @@ void ShowThreatsBox(
 		box->setWidth(st::exteraInstallWidth);
 		box->setNoContentMargin(true);
 		const auto sections = std::array{
-			std::pair{ ThreatLevel::Danger, tr::lng_exd_threats_section_danger(tr::now) },
-			std::pair{ ThreatLevel::Attention, tr::lng_exd_threats_section_attention(tr::now) },
-			std::pair{ ThreatLevel::Other, tr::lng_exd_threats_section_other(tr::now) },
+			std::pair{ ThreatLevel::Danger, tr::lng_oxd_threats_section_danger(tr::now) },
+			std::pair{ ThreatLevel::Attention, tr::lng_oxd_threats_section_attention(tr::now) },
+			std::pair{ ThreatLevel::Other, tr::lng_oxd_threats_section_other(tr::now) },
 		};
 		for (const auto &[level, title] : sections) {
 			auto list = std::vector<Threat>();
@@ -1554,23 +1554,23 @@ void AddThreatsSummary(
 		? st::historyPeer3UserpicBg->c
 		: st::historyPeer2UserpicBg->c;
 	const auto title = danger
-		? tr::lng_exd_threats_found(tr::now)
+		? tr::lng_oxd_threats_found(tr::now)
 		: attention
-		? tr::lng_exd_threats_attention(tr::now)
-		: tr::lng_exd_threats_none(tr::now);
+		? tr::lng_oxd_threats_attention(tr::now)
+		: tr::lng_oxd_threats_none(tr::now);
 	const auto about = danger
-		? tr::lng_exd_threats_dangerous_amount(
+		? tr::lng_oxd_threats_dangerous_amount(
 			tr::now,
 			lt_amount,
 			QString::number(danger))
 		: attention
-		? tr::lng_exd_threats_attention_amount(
+		? tr::lng_oxd_threats_attention_amount(
 			tr::now,
 			lt_amount,
 			QString::number(attention))
 		: threats.empty()
-		? tr::lng_exd_threats_nothing(tr::now)
-		: tr::lng_exd_threats_other_amount(
+		? tr::lng_oxd_threats_nothing(tr::now)
+		: tr::lng_oxd_threats_other_amount(
 			tr::now,
 			lt_amount,
 			QString::number(threats.size()));
@@ -1621,7 +1621,7 @@ void AddDescription(
 			card,
 			object_ptr<Ui::LinkButton>(
 				card,
-				tr::lng_exd_description_more(tr::now))),
+				tr::lng_oxd_description_more(tr::now))),
 		st::exteraDescriptionMore);
 	more->toggleOn(clamped->clampedValue(), anim::type::instant);
 	more->entity()->setClickedCallback([=] {
@@ -1906,7 +1906,7 @@ void ShowSourceBox(
 			object_ptr<Ui::FlatLabel>(box, st::exteraSourceText),
 			st::boxRowPadding);
 		if (source.isEmpty()) {
-			label->setText(tr::lng_exd_plugin_code_empty(tr::now));
+			label->setText(tr::lng_oxd_plugin_code_empty(tr::now));
 		} else {
 			label->setMarkedText(TextWithEntities{
 				source,
@@ -1914,9 +1914,9 @@ void ShowSourceBox(
 			});
 		}
 		label->setSelectable(true);
-		box->addButton(tr::lng_exd_plugin_code_copy(), [=] {
+		box->addButton(tr::lng_oxd_plugin_code_copy(), [=] {
 			QGuiApplication::clipboard()->setText(source);
-			controller->showToast(tr::lng_exd_plugin_code_copied(tr::now));
+			controller->showToast(tr::lng_oxd_plugin_code_copied(tr::now));
 		});
 		box->addButton(tr::lng_close(), [=] { box->closeBox(); });
 	}));
@@ -1924,15 +1924,15 @@ void ShowSourceBox(
 
 void ShowDangerBox(not_null<Window::SessionController*> controller) {
 	controller->show(Ui::MakeInformBox({
-		.text = tr::lng_exd_plugin_danger_text(),
-		.title = tr::lng_exd_plugin_danger_title(),
+		.text = tr::lng_oxd_plugin_danger_text(),
+		.title = tr::lng_oxd_plugin_danger_title(),
 	}));
 }
 
 void ShowUnknownBlockedBox(
 		not_null<Window::SessionController*> controller) {
 	controller->show(Ui::MakeConfirmBox({
-		.text = tr::lng_exd_plugin_unknown_blocked(),
+		.text = tr::lng_oxd_plugin_unknown_blocked(),
 		.confirmed = [=](Fn<void()> close) {
 			close();
 			UrlClickHandler::Open(u"tg://settings/extera/plugins"_q);
@@ -1958,13 +1958,13 @@ void ShowUnknownSourcesWarning(
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
-				tr::lng_exd_unknown_warning(tr::rich),
+				tr::lng_oxd_unknown_warning(tr::rich),
 				st::boxLabel),
 			st::boxRowPadding);
 		const auto confirm = box->addButton(
 			state->left.value() | rpl::map([](int left) {
 				return (left > 0)
-					? tr::lng_exd_unknown_allow_wait(
+					? tr::lng_oxd_unknown_allow_wait(
 						tr::now,
 						lt_seconds,
 						QString::number(left))
@@ -2034,7 +2034,7 @@ void ShowInstallBox(
 		ShowInstallBoxResolved(controller, path, true);
 		return;
 	}
-	controller->showToast(tr::lng_exd_plugin_checking_source(tr::now));
+	controller->showToast(tr::lng_oxd_plugin_checking_source(tr::now));
 	const auto weak = base::make_weak(controller);
 	Extera::PluginTrust::Verify(&controller->session(), path, [=](bool ok) {
 		const auto strong = weak.get();

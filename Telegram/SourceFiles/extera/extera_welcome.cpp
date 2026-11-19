@@ -173,8 +173,8 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 					QRect((logo->width() - size) / 2, 0, size, size),
 					Window::Logo());
 			}, logo->lifetime());
-			addTitle(tr::lng_exd_wizard_welcome());
-			addText(tr::lng_exd_wizard_welcome_text());
+			addTitle(tr::lng_oxd_wizard_welcome());
+			addText(tr::lng_oxd_wizard_welcome_text());
 			AddLinkButton(
 				content,
 				tr::lng_extera_port_developer(),
@@ -199,7 +199,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				u"В разработке..."_q,
 				u"https://t.me/oxDesktop"_q,
 				&st::exteraIconWebsite);
-			box->addButton(tr::lng_exd_wizard_setup(), [=] {
+			box->addButton(tr::lng_oxd_wizard_setup(), [=] {
 				base::call_delayed(0, box, [=] {
 					state->step = Step::Icon;
 					(*rebuild)();
@@ -208,7 +208,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 		};
 
 		const auto fillIcon = [=] {
-			addTitle(tr::lng_exd_wizard_icon());
+			addTitle(tr::lng_oxd_wizard_icon());
 			const auto count = int(state->variants.size());
 			const auto images = std::make_shared<std::vector<QImage>>();
 			const auto ratio = style::DevicePixelRatio();
@@ -308,7 +308,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			const auto square = content->add(
 				object_ptr<Ui::Checkbox>(
 					content,
-					tr::lng_exd_app_icon_square(tr::now),
+					tr::lng_oxd_app_icon_square(tr::now),
 					state->square,
 					st::defaultBoxCheckbox),
 				st::exteraAppIconGridPadding);
@@ -317,7 +317,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				render();
 				grid->update();
 			}, square->lifetime());
-			box->addButton(tr::lng_exd_wizard_next(), [=] {
+			box->addButton(tr::lng_oxd_wizard_next(), [=] {
 				base::call_delayed(0, box, [=] {
 					state->step = Step::Settings;
 					(*rebuild)();
@@ -326,7 +326,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 		};
 
 		const auto fillSettings = [=] {
-			addTitle(tr::lng_exd_wizard_settings());
+			addTitle(tr::lng_oxd_wizard_settings());
 			const auto card = content->add(
 				object_ptr<Ui::VerticalLayout>(content),
 				style::margins(16, 8, 16, 8));
@@ -365,7 +365,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 			if (WsProxy::Available()) {
 				toggle(
 					u"ws_proxy"_q,
-					tr::lng_exd_ws_proxy(),
+					tr::lng_oxd_ws_proxy(),
 					&st::menuIconNetwork,
 					[](bool v) { WsProxy::SetEnabled(v); });
 			}
@@ -386,10 +386,10 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				nullptr);
 			toggle(
 				u"chars_counter"_q,
-				tr::lng_exd_chars_counter(),
+				tr::lng_oxd_chars_counter(),
 				&st::menuIconEdit,
 				nullptr);
-			addText(tr::lng_exd_wizard_settings_about());
+			addText(tr::lng_oxd_wizard_settings_about());
 			box->addButton(rpl::single(u"\u0427\u0442\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u279C"_q), [=] {
 				base::call_delayed(0, box, [=] {
 					state->step = Step::Changelog;
@@ -401,7 +401,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 		const auto fillChangelog = [=] {
 			addTitle(rpl::single(u"\u0427\u0442\u043E \u043D\u043E\u0432\u043E\u0433\u043E"_q));
 			Extera::Changelog::FillLatestFromChangelog(content);
-			box->addButton(tr::lng_exd_wizard_finish(), finish);
+			box->addButton(tr::lng_oxd_wizard_finish(), finish);
 		};
 
 		*rebuild = [=] {

@@ -699,7 +699,7 @@ void FeedWidget::rebuildTexts() {
 	_tabCategoryIndices.push_back(0);
 	_tabTexts.emplace_back(
 		st::semiboldTextStyle,
-		tr::lng_exd_feed_all(tr::now));
+		tr::lng_oxd_feed_all(tr::now));
 	for (auto i = 0; i != int(categories.size()); ++i) {
 		const auto &category = categories[i];
 		if (category.hidden) {
@@ -827,7 +827,7 @@ void FeedWidget::showMenu() {
 	};
 	if (!categories.empty()) {
 		_menu->addAction(
-			tr::lng_exd_feed_all(tr::now),
+			tr::lng_oxd_feed_all(tr::now),
 			[=] { select(0); },
 			(current == 0) ? &st::menuIconSelect : nullptr);
 		for (auto i = 0; i != int(categories.size()); ++i) {
@@ -838,7 +838,7 @@ void FeedWidget::showMenu() {
 		}
 		_menu->addSeparator();
 	}
-	_menu->addAction(tr::lng_exd_feed_category_new(tr::now), [=] {
+	_menu->addAction(tr::lng_oxd_feed_category_new(tr::now), [=] {
 		ShowCategoryBox(window, -1, crl::guard(this, [=] {
 			refresh();
 			_topBar->update();
@@ -1081,8 +1081,8 @@ void ShowCategoryBox(
 		const auto exists = (index >= 0 && index < int(list.size()));
 		const auto existing = exists ? list[index] : Category();
 		box->setTitle(exists
-			? tr::lng_exd_feed_category_edit()
-			: tr::lng_exd_feed_category_new());
+			? tr::lng_oxd_feed_category_edit()
+			: tr::lng_oxd_feed_category_new());
 		box->setWidth(st::boxWideWidth);
 		const auto content = box->verticalLayout();
 		const auto emoji = box->lifetime().make_state<rpl::variable<QString>>(
@@ -1091,17 +1091,17 @@ void ShowCategoryBox(
 			object_ptr<Ui::InputField>(
 				content,
 				st::defaultInputField,
-				tr::lng_exd_feed_category_name(),
+				tr::lng_oxd_feed_category_name(),
 				existing.name),
 			st::boxRowPadding);
 		name->setMaxLength(32);
 		Ui::AddSkip(content);
 		const auto emojiButton = Settings::AddButtonWithLabel(
 			content,
-			tr::lng_exd_feed_category_emoji(),
+			tr::lng_oxd_feed_category_emoji(),
 			emoji->value() | rpl::map([](const QString &value) {
 				return value.startsWith(u"custom:"_q)
-					? tr::lng_exd_feed_category_premium(tr::now)
+					? tr::lng_oxd_feed_category_premium(tr::now)
 					: value;
 			}),
 			st::settingsButtonNoIcon);
@@ -1151,7 +1151,7 @@ void ShowCategoryBox(
 					existing.channels.end()));
 		const auto channelsButton = Settings::AddButtonWithLabel(
 			content,
-			tr::lng_exd_feed_category_channels(),
+			tr::lng_oxd_feed_category_channels(),
 			selected->value(
 			) | rpl::map([](const base::flat_set<uint64> &list) {
 				return QString::number(list.size());
@@ -1160,7 +1160,7 @@ void ShowCategoryBox(
 		channelsButton->setClickedCallback([=] {
 			ShowChannelsPicker(
 				controller,
-				tr::lng_exd_feed_category_channels(),
+				tr::lng_oxd_feed_category_channels(),
 				selected->current(),
 				[=](base::flat_set<uint64> result) {
 					*selected = std::move(result);
@@ -1278,7 +1278,7 @@ void ShowFeedSettings(not_null<Window::SessionController*> controller) {
 			u"feed_include_archived"_q,
 			tr::lng_extera_feed_archived());
 		Ui::AddDividerText(content, tr::lng_extera_feed_archived_about());
-		Ui::AddSubsectionTitle(content, tr::lng_exd_feed_categories());
+		Ui::AddSubsectionTitle(content, tr::lng_oxd_feed_categories());
 		const auto reopen = [=] {
 			box->closeBox();
 			ShowFeedSettings(controller);
@@ -1302,7 +1302,7 @@ void ShowFeedSettings(not_null<Window::SessionController*> controller) {
 		const auto create = content->add(
 			object_ptr<Ui::SettingsButton>(
 				content,
-				tr::lng_exd_feed_category_new(),
+				tr::lng_oxd_feed_category_new(),
 				st::settingsButtonActive));
 		create->setClickedCallback([=] {
 			ShowCategoryBox(controller, -1, reopen);
@@ -1317,7 +1317,7 @@ void ShowFeedSettings(not_null<Window::SessionController*> controller) {
 			const auto shown = ranges::count_if(all, [&](auto history) {
 				return !hidden.contains(history->peer->id.value);
 			});
-			return tr::lng_exd_feed_shown_count(
+			return tr::lng_oxd_feed_shown_count(
 				tr::now,
 				lt_shown,
 				QString::number(shown),

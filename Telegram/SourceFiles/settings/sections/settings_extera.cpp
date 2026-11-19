@@ -755,7 +755,7 @@ void PaintGesturesPreview(
 void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setWidth(st::boxWideWidth);
-		box->setTitle(tr::lng_exd_badge_title());
+		box->setTitle(tr::lng_oxd_badge_title());
 		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 		const auto self = controller->session().user();
@@ -796,7 +796,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			const auto textX = avX + avSize + 16;
 			p.setFont(st::semiboldFont);
 			p.setPen(st::windowActiveTextFg->c);
-			p.drawText(textX, avY + 20, tr::lng_exd_badge_get(tr::now));
+			p.drawText(textX, avY + 20, tr::lng_oxd_badge_get(tr::now));
 
 			p.setFont(st::normalFont);
 			p.setPen(isPurchased ? QColor(72, 199, 116) : QColor(255, 120, 50));
@@ -868,7 +868,7 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 		box->addButton(
 			rpl::single(isPurchased ? u"Подробнее о бейдже"_q : u"Получить бейдж"_q),
 			[=] {
-				UrlClickHandler::Open(u"https://t.me/exteraAuthBot/donate"_q);
+				UrlClickHandler::Open(u"https://t.me/exteraAuthBot?start=donate"_q);
 			});
 		box->addButton(tr::lng_close(), [=] { box->closeBox(); });
 	}));
@@ -983,7 +983,7 @@ void ShowAppIconBox(not_null<Window::SessionController*> controller) {
 		const auto square = box->addRow(
 			object_ptr<Ui::Checkbox>(
 				box,
-				tr::lng_exd_app_icon_square(tr::now),
+				tr::lng_oxd_app_icon_square(tr::now),
 				currentSquare,
 				st::defaultBoxCheckbox),
 			st::exteraAppIconGridPadding);
@@ -1011,7 +1011,7 @@ void ShowAppIconBox(not_null<Window::SessionController*> controller) {
 
 void ShowGifBotBox(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
-		box->setTitle(tr::lng_exd_gif_bot());
+		box->setTitle(tr::lng_oxd_gif_bot());
 		const auto field = box->addRow(object_ptr<Ui::InputField>(
 			box,
 			st::defaultInputField,
@@ -1020,7 +1020,7 @@ void ShowGifBotBox(not_null<Window::SessionController*> controller) {
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
-				tr::lng_exd_gif_bot_about(),
+				tr::lng_oxd_gif_bot_about(),
 				st::boxDividerLabel),
 			st::exteraQuickAboutPadding);
 		const auto save = [=] {
@@ -1280,11 +1280,11 @@ void PartGeneral1(SectionBuilder &builder) {
 			AddCoreToggle(
 				builder,
 				u"ws_proxy"_q,
-				tr::lng_exd_ws_proxy(),
+				tr::lng_oxd_ws_proxy(),
 				[] { return Extera::WsProxy::Enabled(); },
 				[](bool v) { Extera::WsProxy::SetEnabled(v); });
 		});
-		builder.addAbout(tr::lng_exd_ws_proxy_about());
+		builder.addAbout(tr::lng_oxd_ws_proxy_about());
 	}
 }
 
@@ -1322,7 +1322,7 @@ void PartGeneral2(SectionBuilder &builder) {
 			.label = settings->translateToValue(
 			) | rpl::map([](LanguageId id) {
 				return Extera::Bool(u"translate_follow_app"_q)
-					? tr::lng_exd_translate_follow_app(tr::now)
+					? tr::lng_oxd_translate_follow_app(tr::now)
 					: Ui::LanguageName(id);
 			}),
 			.onClick = [=] {
@@ -1350,7 +1350,7 @@ void PartGeneral2(SectionBuilder &builder) {
 						false,
 						nullptr);
 					const auto follow = Extera::Bool(u"translate_follow_app"_q);
-					auto text = tr::lng_exd_translate_follow_app(
+					auto text = tr::lng_oxd_translate_follow_app(
 						tr::now);
 					const auto button = box->verticalLayout()->insert(
 						0,
@@ -1676,12 +1676,12 @@ void PartAppearance4(SectionBuilder &builder) {
 		const auto settings = &Core::App().settings();
 		builder.addButton({
 			.id = u"extera/custom_font_pick"_q,
-			.title = tr::lng_exd_custom_font_choose(),
+			.title = tr::lng_oxd_custom_font_choose(),
 			.icon = { &st::exteraIconAppearance },
 			.onClick = [=] {
 				FileDialog::GetOpenPath(
 					Core::App().getFileDialogParent(),
-					tr::lng_exd_custom_font_choose(tr::now),
+					tr::lng_oxd_custom_font_choose(tr::now),
 					u"Font files (*.ttf *.otf *.woff2);;All files (*.*)"_q,
 					[=](FileDialog::OpenResult &&result) {
 						if (!result.paths.isEmpty()) {
@@ -1789,7 +1789,7 @@ void PartChats2(SectionBuilder &builder) {
 		const auto gifController = builder.controller();
 		builder.addButton({
 			.id = u"extera/gif_bot"_q,
-			.title = tr::lng_exd_gif_bot(),
+			.title = tr::lng_oxd_gif_bot(),
 			.st = &st::settingsButtonNoIcon,
 			.label = Config().stringChanges(
 				u"gif_bot"_q
@@ -1915,52 +1915,52 @@ void PartChats4(SectionBuilder &builder) {
 		AddToggle(
 			builder,
 			u"queue_reply"_q,
-			tr::lng_exd_queue_reply(),
+			tr::lng_oxd_queue_reply(),
 			{ u"queue"_q, u"reply"_q, u"sending"_q },
-			tr::lng_exd_queue_reply_about(),
+			tr::lng_oxd_queue_reply_about(),
 			true);
 		AddToggle(
 			builder,
 			u"smart_bug_report_helper"_q,
-			tr::lng_exd_bug_helper(),
+			tr::lng_oxd_bug_helper(),
 			{ u"bug"_q, u"report"_q, u"diagnostic"_q },
-			tr::lng_exd_bug_helper_about(),
+			tr::lng_oxd_bug_helper_about(),
 			true);
 		AddToggle(
 			builder,
 			u"quote_reply"_q,
-			tr::lng_exd_quote_reply(),
+			tr::lng_oxd_quote_reply(),
 			{ u"quote"_q, u"reply"_q },
-			tr::lng_exd_quote_reply_about(),
+			tr::lng_oxd_quote_reply_about(),
 			true);
 		AddToggle(
 			builder,
 			u"hide_copy_toast"_q,
-			tr::lng_exd_hide_copy_toast());
+			tr::lng_oxd_hide_copy_toast());
 		AddToggle(
 			builder,
 			u"chars_counter"_q,
-			tr::lng_exd_chars_counter());
+			tr::lng_oxd_chars_counter());
 		AddToggle(
 			builder,
 			u"select_service"_q,
-			tr::lng_exd_select_service(),
+			tr::lng_oxd_select_service(),
 			{ u"select"_q, u"service"_q },
-			tr::lng_exd_select_service_about(),
+			tr::lng_oxd_select_service_about(),
 			true);
 		AddToggle(
 			builder,
 			u"full_members"_q,
-			tr::lng_exd_full_members(),
+			tr::lng_oxd_full_members(),
 			{ u"members"_q, u"participants"_q },
-			tr::lng_exd_full_members_about(),
+			tr::lng_oxd_full_members_about(),
 			true);
 		AddToggle(
 			builder,
 			u"name_accent"_q,
-			tr::lng_exd_name_accent(),
+			tr::lng_oxd_name_accent(),
 			{ u"color"_q, u"name"_q },
-			tr::lng_exd_name_accent_about(),
+			tr::lng_oxd_name_accent_about(),
 			true);
 		AddToggle(
 			builder,
@@ -2020,32 +2020,32 @@ void PartChats5(SectionBuilder &builder) {
 		AddToggle(
 			builder,
 			u"static_reactions_enabled"_q,
-			tr::lng_exd_static_reactions(),
+			tr::lng_oxd_static_reactions(),
 			{ u"reactions"_q, u"static"_q },
-			tr::lng_exd_static_reactions_about(),
+			tr::lng_oxd_static_reactions_about(),
 			true);
 		AddToggle(
 			builder,
 			u"shadow_drafts_enabled"_q,
-			tr::lng_exd_shadow_drafts(),
+			tr::lng_oxd_shadow_drafts(),
 			{ u"draft"_q, u"history"_q, u"undo"_q },
-			tr::lng_exd_shadow_drafts_about(),
+			tr::lng_oxd_shadow_drafts_about(),
 			true);
 		AddToggle(
 			builder,
 			u"hud_quick_switcher"_q,
-			tr::lng_exd_hud_switcher(),
+			tr::lng_oxd_hud_switcher(),
 			{ u"hud"_q, u"spotlight"_q, u"switcher"_q },
-			tr::lng_exd_hud_switcher_about(),
+			tr::lng_oxd_hud_switcher_about(),
 			true);
 		AddChoice(
 			builder,
 			u"default_forward_mode"_q,
-			tr::lng_exd_default_forward,
+			tr::lng_oxd_default_forward,
 			{
-				&tr::lng_exd_default_forward_standard,
-				&tr::lng_exd_default_forward_no_author,
-				&tr::lng_exd_default_forward_no_author_caption,
+				&tr::lng_oxd_default_forward_standard,
+				&tr::lng_oxd_default_forward_no_author,
+				&tr::lng_oxd_default_forward_no_author_caption,
 			},
 			{ u"forward"_q });
 		AddToggle(
@@ -2104,9 +2104,9 @@ void PartChats6(SectionBuilder &builder) {
 		AddToggle(
 			builder,
 			u"media_deduplication"_q,
-			tr::lng_exd_media_dedup(),
+			tr::lng_oxd_media_dedup(),
 			{ u"dedup"_q, u"cache"_q, u"media"_q },
-			tr::lng_exd_media_dedup_about(),
+			tr::lng_oxd_media_dedup_about(),
 			true);
 	});
 	builder.addDivider();
@@ -2149,31 +2149,31 @@ void PartChats7(SectionBuilder &builder) {
 		AddToggle(
 			builder,
 			u"mini_player_always_on_top"_q,
-			tr::lng_exd_mini_player_pin());
+			tr::lng_oxd_mini_player_pin());
 		AddToggle(
 			builder,
 			u"mini_player_compact"_q,
-			tr::lng_exd_mini_player_compact());
+			tr::lng_oxd_mini_player_compact());
 		AddToggle(
 			builder,
 			u"gapless_playback"_q,
-			tr::lng_exd_gapless_playback(),
+			tr::lng_oxd_gapless_playback(),
 			{ u"gapless"_q, u"audio"_q, u"music"_q },
-			tr::lng_exd_gapless_playback_about(),
+			tr::lng_oxd_gapless_playback_about(),
 			true);
 		AddToggle(
 			builder,
 			u"audio_looper_enabled"_q,
-			tr::lng_exd_audio_looper(),
+			tr::lng_oxd_audio_looper(),
 			{ u"loop"_q, u"audio"_q, u"clip"_q },
-			tr::lng_exd_audio_looper_about(),
+			tr::lng_oxd_audio_looper_about(),
 			true);
 		AddToggle(
 			builder,
 			u"pitch_preserved_speed"_q,
-			tr::lng_exd_pitch_preserved(),
+			tr::lng_oxd_pitch_preserved(),
 			{ u"speed"_q, u"pitch"_q, u"voice"_q },
-			tr::lng_exd_pitch_preserved_about(),
+			tr::lng_oxd_pitch_preserved_about(),
 			true);
 	});
 	AddAbout(builder, tr::lng_extera_auto_pause_about());
@@ -2253,11 +2253,11 @@ void PartOther0(SectionBuilder &builder) {
 	[[maybe_unused]] const auto controller = builder.controller();
 
 	builder.addSkip();
-	builder.addSubsectionTitle(tr::lng_exd_badge_title());
+	builder.addSubsectionTitle(tr::lng_oxd_badge_title());
 	builder.card([&] {
 		builder.addButton({
 			.id = u"extera/badge_buy"_q,
-			.title = tr::lng_exd_badge_get(),
+			.title = tr::lng_oxd_badge_get(),
 			.icon = { &st::menuIconPremium },
 			.onClick = [=] { ShowBadgeInfoBox(controller); },
 			.keywords = { u"badge"_q, u"verified"_q },
@@ -2266,17 +2266,16 @@ void PartOther0(SectionBuilder &builder) {
 			.id = u"extera/badge_bot"_q,
 			.title = rpl::single(u"Купить стрелочку (@exteraAuthBot)"_q),
 			.icon = { &st::menuIconBotCommands },
-			.onClick = [=] { UrlClickHandler::Open(u"https://t.me/exteraAuthBot/donate"_q); },
+			.onClick = [=] { UrlClickHandler::Open(u"https://t.me/exteraAuthBot?start=donate"_q); },
 			.keywords = { u"badge"_q, u"donate"_q, u"bot"_q },
 		});
 	});
-	AddAbout(builder, tr::lng_exd_badge_about());
 }
 
 void PartOther1(SectionBuilder &builder) {
 	[[maybe_unused]] const auto controller = builder.controller();
 
-	builder.addSubsectionTitle(tr::lng_exd_donate());
+	builder.addSubsectionTitle(tr::lng_oxd_donate());
 	builder.card([&] {
 		const auto wallet = [&](
 				const QString &id,
@@ -2292,14 +2291,14 @@ void PartOther1(SectionBuilder &builder) {
 				.onClick = [=] {
 					QGuiApplication::clipboard()->setText(address);
 					controller->showToast(
-						tr::lng_exd_donate_copied(tr::now));
+						tr::lng_oxd_donate_copied(tr::now));
 				},
 				.keywords = { u"donate"_q, u"crypto"_q },
 			});
 		};
 		wallet(
 			u"ton"_q,
-			tr::lng_exd_donate_ton(),
+			tr::lng_oxd_donate_ton(),
 			u"UQA8QlH0yECWALtLlaOI5Uulwwe0Wm1SPBbPzJ18AkvEKxCF"_q);
 		builder.addButton({
 			.id = u"extera/donate_other"_q,
@@ -2311,7 +2310,7 @@ void PartOther1(SectionBuilder &builder) {
 			.keywords = { u"donate"_q, u"author"_q, u"other"_q },
 		});
 	});
-	AddAbout(builder, tr::lng_exd_donate_about());
+	AddAbout(builder, tr::lng_oxd_donate_about());
 }
 
 void PartOther2(SectionBuilder &builder) {
@@ -2355,7 +2354,7 @@ void PartOther2(SectionBuilder &builder) {
 		});
 		builder.addButton({
 			.id = u"extera/changelog"_q,
-			.title = tr::lng_exd_changelog_title(),
+			.title = tr::lng_oxd_changelog_title(),
 			.icon = { &st::menuIconInfo },
 			.onClick = [=] {
 				if (controller) {
@@ -2367,11 +2366,11 @@ void PartOther2(SectionBuilder &builder) {
 		AddChoice(
 			builder,
 			u"auto_update"_q,
-			tr::lng_exd_auto_update,
+			tr::lng_oxd_auto_update,
 			{
-				&tr::lng_exd_auto_update_install,
-				&tr::lng_exd_auto_update_download,
-				&tr::lng_exd_auto_update_off,
+				&tr::lng_oxd_auto_update_install,
+				&tr::lng_oxd_auto_update_download,
+				&tr::lng_oxd_auto_update_off,
 			});
 	});
 	builder.addDivider();
@@ -2878,42 +2877,42 @@ void AddCategoryGrid(SectionBuilder &builder) {
 		const auto cards = std::make_shared<std::vector<CategoryCard>>(
 			std::vector<CategoryCard>{
 			{ [] { return tr::lng_extera_appearance(); },
-				[] { return tr::lng_exd_cat_appearance_about(); },
+				[] { return tr::lng_oxd_cat_appearance_about(); },
 				&st::menuIconPalette,
 				ExteraAppearanceId,
 				QColor(0x8E, 0x6C, 0xEF) },
-			{ [] { return tr::lng_exd_cat_messages(); },
-				[] { return tr::lng_exd_cat_messages_about(); },
+			{ [] { return tr::lng_oxd_cat_messages(); },
+				[] { return tr::lng_oxd_cat_messages_about(); },
 				&st::exteraIconChats,
 				ExteraGeneralId,
 				QColor(0x3A, 0x9B, 0xF0) },
-			{ [] { return tr::lng_exd_cat_translate(); },
-				[] { return tr::lng_exd_cat_translate_about(); },
+			{ [] { return tr::lng_oxd_cat_translate(); },
+				[] { return tr::lng_oxd_cat_translate_about(); },
 				&st::exteraIconTranslate,
 				ExteraChatsId,
 				QColor(0x26, 0xB0, 0xA2) },
-			{ [] { return tr::lng_exd_cat_privacy(); },
-				[] { return tr::lng_exd_cat_privacy_about(); },
+			{ [] { return tr::lng_oxd_cat_privacy(); },
+				[] { return tr::lng_oxd_cat_privacy_about(); },
 				&st::menuIconLock,
 				ExteraPrivacyId,
 				QColor(0x5B, 0x6B, 0xE8) },
-			{ [] { return tr::lng_exd_cat_network(); },
-				[] { return tr::lng_exd_cat_network_about(); },
+			{ [] { return tr::lng_oxd_cat_network(); },
+				[] { return tr::lng_oxd_cat_network_about(); },
 				&st::menuIconNetwork,
 				ExteraNetworkId,
 				QColor(0xF0, 0x8A, 0x3A) },
-			{ [] { return tr::lng_exd_cat_plugins(); },
-				[] { return tr::lng_exd_cat_plugins_about(); },
+			{ [] { return tr::lng_oxd_cat_plugins(); },
+				[] { return tr::lng_oxd_cat_plugins_about(); },
 				&st::exteraIconPlugins,
 				ExteraPluginsId,
 				QColor(0xE2, 0x55, 0x7B) },
-			{ [] { return tr::lng_exd_cat_updates(); },
-				[] { return tr::lng_exd_cat_updates_about(); },
+			{ [] { return tr::lng_oxd_cat_updates(); },
+				[] { return tr::lng_oxd_cat_updates_about(); },
 				&st::menuIconRestore,
 				ExteraUpdatesId,
 				QColor(0x3C, 0xB3, 0x71) },
-			{ [] { return tr::lng_exd_cat_support(); },
-				[] { return tr::lng_exd_cat_support_about(); },
+			{ [] { return tr::lng_oxd_cat_support(); },
+				[] { return tr::lng_oxd_cat_support_about(); },
 				&st::menuIconLike,
 				ExteraSupportId,
 				QColor(0xF2, 0x54, 0x5B) },
@@ -3137,19 +3136,19 @@ void BuildPluginsEngine(SectionBuilder &builder) {
 		AddToggle(
 			builder,
 			u"plugins_no_auto_safe"_q,
-			tr::lng_exd_no_auto_safe());
+			tr::lng_oxd_no_auto_safe());
 		builder.addButton({
 			.id = u"extera/plugins_export"_q,
-			.title = tr::lng_exd_plugins_export(),
+			.title = tr::lng_oxd_plugins_export(),
 			.st = &st::settingsButtonNoIcon,
 			.onClick = [=] {
 				FileDialog::GetFolder(
 					Core::App().getFileDialogParent(),
-					tr::lng_exd_plugins_export(tr::now),
+					tr::lng_oxd_plugins_export(tr::now),
 					QString(),
 					[=](QString &&folder) {
 						const auto count = Extera::Plugins::ExportAll(folder);
-						controller->showToast(tr::lng_exd_plugins_exported(
+						controller->showToast(tr::lng_oxd_plugins_exported(
 							tr::now,
 							lt_count,
 							count));
@@ -3161,11 +3160,11 @@ void BuildPluginsEngine(SectionBuilder &builder) {
 
 
 	builder.addSkip();
-	builder.addSubsectionTitle(tr::lng_exd_plugins_sdk());
+	builder.addSubsectionTitle(tr::lng_oxd_plugins_sdk());
 	builder.card([&] {
 		builder.addButton({
 			.id = u"extera/plugins_sdk"_q,
-			.title = tr::lng_exd_plugins_sdk_version(),
+			.title = tr::lng_oxd_plugins_sdk_version(),
 			.st = &st::settingsButtonNoIcon,
 			.label = rpl::single(QString::fromLatin1(Extera::Plugins::kSdkVersion)),
 		});
@@ -3203,7 +3202,7 @@ void BuildPluginsEngine(SectionBuilder &builder) {
 					? channel->name()
 					: !username.isEmpty()
 					? (u"@"_q + username)
-					: tr::lng_exd_trusted_channel(
+					: tr::lng_oxd_trusted_channel(
 						tr::now,
 						lt_id,
 						QString::number(bare))),
@@ -3220,7 +3219,7 @@ void BuildPluginsEngine(SectionBuilder &builder) {
 			});
 		}
 	});
-	AddAbout(builder, tr::lng_exd_trusted_sources_about());
+	AddAbout(builder, tr::lng_oxd_trusted_sources_about());
 }
 
 // AI Chat
@@ -3444,33 +3443,52 @@ void BuildPlugins(SectionBuilder &builder) {
 void PartSmartGhost(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	builder.addSkip();
-	builder.addSubsectionTitle(rpl::single(u"Smart Ghost Mode (\u041F\u0440\u0438\u0437\u0440\u0430\u043A)"_q));
+	builder.addSubsectionTitle(tr::lng_oxd_ghost_mode());
 	builder.card([&] {
 		AddToggle(
 			builder,
+			u"ghost_mode"_q,
+			tr::lng_oxd_ghost_mode(),
+			{ u"ghost"_q, u"stealth"_q },
+			tr::lng_oxd_ghost_mode_about(),
+			true);
+		AddToggle(
+			builder,
 			u"ghost_hide_read_channels"_q,
-			tr::lng_exd_smart_ghost_channels(),
+			tr::lng_oxd_smart_ghost_channels(),
 			{ u"ghost"_q, u"channel"_q },
-			tr::lng_exd_smart_ghost_channels_about(),
+			tr::lng_oxd_smart_ghost_channels_about(),
 			true);
 		AddToggle(
 			builder,
 			u"ghost_hide_read_groups"_q,
-			tr::lng_exd_smart_ghost_groups(),
+			tr::lng_oxd_smart_ghost_groups(),
 			{ u"ghost"_q, u"group"_q },
-			tr::lng_exd_smart_ghost_groups_about(),
+			tr::lng_oxd_smart_ghost_groups_about(),
 			true);
 		AddToggle(
 			builder,
 			u"ghost_hide_read_pms"_q,
-			tr::lng_exd_smart_ghost_pms(),
+			tr::lng_oxd_smart_ghost_pms(),
 			{ u"ghost"_q, u"pm"_q, u"private"_q },
-			tr::lng_exd_smart_ghost_pms_about(),
+			tr::lng_oxd_smart_ghost_pms_about(),
 			true);
 		AddToggle(
 			builder,
+			u"ghost_hide_typing"_q,
+			rpl::single(u"Скрывать статус «печатает»"_q),
+			{ u"ghost"_q, u"typing"_q },
+			rpl::single(u"Не отправлять собеседнику индикацию набора текста и записи голосовых."_q),
+			true);
+	});
+
+	builder.addSkip();
+	builder.addSubsectionTitle(rpl::single(u"Анти-удаление сообщений"_q));
+	builder.card([&] {
+		AddToggle(
+			builder,
 			u"anti_delete"_q,
-			rpl::single(u"Анти-удаление сообщений"_q),
+			rpl::single(u"Сохранять удаленные сообщения"_q),
 			{ u"anti"_q, u"delete"_q },
 			rpl::single(u"Сохранять удаленные собеседником сообщения с пометкой в конце."_q),
 			true);
@@ -3631,7 +3649,7 @@ const auto kMainMeta = BuildHelper({
 const auto kGeneralMeta = BuildHelper({
 	.id = ExteraGeneral::Id(),
 	.parentId = ExteraMain::Id(),
-	.title = &tr::lng_exd_cat_messages,
+	.title = &tr::lng_oxd_cat_messages,
 	.icon = &st::exteraIconChats,
 }, BuildMessages);
 
@@ -3645,14 +3663,14 @@ const auto kAppearanceMeta = BuildHelper({
 const auto kChatsMeta = BuildHelper({
 	.id = ExteraChats::Id(),
 	.parentId = ExteraMain::Id(),
-	.title = &tr::lng_exd_cat_translate,
+	.title = &tr::lng_oxd_cat_translate,
 	.icon = &st::exteraIconTranslate,
 }, BuildTranslate);
 
 const auto kPluginsMeta = BuildHelper({
 	.id = ExteraPlugins::Id(),
 	.parentId = ExteraMain::Id(),
-	.title = &tr::lng_exd_cat_plugins,
+	.title = &tr::lng_oxd_cat_plugins,
 	.icon = &st::exteraIconPlugins,
 }, BuildPlugins);
 
@@ -3687,28 +3705,28 @@ const auto kAiChatMeta = BuildHelper({
 const auto kPrivacyMeta = BuildHelper({
 	.id = ExteraPrivacy::Id(),
 	.parentId = ExteraMain::Id(),
-	.title = &tr::lng_exd_cat_privacy,
+	.title = &tr::lng_oxd_cat_privacy,
 	.icon = &st::menuIconLock,
 }, BuildPrivacy);
 
 const auto kNetworkMeta = BuildHelper({
 	.id = ExteraNetwork::Id(),
 	.parentId = ExteraMain::Id(),
-	.title = &tr::lng_exd_cat_network,
+	.title = &tr::lng_oxd_cat_network,
 	.icon = &st::menuIconNetwork,
 }, BuildNetwork);
 
 const auto kUpdatesMeta = BuildHelper({
 	.id = ExteraUpdates::Id(),
 	.parentId = ExteraMain::Id(),
-	.title = &tr::lng_exd_cat_updates,
+	.title = &tr::lng_oxd_cat_updates,
 	.icon = &st::menuIconRestore,
 }, BuildUpdates);
 
 const auto kSupportMeta = BuildHelper({
 	.id = ExteraSupport::Id(),
 	.parentId = ExteraMain::Id(),
-	.title = &tr::lng_exd_cat_support,
+	.title = &tr::lng_oxd_cat_support,
 	.icon = &st::menuIconLike,
 }, BuildSupport);
 
@@ -3734,18 +3752,18 @@ const auto kSupportMeta = BuildHelper({
 [[nodiscard]] rpl::producer<QString> Title(int index) {
 	switch (index) {
 	case 0: return tr::lng_extera_title();
-	case 1: return tr::lng_exd_cat_messages();
+	case 1: return tr::lng_oxd_cat_messages();
 	case 2: return tr::lng_extera_appearance();
-	case 3: return tr::lng_exd_cat_translate();
-	case 4: return tr::lng_exd_cat_plugins();
+	case 3: return tr::lng_oxd_cat_translate();
+	case 4: return tr::lng_oxd_cat_plugins();
 	case 5: return tr::lng_extera_other();
 	case 6: return tr::lng_extera_plugins_engine_title();
 	case 7: return tr::lng_extera_nav_title();
 	case 8: return tr::lng_extera_ai_chat();
-	case 9: return tr::lng_exd_cat_privacy();
-	case 10: return tr::lng_exd_cat_network();
-	case 11: return tr::lng_exd_cat_updates();
-	case 12: return tr::lng_exd_cat_support();
+	case 9: return tr::lng_oxd_cat_privacy();
+	case 10: return tr::lng_oxd_cat_network();
+	case 11: return tr::lng_oxd_cat_updates();
+	case 12: return tr::lng_oxd_cat_support();
 	}
 	Unexpected("Index in Extera Title.");
 }

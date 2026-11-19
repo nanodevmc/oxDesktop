@@ -522,8 +522,29 @@ TopBar::TopBar(
 			std::move(badgeUpdates),
 			_badge->updated());
 
-		const auto isCustomBadge = (_peer->isSelf() && Extera::BadgeKindFor(_peer) != Extera::BadgeKind::None);
-		if (!isCustomBadge) {
+		if (Extera::BadgeKindFor(_peer) != Extera::BadgeKind::None) {
+			_badge->setPremiumClickCallback([weak = base::make_weak(controller), peer = _peer] {
+				const auto controller = weak.get();
+				if (!controller) {
+					return;
+				}
+				const auto custom = Extera::BadgeCustomText(peer);
+				if (!custom.isEmpty()) {
+					controller->showToast({
+						.text = TextWithEntities{ custom },
+						.duration = crl::time(4000),
+					});
+					return;
+				}
+				const auto num = Extera::BadgeNumber(peer);
+				if (num > 0) {
+					controller->showToast({
+						.text = TextWithEntities{ peer->name() + u" — ExteraGram Supporter #"_q + QString::number(num) },
+						.duration = crl::time(4000),
+					});
+				}
+			});
+		} else {
 			_badge->setPremiumClickCallback([controller, peer = _peer] {
 				::Settings::ShowEmojiStatusPremium(controller, peer);
 			});
@@ -552,7 +573,7 @@ TopBar::TopBar(
 			};
 			if (Extera::PluginTrust::IsTrustedChannel(peer)) {
 				controller->showToast({
-					.text = { tr::lng_exd_badge_trusted(
+					.text = { tr::lng_oxd_badge_trusted(
 						tr::now,
 						lt_name,
 						name) },
@@ -560,10 +581,7 @@ TopBar::TopBar(
 				});
 				return;
 			}
-			if (!custom.isEmpty()
-				&& kind != Kind::Developer
-				&& kind != Kind::OfficialChannel
-				&& kind != Kind::Supporter) {
+			if (!custom.isEmpty()) {
 				exdToast(custom);
 				return;
 			}
@@ -587,24 +605,36 @@ TopBar::TopBar(
 				exdToast(tr::lng_extera_badge_extera_resource(
 					tr::now, lt_name, name));
 				break;
-			case Kind::Supporter:
-				exdToast(tr::lng_extera_badge_supporter(
-					tr::now, lt_name, name));
+			case Kind::Supporter: {
+				const auto num = Extera::BadgeNumber(peer);
+				if (num > 0) {
+					exdToast(name + u" — ExteraGram Supporter #"_q + QString::number(num));
+				} else {
+					exdToast(tr::lng_extera_badge_supporter(
+						tr::now, lt_name, name));
+				}
 				break;
-			case Kind::Custom:
-				exdToast(
-					tr::lng_extera_badge_supporter(tr::now, lt_name, name));
+			}
+			case Kind::Custom: {
+				const auto num = Extera::BadgeNumber(peer);
+				if (num > 0) {
+					exdToast(name + u" — ExteraGram Supporter #"_q + QString::number(num));
+				} else {
+					exdToast(
+						tr::lng_extera_badge_supporter(tr::now, lt_name, name));
+				}
 				break;
+			}
 			case Kind::Bughunter:
-				exdToast(tr::lng_exd_badge_bughunter(
+				exdToast(tr::lng_oxd_badge_bughunter(
 					tr::now, lt_name, name));
 				break;
 			case Kind::Helper:
-				exdToast(tr::lng_exd_badge_helper(
+				exdToast(tr::lng_oxd_badge_helper(
 					tr::now, lt_name, name));
 				break;
 			case Kind::Donor:
-				exdToast(tr::lng_exd_badge_donor(
+				exdToast(tr::lng_oxd_badge_donor(
 					tr::now, lt_name, name));
 				break;
 			case Kind::None:

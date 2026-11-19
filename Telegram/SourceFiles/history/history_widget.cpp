@@ -654,9 +654,9 @@ HistoryWidget::HistoryWidget(
 		}
 		const auto text = ids.join(QChar('\n'));
 		request.menu->addSeparator();
-		request.menu->addAction(tr::lng_exd_copy_emoji_id(tr::now), [=] {
+		request.menu->addAction(tr::lng_oxd_copy_emoji_id(tr::now), [=] {
 			QGuiApplication::clipboard()->setText(text);
-			controller->showToast(tr::lng_exd_emoji_id_copied(tr::now));
+			controller->showToast(tr::lng_oxd_emoji_id_copied(tr::now));
 		});
 	});
 	_field->setMimeDataHook(WrappedMessageFieldMimeHook([=](
@@ -3565,12 +3565,15 @@ void HistoryWidget::showHistory(
 						).arg(Logs::b(_history->loadedAtBottom())
 						).arg(showAtMsgId.bare));
 
-					const auto to = countInitialScrollTop();
+					const auto to = std::clamp(countInitialScrollTop(), 0, _scroll->scrollTopMax());
 					const auto item = getItemFromHistoryOrMigrated(
 						_showAtMsgId);
-					animatedScrollToY(
-						std::clamp(to, 0, _scroll->scrollTopMax()),
-						item);
+					if (params.animated == anim::type::instant
+						|| params.way == Window::SectionShow::Way::ClearStack) {
+						synteticScrollToY(to);
+					} else {
+						animatedScrollToY(to, item);
+					}
 				} else {
 					historyLoaded();
 				}

@@ -238,7 +238,7 @@ void AddCopyLinkMenu(
 			st::popupMenuWithIcons);
 		(*menu)->addAction(tr::lng_context_copy_link(tr::now), [=] {
 			QGuiApplication::clipboard()->setText(link);
-			controller->showToast(tr::lng_exd_settings_link_copied(tr::now));
+			controller->showToast(tr::lng_oxd_settings_link_copied(tr::now));
 		}, &st::menuIconLink);
 		(*menu)->popup(QCursor::pos());
 		return base::EventFilterResult::Cancel;

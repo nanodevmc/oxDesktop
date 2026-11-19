@@ -127,7 +127,7 @@ void Show(
 		const auto status = content->add(
 			object_ptr<Ui::FlatLabel>(
 				content,
-				tr::lng_exd_pdf_loading(),
+				tr::lng_oxd_pdf_loading(),
 				st::boxLabel),
 			st::boxRowPadding);
 		struct State {
@@ -149,7 +149,7 @@ void Show(
 				return;
 			}
 			if (!count) {
-				status->setText(tr::lng_exd_pdf_failed(tr::now));
+				status->setText(tr::lng_oxd_pdf_failed(tr::now));
 				return;
 			}
 			status->hide();
@@ -185,7 +185,7 @@ void Show(
 			state->images[page.index] = std::move(page.image);
 			widget->update();
 		});
-		box->addButton(tr::lng_exd_pdf_open_external(), [=] {
+		box->addButton(tr::lng_oxd_pdf_open_external(), [=] {
 			File::Launch(path);
 			box->closeBox();
 		});

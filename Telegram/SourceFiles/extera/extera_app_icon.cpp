@@ -202,7 +202,7 @@ std::vector<Variant> Variants() {
 		},
 		{
 			u"telegram"_q,
-			tr::lng_exd_app_icon_telegram(tr::now),
+			tr::lng_oxd_app_icon_telegram(tr::now),
 			QColor(34, 135, 203),
 			QColor(85, 190, 240),
 			Qt::white,
@@ -210,7 +210,7 @@ std::vector<Variant> Variants() {
 		},
 		{
 			u"accent"_q,
-			tr::lng_exd_app_icon_accent(tr::now),
+			tr::lng_oxd_app_icon_accent(tr::now),
 			accent,
 			Lighter(accent, 0.35),
 			Qt::white,
@@ -218,7 +218,7 @@ std::vector<Variant> Variants() {
 		},
 		{
 			u"dark"_q,
-			tr::lng_exd_app_icon_dark(tr::now),
+			tr::lng_oxd_app_icon_dark(tr::now),
 			QColor(28, 28, 32),
 			QColor(58, 58, 66),
 			QColor(255, 108, 42),
@@ -226,7 +226,7 @@ std::vector<Variant> Variants() {
 		},
 		{
 			u"light"_q,
-			tr::lng_exd_app_icon_light(tr::now),
+			tr::lng_oxd_app_icon_light(tr::now),
 			QColor(240, 240, 244),
 			QColor(255, 255, 255),
 			QColor(218, 48, 24),

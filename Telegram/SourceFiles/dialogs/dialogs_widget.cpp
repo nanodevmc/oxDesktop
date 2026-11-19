@@ -4634,14 +4634,14 @@ void Widget::exdShowMediaFilterMenu() {
 		this,
 		st::popupMenuWithIcons);
 	const auto phrases = std::vector<tr::phrase<>>{
-		tr::lng_exd_search_media_all,
-		tr::lng_exd_search_media_photos,
-		tr::lng_exd_search_media_videos,
-		tr::lng_exd_search_media_files,
-		tr::lng_exd_search_media_links,
-		tr::lng_exd_search_media_music,
-		tr::lng_exd_search_media_voice,
-		tr::lng_exd_search_media_gifs,
+		tr::lng_oxd_search_media_all,
+		tr::lng_oxd_search_media_photos,
+		tr::lng_oxd_search_media_videos,
+		tr::lng_oxd_search_media_files,
+		tr::lng_oxd_search_media_links,
+		tr::lng_oxd_search_media_music,
+		tr::lng_oxd_search_media_voice,
+		tr::lng_oxd_search_media_gifs,
 	};
 	for (auto i = 0; i != int(phrases.size()); ++i) {
 		_exdMediaMenu->addAction(phrases[i](tr::now), [=] {

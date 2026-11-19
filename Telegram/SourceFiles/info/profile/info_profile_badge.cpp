@@ -105,7 +105,7 @@ void Badge::setContent(Content content) {
 		case BadgeType::Direct:
 			return tr::lng_direct_badge(tr::now);
 		case BadgeType::Trusted:
-			return tr::lng_exd_trusted_sources(tr::now);
+			return tr::lng_oxd_trusted_sources(tr::now);
 		}
 		Unexpected("badge type");
 	}());

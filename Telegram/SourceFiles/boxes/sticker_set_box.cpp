@@ -1775,9 +1775,9 @@ void StickerSetBox::Inner::contextMenuEvent(QContextMenuEvent *e) {
 		}
 		const auto emojiId = QString::number(chosenDocument->id);
 		const auto show = _show;
-		_menu->addAction(tr::lng_exd_copy_emoji_id(tr::now), [=] {
+		_menu->addAction(tr::lng_oxd_copy_emoji_id(tr::now), [=] {
 			QGuiApplication::clipboard()->setText(emojiId);
-			show->showToast(tr::lng_exd_emoji_id_copied(tr::now));
+			show->showToast(tr::lng_oxd_emoji_id_copied(tr::now));
 		}, &st::menuIconCopy);
 		if (!amSetCreator()) {
 			Api::AddAddToEmojiSetAction(

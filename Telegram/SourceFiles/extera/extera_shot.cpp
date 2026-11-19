@@ -6,6 +6,7 @@
 #include "ui/chat/chat_style.h"
 #include "ui/chat/chat_theme.h"
 #include "ui/painter.h"
+#include "lang/lang_keys.h"
 #include "styles/style_basic.h"
 
 #include <QtGui/QClipboard>
@@ -15,27 +16,35 @@
 #include <QtGui/QLinearGradient>
 #include <cmath>
 #include <algorithm>
+#include <vector>
+#include <optional>
 
 namespace Extera {
+namespace {
 
-void TakeMessageShot(
+struct RenderedMessage {
+	QImage image;
+	int width = 0;
+	int height = 0;
+	bool isOut = false;
+};
+
+std::optional<RenderedMessage> RenderSingleItem(
 		Window::SessionController *controller,
-		HistoryItem *item) {
-	if (!controller || !item) {
-		return;
+		HistoryItem *item,
+		float64 ratio) {
+	if (!item) {
+		return std::nullopt;
 	}
 	const auto view = item->mainView();
 	if (!view) {
-		controller->showToast(u"Не удалось создать снимок сообщения"_q);
-		return;
+		return std::nullopt;
 	}
 
-	const auto ratio = style::DevicePixelRatio();
 	const auto viewW = std::max(view->width(), 120);
 	const auto viewH = std::max(view->height(), 32);
 	if (viewW <= 0 || viewH <= 0) {
-		controller->showToast(u"Не удалось создать снимок сообщения"_q);
-		return;
+		return std::nullopt;
 	}
 
 	auto fullImage = QImage(
@@ -98,11 +107,52 @@ void TakeMessageShot(
 	const auto contentW = int(std::ceil(contentImage.width() / ratio));
 	const auto contentH = int(std::ceil(contentImage.height() / ratio));
 
+	return RenderedMessage{
+		.image = std::move(contentImage),
+		.width = contentW,
+		.height = contentH,
+		.isOut = view->hasOutLayout(),
+	};
+}
+
+} // namespace
+
+void TakeMessagesShot(
+		Window::SessionController *controller,
+		const std::vector<HistoryItem*> &items) {
+	if (!controller || items.empty()) {
+		return;
+	}
+
+	const auto ratio = style::DevicePixelRatio();
+	auto rendered = std::vector<RenderedMessage>();
+	rendered.reserve(items.size());
+
+	int maxContentW = 0;
+	int totalContentH = 0;
+	const auto spacing = 8;
+
+	for (const auto item : items) {
+		if (auto msg = RenderSingleItem(controller, item, ratio)) {
+			maxContentW = std::max(maxContentW, msg->width);
+			if (!rendered.empty()) {
+				totalContentH += spacing;
+			}
+			totalContentH += msg->height;
+			rendered.push_back(std::move(*msg));
+		}
+	}
+
+	if (rendered.empty()) {
+		controller->showToast(u"Не удалось создать снимок сообщений"_q);
+		return;
+	}
+
 	const auto padX = 26;
 	const auto padY = 22;
 	const auto bottomBarH = 20;
-	const auto shotW = contentW + padX * 2;
-	const auto shotH = contentH + padY * 2 + bottomBarH;
+	const auto shotW = maxContentW + padX * 2;
+	const auto shotH = totalContentH + padY * 2 + bottomBarH;
 
 	auto finalImage = QImage(
 		shotW * ratio,
@@ -126,7 +176,14 @@ void TakeMessageShot(
 		p.setPen(QPen(QColor(255, 255, 255, 24), 1.0));
 		p.drawRoundedRect(cardRect, 14.0, 14.0);
 
-		p.drawImage(padX, padY, contentImage);
+		int curY = padY;
+		for (const auto &msg : rendered) {
+			const auto itemX = msg.isOut
+				? (shotW - padX - msg.width)
+				: padX;
+			p.drawImage(itemX, curY, msg.image);
+			curY += msg.height + spacing;
+		}
 
 		p.setFont(st::semiboldFont);
 		p.setPen(QColor(255, 255, 255, 80));
@@ -137,7 +194,30 @@ void TakeMessageShot(
 	}
 
 	QGuiApplication::clipboard()->setImage(finalImage);
-	controller->showToast(u"Снимок сообщения скопирован в буфер обмена"_q);
+	if (rendered.size() > 1) {
+		controller->showToast(tr::lng_oxd_toast_shots_copied(tr::now));
+	} else {
+		controller->showToast(tr::lng_oxd_toast_shot_copied(tr::now));
+	}
+}
+
+void TakeMessagesShot(
+		Window::SessionController *controller,
+		const std::vector<not_null<HistoryItem*>> &items) {
+	auto raw = std::vector<HistoryItem*>();
+	raw.reserve(items.size());
+	for (const auto item : items) {
+		raw.push_back(item.get());
+	}
+	TakeMessagesShot(controller, raw);
+}
+
+void TakeMessageShot(
+		Window::SessionController *controller,
+		HistoryItem *item) {
+	if (item) {
+		TakeMessagesShot(controller, std::vector<HistoryItem*>{ item });
+	}
 }
 
 } // namespace Extera

@@ -1027,17 +1027,17 @@ void BuildGlobalNotificationsSection(SectionBuilder &builder) {
 		Extera::Config::Instance().stringChanges(u"notify_sound"_q));
 	builder.addButton({
 		.id = u"notifications/exd_sound"_q,
-		.title = tr::lng_exd_notify_sound(),
+		.title = tr::lng_oxd_notify_sound(),
 		.icon = { &st::menuIconFile },
 		.label = rpl::duplicate(customSound) | rpl::map([](QString path) {
 			return path.isEmpty()
-				? tr::lng_exd_notify_sound_default(tr::now)
+				? tr::lng_oxd_notify_sound_default(tr::now)
 				: QFileInfo(path).fileName();
 		}),
 		.onClick = [] {
 			FileDialog::GetOpenPath(
 				QPointer<QWidget>(),
-				tr::lng_exd_notify_sound(tr::now),
+				tr::lng_oxd_notify_sound(tr::now),
 				u"Audio (*.mp3 *.ogg *.wav *.m4a *.opus)"_q,
 				[](FileDialog::OpenResult &&result) {
 					if (result.paths.isEmpty()) {
@@ -1053,7 +1053,7 @@ void BuildGlobalNotificationsSection(SectionBuilder &builder) {
 	});
 	builder.addButton({
 		.id = u"notifications/exd_sound_reset"_q,
-		.title = tr::lng_exd_notify_sound_reset(),
+		.title = tr::lng_oxd_notify_sound_reset(),
 		.icon = { &st::menuIconRestore },
 		.onClick = [] {
 			Extera::Config::Instance().setString(u"notify_sound"_q, QString());

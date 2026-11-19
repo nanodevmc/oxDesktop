@@ -761,7 +761,7 @@ FillMenuResult FillSendMenu(
 			&icons.menuSchedule);
 		if (type != Type::Reminder) {
 			menu->addAction(
-				tr::lng_exd_schedule_max(tr::now),
+				tr::lng_oxd_schedule_max(tr::now),
 				[=] { action({ Api::SendOptions{
 					.scheduled = base::unixtime::now() + kExdScheduleMax,
 				} }, details); },

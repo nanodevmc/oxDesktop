@@ -854,7 +854,7 @@ void View::mouseReleaseEvent(QMouseEvent *e) {
 				text.push_back(entry.text);
 			}
 			QGuiApplication::clipboard()->setText(text.join('\n'));
-			_controller->showToast(tr::lng_exd_player_lyrics_copied(tr::now));
+			_controller->showToast(tr::lng_oxd_player_lyrics_copied(tr::now));
 		}
 		break;
 	case Button::Line:
@@ -905,23 +905,23 @@ void View::contextMenuEvent(QContextMenuEvent *e) {
 		const auto menu = Ui::CreateChild<Ui::PopupMenu>(this, st::defaultPopupMenu);
 		menu->addAction(tr::lng_context_copy_text(tr::now), [=] {
 			QGuiApplication::clipboard()->setText(lineText);
-			_controller->showToast(tr::lng_exd_player_lyrics_copied(tr::now));
+			_controller->showToast(tr::lng_oxd_player_lyrics_copied(tr::now));
 		}, &st::menuIconCopy);
 
-		menu->addAction(tr::lng_exd_lyrics_quote(tr::now) + u" (BETA)"_q, [=] {
+		menu->addAction(tr::lng_oxd_lyrics_quote(tr::now) + u" (BETA)"_q, [=] {
 			const auto title = _title;
 			const auto performer = _performer;
 			const auto quoteCard = QString(u"\u00AB %1 \u00BB\n\u2014 %2 \u2022 %3"_q).arg(lineText, performer, title);
 			QGuiApplication::clipboard()->setText(quoteCard);
-			_controller->showToast(tr::lng_exd_lyrics_quote_copied(tr::now));
+			_controller->showToast(tr::lng_oxd_lyrics_quote_copied(tr::now));
 		}, &st::menuIconShare);
 
 		if (Extera::Bool(u"local_audio_player"_q)) {
 			menu->addSeparator();
-			menu->addAction(tr::lng_exd_open_local_audio(tr::now), [=] {
+			menu->addAction(tr::lng_oxd_open_local_audio(tr::now), [=] {
 				FileDialog::GetOpenPath(
 					this,
-					tr::lng_exd_open_local_audio(tr::now),
+					tr::lng_oxd_open_local_audio(tr::now),
 					u"Audio files (*.mp3 *.flac *.ogg *.wav *.m4a *.aac *.opus);;All files (*.*)"_q,
 					[=](FileDialog::OpenResult &&result) {
 						if (!result.paths.isEmpty()) {
@@ -937,10 +937,10 @@ void View::contextMenuEvent(QContextMenuEvent *e) {
 	}
 	const auto menu = Ui::CreateChild<Ui::PopupMenu>(this, st::defaultPopupMenu);
 	if (Extera::Bool(u"local_audio_player"_q)) {
-		menu->addAction(tr::lng_exd_open_local_audio(tr::now), [=] {
+		menu->addAction(tr::lng_oxd_open_local_audio(tr::now), [=] {
 			FileDialog::GetOpenPath(
 				this,
-				tr::lng_exd_open_local_audio(tr::now),
+				tr::lng_oxd_open_local_audio(tr::now),
 				u"Audio files (*.mp3 *.flac *.ogg *.wav *.m4a *.aac *.opus);;All files (*.*)"_q,
 				[=](FileDialog::OpenResult &&result) {
 					if (!result.paths.isEmpty()) {
@@ -1160,8 +1160,8 @@ void View::paintLyrics(QPainter &p) {
 			rect,
 			Qt::AlignCenter | Qt::TextWordWrap,
 			(_lyrics == Lyrics::Loading)
-				? tr::lng_exd_player_lyrics_loading(tr::now)
-				: tr::lng_exd_player_lyrics_none(tr::now));
+				? tr::lng_oxd_player_lyrics_loading(tr::now)
+				: tr::lng_oxd_player_lyrics_none(tr::now));
 		return;
 	}
 	layoutLines();

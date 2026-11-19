@@ -1188,14 +1188,14 @@ void ProxiesBox::setupContent() {
 
 		const auto wsProxyButton = Settings::AddButtonWithLabel(
 			wsProxyWrap,
-			tr::lng_exd_ws_proxy(),
+			tr::lng_oxd_ws_proxy(),
 			Extera::WsProxy::statusTextValue(),
 			st::settingsButtonNoIcon);
 
 		wsProxyWrap->add(
 			object_ptr<Ui::FlatLabel>(
 				wsProxyWrap,
-				tr::lng_exd_ws_proxy_about(tr::now),
+				tr::lng_oxd_ws_proxy_about(tr::now),
 				st::boxDividerLabel),
 			st::proxyAboutPadding);
 

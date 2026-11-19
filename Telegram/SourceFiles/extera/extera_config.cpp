@@ -167,6 +167,7 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"hud_quick_switcher"_q, true },
 		{ u"audio_looper_enabled"_q, true },
 		{ u"pitch_preserved_speed"_q, true },
+		{ u"ghost_mode"_q, true },
 		{ u"ghost_hide_read_channels"_q, true },
 		{ u"ghost_hide_read_groups"_q, true },
 		{ u"ghost_hide_read_pms"_q, true },

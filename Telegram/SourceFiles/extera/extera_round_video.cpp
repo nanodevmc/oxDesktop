@@ -462,7 +462,7 @@ void ShowCropBox(
 		QImage frame,
 		Api::SendAction action) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
-		box->setTitle(tr::lng_exd_round_video());
+		box->setTitle(tr::lng_oxd_round_video());
 		box->setWidth(st::boxWideWidth);
 		struct State {
 			QPointF center = { 0.5, 0.5 };
@@ -555,7 +555,7 @@ void ShowCropBox(
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
-				tr::lng_exd_round_video_hint(),
+				tr::lng_oxd_round_video_hint(),
 				st::boxDividerLabel),
 			st::boxRowPadding);
 		box->addButton(tr::lng_send_button(), [=] {
@@ -567,7 +567,7 @@ void ShowCropBox(
 				state->side,
 				state->side);
 			box->closeBox();
-			controller->showToast(tr::lng_exd_round_video_preparing(tr::now));
+			controller->showToast(tr::lng_oxd_round_video_preparing(tr::now));
 			const auto weak = base::make_weak(controller);
 			crl::async([=] {
 				auto transcoder = Transcoder(path);
@@ -578,7 +578,7 @@ void ShowCropBox(
 						return;
 					} else if (result.content.isEmpty()) {
 						strong->showToast(
-							tr::lng_exd_round_video_failed(tr::now));
+							tr::lng_oxd_round_video_failed(tr::now));
 						return;
 					}
 					strong->session().api().sendVoiceMessage(
@@ -602,7 +602,7 @@ void ChooseAndSend(
 	const auto weak = base::make_weak(controller);
 	FileDialog::GetOpenPath(
 		QPointer<QWidget>(controller->widget().get()),
-		tr::lng_exd_round_video(tr::now),
+		tr::lng_oxd_round_video(tr::now),
 		FileDialog::PhotoVideoFilesFilter(),
 		[=](FileDialog::OpenResult &&result) {
 			const auto strong = weak.get();
@@ -620,7 +620,7 @@ void ShowForPath(
 	auto transcoder = Transcoder(path);
 	const auto frame = transcoder.firstFrame();
 	if (frame.isNull()) {
-		controller->showToast(tr::lng_exd_round_video_failed(tr::now));
+		controller->showToast(tr::lng_oxd_round_video_failed(tr::now));
 		return;
 	}
 	ShowCropBox(controller, path, frame, action);

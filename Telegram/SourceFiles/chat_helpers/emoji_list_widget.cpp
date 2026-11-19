@@ -2158,7 +2158,7 @@ void EmojiListWidget::fillRecentMenu(
 	}
 	if (document) {
 		const auto emojiId = QString::number(document->id);
-		addAction(tr::lng_exd_copy_emoji_id(tr::now), [=] {
+		addAction(tr::lng_oxd_copy_emoji_id(tr::now), [=] {
 			QGuiApplication::clipboard()->setText(emojiId);
 		}, &st().icons.menuEmojiCopy);
 	}
@@ -2174,8 +2174,8 @@ void EmojiListWidget::fillRecentMenu(
 		const auto favorite = FavoriteEmojiList().contains(key);
 		if (!key.isEmpty()) {
 			addAction(favorite
-				? tr::lng_exd_emoji_unfavorite(tr::now)
-				: tr::lng_exd_emoji_favorite(tr::now), crl::guard(this, [=] {
+				? tr::lng_oxd_emoji_unfavorite(tr::now)
+				: tr::lng_oxd_emoji_favorite(tr::now), crl::guard(this, [=] {
 				auto list = FavoriteEmojiList();
 				if (favorite) {
 					list.removeAll(key);
@@ -3811,7 +3811,7 @@ void EmojiListWidget::refreshCustom() {
 					ExdFavoritesSetId(),
 					0,
 					0,
-					tr::lng_exd_emoji_favorites(tr::now),
+					tr::lng_oxd_emoji_favorites(tr::now),
 					QString(),
 					0,
 					Data::StickersSetFlags(),
@@ -3822,7 +3822,7 @@ void EmojiListWidget::refreshCustom() {
 				.id = ExdFavoritesSetId(),
 				.set = _exdFavoritesSet.get(),
 				.thumbnailDocument = thumbnail,
-				.title = tr::lng_exd_emoji_favorites(tr::now),
+				.title = tr::lng_oxd_emoji_favorites(tr::now),
 				.list = std::move(favorites),
 			});
 		}

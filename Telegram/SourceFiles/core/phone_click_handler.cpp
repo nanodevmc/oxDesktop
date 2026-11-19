@@ -332,7 +332,7 @@ void ResolvePhoneAction::paint(Painter &p) {
 void ResolvePhoneAction::prepare() {
 	rpl::combine(
 		(_byId
-			? tr::lng_exd_open_profile_id()
+			? tr::lng_oxd_open_profile_id()
 			: tr::lng_context_view_profile()),
 		_peer.value(
 		) | rpl::map([](PeerData *peer) {
@@ -341,7 +341,7 @@ void ResolvePhoneAction::prepare() {
 				: rpl::single(QString());
 		}) | rpl::flatten_latest(),
 		(_byId
-			? tr::lng_exd_profile_id_not_found()
+			? tr::lng_oxd_profile_id_not_found()
 			: tr::lng_menu_not_contact()),
 		_loaded.value(
 		) | rpl::map([](bool loaded) {

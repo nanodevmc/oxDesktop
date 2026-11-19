@@ -166,7 +166,7 @@ void ShowAutoSafeModeBox(bool hang = false) {
 		}
 		controller->show(Ui::MakeConfirmBox({
 			.text = (hang
-				? tr::lng_exd_safe_mode_hang()
+				? tr::lng_oxd_safe_mode_hang()
 				: tr::lng_extera_safe_mode_auto()),
 			.confirmed = [=](Fn<void()> close) {
 				close();

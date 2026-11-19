@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_inner_widget.h"
 #include "extera/extera_menu.h"
+#include "extera/extera_shot.h"
 
 #include "extera/extera_config.h"
 
@@ -3487,6 +3488,9 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					controller,
 					selectedItemsForExport(),
 					this);
+				_menu->addAction(tr::lng_oxd_message_shot(tr::now), [=] {
+					Extera::TakeMessagesShot(_controller, selectedItemsForExport());
+				}, &st::menuIconCopy);
 			}
 			_menu->addAction(tr::lng_context_clear_selection(tr::now), [=] {
 				_widget->clearSelected();
@@ -3791,6 +3795,9 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					controller,
 					selectedItemsForExport(),
 					this);
+				_menu->addAction(tr::lng_oxd_message_shot(tr::now), [=] {
+					Extera::TakeMessagesShot(_controller, selectedItemsForExport());
+				}, &st::menuIconCopy);
 			}
 			_menu->addAction(tr::lng_context_clear_selection(tr::now), [=] {
 				_widget->clearSelected();

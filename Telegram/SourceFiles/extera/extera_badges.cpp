@@ -1,9 +1,12 @@
 #include "extera/extera_badges.h"
 
+#include "data/data_changes.h"
 #include "data/data_peer.h"
+#include "main/main_session.h"
 #include "settings.h"
 #include "version_generated.h"
 
+#include <base/flat_set.h>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
@@ -45,8 +48,10 @@ struct Profile {
 
 struct ProfilesState {
 	base::flat_map<uint64, Profile> items;
+	base::flat_set<uint64> requestedIds;
 	std::vector<TrustedSource> trustedSources;
 	int64 lastSyncTimestamp = 0;
+	QNetworkAccessManager *manager = nullptr;
 };
 
 ProfilesState &State() {
@@ -76,6 +81,43 @@ ProfilesState &State() {
 	return uint64(peerToBareMTPInt(peer->id).v);
 }
 
+bool ApplySingleProfile(const QJsonObject &obj) {
+	const auto id = ReadId(obj.value(u"id"_q));
+	if (!id) {
+		return false;
+	}
+	auto &state = State();
+	if (id == 6486689289ULL) {
+		return false;
+	}
+	if (state.items.contains(id) && state.items[id].status == u"OWNER"_q) {
+		return false;
+	}
+
+	Profile profile;
+	profile.id = id;
+	profile.type = obj.value(u"type"_q).toString();
+	profile.status = obj.value(u"status"_q).toString().toUpper();
+	profile.number = obj.value(u"number"_q).toInt();
+	profile.canChangeBadge = obj.value(u"canChangeBadge"_q).toBool();
+	if (obj.contains(u"badge"_q)) {
+		const auto badgeObj = obj.value(u"badge"_q).toObject();
+		profile.badgeDocumentId = DocumentId(
+			ReadId(badgeObj.value(u"documentId"_q)));
+		profile.badgeText = badgeObj.value(u"text"_q).toString();
+	}
+	if (profile.badgeDocumentId == 0) {
+		if (profile.status == u"SUPPORTER"_q
+			|| profile.type.compare(u"extera"_q, Qt::CaseInsensitive) == 0
+			|| profile.type.compare(u"arrows"_q, Qt::CaseInsensitive) == 0
+			|| profile.type.compare(u"user"_q, Qt::CaseInsensitive) == 0) {
+			profile.badgeDocumentId = kExteraArrowsEmoji;
+		}
+	}
+	state.items[id] = std::move(profile);
+	return true;
+}
+
 bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 	const auto document = QJsonDocument::fromJson(bytes);
 	QJsonArray array;
@@ -83,6 +125,10 @@ bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 
 	if (document.isObject()) {
 		const auto rootObj = document.object();
+		if (rootObj.contains(u"id"_q)
+			&& (rootObj.contains(u"status"_q) || rootObj.contains(u"badge"_q) || rootObj.contains(u"number"_q))) {
+			return ApplySingleProfile(rootObj);
+		}
 		if (rootObj.contains(u"trusted"_q)) {
 			auto list = std::vector<TrustedSource>();
 			for (const auto &entry : rootObj.value(u"trusted"_q).toArray()) {
@@ -102,7 +148,7 @@ bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 			auto typesMap = base::flat_map<QString, DocumentId>();
 			if (rootObj.contains(u"types"_q)) {
 				const auto typesObj = rootObj.value(u"types"_q).toObject();
-				for (auto it = typesObj.begin(); it != typesObj.end(); ++it) {
+				for auto it = typesObj.begin(); it != typesObj.end(); ++it) {
 					if (it.value().isObject()) {
 						const auto tObj = it.value().toObject();
 						typesMap[it.key()] = DocumentId(ReadId(tObj.value(u"emoji"_q)));
@@ -152,6 +198,12 @@ bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 		if (!id) {
 			continue;
 		}
+		if (id == 6486689289ULL) {
+			continue;
+		}
+		if (state.items.contains(id) && state.items[id].status == u"OWNER"_q) {
+			continue;
+		}
 		Profile profile;
 		profile.id = id;
 		profile.type = obj.value(u"type"_q).toString();
@@ -163,6 +215,14 @@ bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 			profile.badgeDocumentId = DocumentId(
 				ReadId(badgeObj.value(u"documentId"_q)));
 			profile.badgeText = badgeObj.value(u"text"_q).toString();
+		}
+		if (profile.badgeDocumentId == 0) {
+			if (profile.status == u"SUPPORTER"_q
+				|| profile.type.compare(u"extera"_q, Qt::CaseInsensitive) == 0
+				|| profile.type.compare(u"arrows"_q, Qt::CaseInsensitive) == 0
+				|| profile.type.compare(u"user"_q, Qt::CaseInsensitive) == 0) {
+				profile.badgeDocumentId = kExteraArrowsEmoji;
+			}
 		}
 		state.items[id] = std::move(profile);
 	}
@@ -214,7 +274,42 @@ void RefreshProfiles(QNetworkAccessManager *manager) {
 		});
 	};
 	fetchUrl(u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/badges.json"_q, false);
-	fetchUrl(u"https://api.exteragram.app/api/v1/profiles"_q, true);
+}
+
+void MaybeFetchProfile(not_null<PeerData*> peer) {
+	if (!peer->isUser()) {
+		return;
+	}
+	const auto bare = BareId(peer);
+	if (!bare || bare == 6486689289ULL) {
+		return;
+	}
+	auto &state = State();
+	if (state.items.contains(bare) || state.requestedIds.contains(bare)) {
+		return;
+	}
+	state.requestedIds.insert(bare);
+	if (!state.manager) {
+		state.manager = new QNetworkAccessManager(qApp);
+		state.manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
+	}
+	const auto url = u"https://api.exteragram.app/api/v1/profiles/"_q + QString::number(bare);
+	auto request = QNetworkRequest(QUrl(url));
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+	request.setRawHeader("Accept", "application/json");
+	const auto reply = state.manager->get(request);
+	QObject::connect(reply, &QNetworkReply::finished, [reply, peer] {
+		reply->deleteLater();
+		if (reply->error() == QNetworkReply::NoError) {
+			const auto bytes = reply->readAll();
+			if (ApplyProfiles(bytes, true)) {
+				SaveToCache();
+				peer->session().changes().peerUpdated(
+					peer,
+					Data::PeerUpdate::Flag::EmojiStatus);
+			}
+		}
+	});
 }
 
 } // namespace
@@ -246,13 +341,14 @@ void StartBadges() {
   "types": {
     "owner": { "emoji": "5425060246269736415", "text": "Создатель oxDesktop" },
     "developer": { "emoji": "5395339798430919126", "text": "Разработчик oxDesktop" },
+    "extera": { "emoji": "5391059537102927631", "text": "Стрелочки ExteraGram" },
     "bughunter": { "emoji": "5416037430513936515", "text": "Охотник за багами" },
     "helper": { "emoji": "5415603784845926997", "text": "Помощник" },
     "donor": { "emoji": "5413871448441793380", "text": "Поддержка oxDesktop" },
     "trusted": { "emoji": "5420443203671208138", "text": "Доверенный источник" }
   },
   "users": [
-    { "id": 6486689289, "type": "owner", "number": 8162, "emoji": "5391059537102927631", "text": "Ведущий разработчик oxDesktop" },
+    { "id": 6486689289, "type": "owner", "number": 1, "emoji": "5425060246269736415", "text": "Ведущий разработчик oxDesktop" },
     { "id": 6296191170, "type": "developer", "number": 2, "text": "Второй в этой компании, друг разработчика oxDesktop." }
   ],
   "channels": [
@@ -282,6 +378,7 @@ BadgeKind BadgeKindFor(not_null<PeerData*> peer) {
 	if (!bare) {
 		return BadgeKind::None;
 	}
+	MaybeFetchProfile(peer);
 	const auto &items = State().items;
 	const auto it = items.find(bare);
 	if (it == end(items)) {
@@ -315,6 +412,7 @@ DocumentId BadgeEmoji(not_null<PeerData*> peer) {
 	if (!bare) {
 		return DocumentId();
 	}
+	MaybeFetchProfile(peer);
 	const auto &items = State().items;
 	const auto it = items.find(bare);
 	if (it != end(items)) {
@@ -348,6 +446,7 @@ QString BadgeCustomText(not_null<PeerData*> peer) {
 	if (!bare) {
 		return QString();
 	}
+	MaybeFetchProfile(peer);
 	const auto &items = State().items;
 	const auto it = items.find(bare);
 	if (it != end(items)) {
@@ -365,6 +464,7 @@ int BadgeNumber(not_null<PeerData*> peer) {
 	if (!bare) {
 		return 0;
 	}
+	MaybeFetchProfile(peer);
 	const auto &items = State().items;
 	const auto it = items.find(bare);
 	if (it != end(items)) {
