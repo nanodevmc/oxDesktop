@@ -187,6 +187,8 @@ public:
 	[[nodiscard]] MessageIdsList getSelectedForwardItems() const;
 	[[nodiscard]] auto getSelectedEphemeral() const
 		-> std::vector<not_null<HistoryItem*>>;
+	[[nodiscard]] auto selectedItemsForExport() const
+		-> std::vector<not_null<HistoryItem*>>;
 	[[nodiscard]] bool hasSelectedItems() const;
 	[[nodiscard]] HistoryView::SelectionModeResult inSelectionMode() const;
 	[[nodiscard]] HistoryView::SelectionModeResult inSelectionMode(
@@ -476,8 +478,6 @@ private:
 	[[nodiscard]] bool isPressInSelectedText(
 		not_null<const Element*> view,
 		TextState state) const;
-	[[nodiscard]] auto selectedItemsForExport() const
-		-> std::vector<not_null<HistoryItem*>>;
 	void updateDragSelection(Element *dragSelFrom, Element *dragSelTo, bool dragSelecting);
 	RenderSelectionState itemRenderSelection(
 		not_null<Element*> view,
