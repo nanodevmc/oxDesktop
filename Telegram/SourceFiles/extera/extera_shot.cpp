@@ -113,9 +113,9 @@ std::optional<RenderedMessage> RenderSingleItem(
 	const auto contentW = int(std::ceil(contentImage.width() / ratio));
 	const auto contentH = int(std::ceil(contentImage.height() / ratio));
 
-	const auto peer = item->from()
-		? item->from()
-		: item->history()->peer.get();
+	const auto peer = item->displayFrom()
+		? item->displayFrom()
+		: item->from().get();
 
 	return RenderedMessage{
 		.image = std::move(contentImage),
