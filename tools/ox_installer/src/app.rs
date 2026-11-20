@@ -68,7 +68,7 @@ pub enum Screen {
     Finished,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ButtonId {
     Install,
     Cancel,
@@ -206,6 +206,68 @@ impl Drop for AppFonts {
     }
 }
 
+pub const FORM_W: i32 = 520;
+pub const PATH_Y: i32 = 230;
+pub const PATH_H: i32 = 40;
+pub const BROWSE_BTN_W: i32 = 76;
+pub const BROWSE_BTN_H: i32 = 28;
+
+pub const LINK_X: i32 = 36;
+pub const TG_Y: i32 = 368;
+pub const GH_Y: i32 = 394;
+
+pub const CANCEL_BTN_W: i32 = 96;
+pub const INSTALL_BTN_W: i32 = 118;
+pub const ACTION_BTN_H: i32 = 40;
+
+pub const FINISH_CHK_W: i32 = 196;
+pub const FINISH_CHK_Y: i32 = 250;
+pub const FINISH_CHK_H: i32 = 24;
+
+pub const FINISH_BTN_W: i32 = 160;
+pub const FINISH_BTN_Y: i32 = 296;
+pub const FINISH_BTN_H: i32 = 42;
+
+pub struct Layout;
+
+impl Layout {
+    #[inline]
+    pub fn browse_rect(width: i32) -> Rect {
+        let form_x = (width - FORM_W) / 2;
+        Rect::new(form_x + FORM_W - 84, PATH_Y + 6, BROWSE_BTN_W, BROWSE_BTN_H)
+    }
+
+    #[inline]
+    pub fn link_telegram_rect() -> Rect {
+        Rect::new(LINK_X, TG_Y, 130, 20)
+    }
+
+    #[inline]
+    pub fn link_github_rect() -> Rect {
+        Rect::new(LINK_X, GH_Y, 110, 20)
+    }
+
+    #[inline]
+    pub fn cancel_rect(width: i32, height: i32) -> Rect {
+        Rect::new(width - 240, height - 58, CANCEL_BTN_W, ACTION_BTN_H)
+    }
+
+    #[inline]
+    pub fn install_rect(width: i32, height: i32) -> Rect {
+        Rect::new(width - 134, height - 58, INSTALL_BTN_W, ACTION_BTN_H)
+    }
+
+    #[inline]
+    pub fn finish_chk_rect(width: i32) -> Rect {
+        Rect::new((width - FINISH_CHK_W) / 2, FINISH_CHK_Y, FINISH_CHK_W, FINISH_CHK_H)
+    }
+
+    #[inline]
+    pub fn finish_btn_rect(width: i32) -> Rect {
+        Rect::new((width - FINISH_BTN_W) / 2, FINISH_BTN_Y, FINISH_BTN_W, FINISH_BTN_H)
+    }
+}
+
 pub const INSTALLER_VERSION: &str = env!("OX_VERSION");
 
 pub struct InstallerApp {
@@ -217,6 +279,7 @@ pub struct InstallerApp {
     pub create_start_menu_shortcut: bool,
     pub launch_after_install: bool,
     pub progress_percent: usize,
+    pub banner_img: Option<GdiImage>,
     pub logo_img: Option<GdiImage>,
     pub fonts: AppFonts,
     pub hovered_btn: Option<ButtonId>,
@@ -227,6 +290,9 @@ impl InstallerApp {
     pub fn new() -> Self {
         let app_data = std::env::var("APPDATA").unwrap_or_else(|_| "C:\\".to_string());
         let default_target = PathBuf::from(app_data).join("oxDesktop");
+
+        let banner_bytes = include_bytes!("../assets/banner.png");
+        let banner_img = GdiImage::from_bytes(banner_bytes);
 
         let delta_bytes = include_bytes!("../assets/delta_avatar.png");
         let logo_img = GdiImage::from_bytes(delta_bytes);
@@ -249,6 +315,7 @@ impl InstallerApp {
             create_start_menu_shortcut: true,
             launch_after_install: true,
             progress_percent: 0,
+            banner_img,
             logo_img,
             fonts: AppFonts::new(),
             hovered_btn: None,
@@ -275,74 +342,39 @@ impl InstallerApp {
     }
 
     fn render_welcome(&self, hdc: HDC, graphics: &GdiGraphics, width: i32, height: i32) {
-        // --- 1. Левый верхний угол: информация о версиях ---
-        unsafe {
-            SelectObject(hdc, self.fonts.small);
-
-            // Текущая версия
-            SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_MUTED));
-            let mut r_cur_lbl = Rect::new(20, 14, 100, 16).to_win32_rect();
-            let cur_lbl = to_wide_null("Текущая версия:");
-            DrawTextW(hdc, cur_lbl.as_ptr(), -1, &mut r_cur_lbl, 0x00000000 | 0x00000004);
-
-            let cur_val_str = match &self.installed_version {
-                Some(v) => format!("v{}", v.strip_prefix('v').unwrap_or(v)),
-                None => "не установлена".to_string(),
-            };
-            SetTextColor(hdc, argb_to_colorref(if self.installed_version.is_some() { COLOR_TEXT_PRIMARY } else { COLOR_TEXT_MUTED }));
-            let mut r_cur_val = Rect::new(122, 14, 107, 16).to_win32_rect();
-            let cur_val_w = to_wide_null(&cur_val_str);
-            DrawTextW(hdc, cur_val_w.as_ptr(), -1, &mut r_cur_val, 0x00000000 | 0x00000004);
-
-            // Устанавливаемая версия
-            SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_MUTED));
-            let mut r_inst_lbl = Rect::new(20, 32, 136, 16).to_win32_rect();
-            let inst_lbl = to_wide_null("Устанавливаемая версия:");
-            DrawTextW(hdc, inst_lbl.as_ptr(), -1, &mut r_inst_lbl, 0x00000000 | 0x00000004);
-
-            SetTextColor(hdc, argb_to_colorref(COLOR_ACCENT));
-            let inst_val_str = format!("v{}", INSTALLER_VERSION.strip_prefix('v').unwrap_or(INSTALLER_VERSION));
-            let mut r_inst_val = Rect::new(158, 32, 90, 16).to_win32_rect();
-            let inst_val_w = to_wide_null(&inst_val_str);
-            DrawTextW(hdc, inst_val_w.as_ptr(), -1, &mut r_inst_val, 0x00000000 | 0x00000004);
-
-            // Если версия одинакова (1в1)
-            if self.is_same_version {
-                SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_MUTED));
-                let mut r_note = Rect::new(20, 50, 210, 32).to_win32_rect();
-                let note_str = to_wide_null("Обновление не требуется\n(можно переустановить с нуля).");
-                DrawTextW(hdc, note_str.as_ptr(), -1, &mut r_note, 0x00000000);
-            }
+        // --- 0. Бесшовный баннер в шапке (кадрируем исходник, отсекая нижний шильдик 350-400px) ---
+        let banner_dst_h = 138;
+        if let Some(banner) = &self.banner_img {
+            // Исходник 1500x400: берем срез 0..340 по вертикали, где кнопка "Поставить звезду" кончается на y=259
+            banner.draw_part(graphics.raw(), 0, 0, width, banner_dst_h, 0, 0, 1500, 340);
         }
 
-        // --- 2. Центр: Дельта логотип, заголовок и подзаголовок (центрированы и сбалансированы) ---
-        let logo_size = 64;
-        let logo_x = (width - logo_size) / 2;
-        let logo_y = 70;
+        // Мягкий градиентный переход (Liquid Fade-out) в цвет фона COLOR_BG (0xFF0E1217)
+        graphics.fill_rect(0, banner_dst_h - 24, width, 8, 0x440E1217);
+        graphics.fill_rect(0, banner_dst_h - 16, width, 8, 0x880E1217);
+        graphics.fill_rect(0, banner_dst_h - 8, width, 8, 0xCC0E1217);
+        graphics.fill_rect(0, banner_dst_h, width, 6, COLOR_BG);
 
-        if let Some(logo) = &self.logo_img {
-            logo.draw(graphics.raw(), logo_x, logo_y, logo_size, logo_size);
-        }
-
+        // --- 1. Центр под баннером: чёткий заголовок oxDesktop и слоган ---
         unsafe {
             SelectObject(hdc, self.fonts.title);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_PRIMARY));
-            let mut r_title = Rect::new(0, logo_y + logo_size + 8, width, 28).to_win32_rect();
+            let mut r_title = Rect::new(0, 156, width, 26).to_win32_rect();
             let title_str = to_wide_null("oxDesktop");
             DrawTextW(hdc, title_str.as_ptr(), -1, &mut r_title, 0x00000001 | 0x00000020);
 
             SelectObject(hdc, self.fonts.body);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_SECONDARY));
-            let mut r_sub = Rect::new(0, logo_y + logo_size + 45, width, 22).to_win32_rect();
+            let mut r_sub = Rect::new(0, 186, width, 20).to_win32_rect();
             let sub_str = to_wide_null("Быстрый и безопасный клиент Telegram с обходом блокировок");
             DrawTextW(hdc, sub_str.as_ptr(), -1, &mut r_sub, 0x00000001 | 0x00000020);
         }
 
-        // --- 3. Поле выбора пути ---
-        let form_w = 480;
+        // --- 2. Поле выбора пути ---
+        let form_w = FORM_W;
         let form_x = (width - form_w) / 2;
-        let path_y = 206;
-        let path_h = 36;
+        let path_y = PATH_Y;
+        let path_h = PATH_H;
 
         graphics.fill_rounded_rect(form_x, path_y, form_w, path_h, 6, COLOR_SURFACE);
         graphics.draw_rounded_rect(form_x, path_y, form_w, path_h, 6, COLOR_BORDER, 1.0);
@@ -350,14 +382,14 @@ impl InstallerApp {
         unsafe {
             SelectObject(hdc, self.fonts.small);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_MUTED));
-            let mut r_lbl = Rect::new(form_x + 12, path_y + 9, 45, 18).to_win32_rect();
+            let mut r_lbl = Rect::new(form_x + 14, path_y + 11, 48, 18).to_win32_rect();
             let lbl = to_wide_null("Папка:");
             DrawTextW(hdc, lbl.as_ptr(), -1, &mut r_lbl, 0x00000000 | 0x00000004 | 0x00000020);
 
             SelectObject(hdc, self.fonts.body);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_PRIMARY));
             let path_display = self.target_dir.to_string_lossy();
-            let mut r_path = Rect::new(form_x + 58, path_y + 8, form_w - 138, 20).to_win32_rect();
+            let mut r_path = Rect::new(form_x + 64, path_y + 10, form_w - 156, 20).to_win32_rect();
             let path_wide = to_wide_null(&path_display);
             DrawTextW(
                 hdc,
@@ -372,16 +404,44 @@ impl InstallerApp {
             hdc,
             graphics,
             ButtonId::Browse,
-            Rect::new(form_x + form_w - 74, path_y + 6, 66, 24),
+            Layout::browse_rect(width),
             "Обзор...",
             false,
             true,
         );
 
+        // --- 3. Аккуратная информация о версиях (чистый текст в одну строку, ничего не обрезается) ---
+        let ver_y = 280;
+        unsafe {
+            SelectObject(hdc, self.fonts.small);
+
+            let cur_val_str = match &self.installed_version {
+                Some(v) => format!("v{}", v.strip_prefix('v').unwrap_or(v)),
+                None => "нет".to_string(),
+            };
+            let inst_val_str = format!("v{}", INSTALLER_VERSION.strip_prefix('v').unwrap_or(INSTALLER_VERSION));
+
+            SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_MUTED));
+            let mut r_cur = Rect::new(form_x + 4, ver_y, 140, 18).to_win32_rect();
+            let cur_w = to_wide_null(&format!("Текущая: {}", cur_val_str));
+            DrawTextW(hdc, cur_w.as_ptr(), -1, &mut r_cur, 0x00000000 | 0x00000004);
+
+            let mut r_inst = Rect::new(form_x + 150, ver_y, 170, 18).to_win32_rect();
+            let inst_w = to_wide_null(&format!("Новая версия: {}", inst_val_str));
+            DrawTextW(hdc, inst_w.as_ptr(), -1, &mut r_inst, 0x00000000 | 0x00000004);
+
+            if self.is_same_version {
+                SetTextColor(hdc, argb_to_colorref(COLOR_ACCENT));
+                let mut r_status = Rect::new(form_x + 330, ver_y, 190, 18).to_win32_rect();
+                let status_w = to_wide_null("✓ Уже установлено");
+                DrawTextW(hdc, status_w.as_ptr(), -1, &mut r_status, 0x00000000 | 0x00000004);
+            }
+        }
+
         // --- 4. Ссылки в левом нижнем углу ---
-        let link_x = 32;
-        let tg_y = 312;
-        let gh_y = 336;
+        let link_x = LINK_X;
+        let tg_y = TG_Y;
+        let gh_y = GH_Y;
 
         unsafe {
             let tg_hover = self.hovered_btn == Some(ButtonId::LinkTelegram);
@@ -397,12 +457,12 @@ impl InstallerApp {
             let mut tg_icon_w = [0u16; 3];
             let tg_icon_len = tg_icon_char.encode_utf16(&mut tg_icon_w).len();
             tg_icon_w[tg_icon_len] = 0;
-            let mut r_tg_icon = Rect::new(link_x, tg_y + 25, 16, 18).to_win32_rect();
+            let mut r_tg_icon = Rect::new(link_x, tg_y, 16, 18).to_win32_rect();
             DrawTextW(hdc, tg_icon_w.as_ptr(), -1, &mut r_tg_icon, 0x00000000 | 0x00000004);
 
             // Текст Telegram
             SelectObject(hdc, self.fonts.small);
-            let mut r_tg = Rect::new(link_x + 20, tg_y + 25, 110, 18).to_win32_rect();
+            let mut r_tg = Rect::new(link_x + 20, tg_y, 110, 18).to_win32_rect();
             let tg = to_wide_null("t.me/oxDesktop");
             DrawTextW(hdc, tg.as_ptr(), -1, &mut r_tg, 0x00000000 | 0x00000004);
 
@@ -416,24 +476,22 @@ impl InstallerApp {
             let mut gh_icon_w = [0u16; 3];
             let gh_icon_len = gh_icon_char.encode_utf16(&mut gh_icon_w).len();
             gh_icon_w[gh_icon_len] = 0;
-            let mut r_gh_icon = Rect::new(link_x, gh_y + 25, 16, 18).to_win32_rect();
+            let mut r_gh_icon = Rect::new(link_x, gh_y, 16, 18).to_win32_rect();
             DrawTextW(hdc, gh_icon_w.as_ptr(), -1, &mut r_gh_icon, 0x00000000 | 0x00000004);
 
             // Текст GitHub
             SelectObject(hdc, self.fonts.small);
-            let mut r_gh = Rect::new(link_x + 20, gh_y + 25, 90, 18).to_win32_rect();
+            let mut r_gh = Rect::new(link_x + 20, gh_y, 90, 18).to_win32_rect();
             let gh = to_wide_null("GitHub");
             DrawTextW(hdc, gh.as_ptr(), -1, &mut r_gh, 0x00000000 | 0x00000004);
         }
 
         // --- 6. Правый нижний угол: кнопки Отмена и Установить ---
-        let footer_y = height - 54;
-
         self.draw_button(
             hdc,
             graphics,
             ButtonId::Cancel,
-            Rect::new(width - 216, footer_y, 88, 36),
+            Layout::cancel_rect(width, height),
             "Отмена",
             false,
         );
@@ -442,7 +500,7 @@ impl InstallerApp {
             hdc,
             graphics,
             ButtonId::Install,
-            Rect::new(width - 118, footer_y, 98, 36),
+            Layout::install_rect(width, height),
             "Установить",
             true,
         );
@@ -489,7 +547,7 @@ impl InstallerApp {
     fn render_finished(&self, hdc: HDC, graphics: &GdiGraphics, width: i32, _height: i32) {
         let logo_size = 72;
         let logo_x = (width - logo_size) / 2;
-        let logo_y = 48;
+        let logo_y = 90;
 
         if let Some(logo) = &self.logo_img {
             logo.draw(graphics.raw(), logo_x, logo_y, logo_size, logo_size);
@@ -505,37 +563,33 @@ impl InstallerApp {
 
             SelectObject(hdc, self.fonts.title);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_PRIMARY));
-            let mut r_title = Rect::new(0, logo_y + logo_size + 16, width, 28).to_win32_rect();
+            let mut r_title = Rect::new(0, logo_y + logo_size + 14, width, 28).to_win32_rect();
             let title_str = to_wide_null("oxDesktop установлен");
             DrawTextW(hdc, title_str.as_ptr(), -1, &mut r_title, 0x00000001 | 0x00000020);
 
             SelectObject(hdc, self.fonts.body);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_SECONDARY));
-            let mut r_sub = Rect::new(0, logo_y + logo_size + 46, width, 20).to_win32_rect();
-            let sub_str = to_wide_null("Клиент готов к первому запуску");
+            let mut r_sub = Rect::new(0, logo_y + logo_size + 44, width, 20).to_win32_rect();
+            let sub_str = to_wide_null("Клиент успешно установлен в систему");
             DrawTextW(hdc, sub_str.as_ptr(), -1, &mut r_sub, 0x00000001 | 0x00000020);
         }
 
         // Чекбокс выровнен строго по центру
-        let chk_w = 220;
-        let chk_x = (width - chk_w) / 2;
         self.draw_checkbox(
             hdc,
             graphics,
             ButtonId::CheckLaunch,
-            Rect::new(chk_x, 226, chk_w, 24),
+            Layout::finish_chk_rect(width),
             "Запустить oxDesktop сейчас",
             self.launch_after_install,
         );
 
         // Кнопка Готово выровнена строго по центру
-        let btn_w = 140;
-        let btn_x = (width - btn_w) / 2;
         self.draw_button(
             hdc,
             graphics,
             ButtonId::Finish,
-            Rect::new(btn_x, 280, btn_w, 38),
+            Layout::finish_btn_rect(width),
             "Готово",
             true,
         );
@@ -736,48 +790,37 @@ impl InstallerApp {
         }
     }
 
-    fn hit_test(&self, x: i32, y: i32) -> Option<ButtonId> {
+    pub fn hit_test(&self, x: i32, y: i32) -> Option<ButtonId> {
         let w = WIN_WIDTH;
         let h = WIN_HEIGHT;
-        let form_w = 460;
-        let form_x = (w - form_w) / 2;
-        let path_y = 176;
-        let link_x = 32;
-        let tg_y = 320;
-        let gh_y = 344;
-        let footer_y = h - 54;
 
         match self.screen {
             Screen::Welcome => {
                 // Ссылки в левом нижнем углу (друг под другом)
-                if Rect::new(link_x, tg_y - 2, 130, 22).contains(x, y) {
+                if Layout::link_telegram_rect().contains(x, y) {
                     return Some(ButtonId::LinkTelegram);
                 }
-                if Rect::new(link_x, gh_y - 2, 110, 22).contains(x, y) {
+                if Layout::link_github_rect().contains(x, y) {
                     return Some(ButtonId::LinkGitHub);
                 }
                 // Кнопка Обзор пути
-                if Rect::new(form_x + form_w - 74, path_y + 6, 66, 24).contains(x, y) {
+                if Layout::browse_rect(w).contains(x, y) {
                     return Some(ButtonId::Browse);
                 }
                 // Кнопки в правом нижнем углу
-                if Rect::new(w - 216, footer_y, 88, 36).contains(x, y) {
+                if Layout::cancel_rect(w, h).contains(x, y) {
                     return Some(ButtonId::Cancel);
                 }
-                if Rect::new(w - 118, footer_y, 98, 36).contains(x, y) {
+                if Layout::install_rect(w, h).contains(x, y) {
                     return Some(ButtonId::Install);
                 }
             }
             Screen::Installing => {}
             Screen::Finished => {
-                let chk_w = 220;
-                let chk_x = (w - chk_w) / 2;
-                if Rect::new(chk_x, 226, chk_w, 24).contains(x, y) {
+                if Layout::finish_chk_rect(w).contains(x, y) {
                     return Some(ButtonId::CheckLaunch);
                 }
-                let btn_w = 140;
-                let btn_x = (w - btn_w) / 2;
-                if Rect::new(btn_x, 280, btn_w, 38).contains(x, y) {
+                if Layout::finish_btn_rect(w).contains(x, y) {
                     return Some(ButtonId::Finish);
                 }
             }
@@ -814,3 +857,8 @@ impl InstallerApp {
         None
     }
 }
+
+#[cfg(test)]
+#[path = "app_tests.rs"]
+mod app_tests;
+

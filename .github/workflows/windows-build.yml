@@ -394,9 +394,7 @@ jobs:
                 Write-Host "Extracting out build tree..."
                 7z x $firstVol -y | Out-Null
                 Remove-Item "oxDesktop-out-win64.7z.*" -Force -ErrorAction SilentlyContinue
-                if (Test-Path 'tdesktop\out') {
-                  Get-ChildItem -Path 'tdesktop\out' -Include '*.pch','*cmake_pch*.obj' -Recurse -Force | Remove-Item -Force -ErrorAction SilentlyContinue
-                }
+                # Retain out build tree intact
                 "OUT_CACHE_HIT=true" >> $env:GITHUB_ENV
                 Write-Host "Out build tree restored successfully."
                 exit 0
@@ -421,8 +419,6 @@ jobs:
           API_ID: ${{ secrets.TDESKTOP_API_ID }}
           API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
         run: |
-          del /s /q "%GITHUB_WORKSPACE%\tdesktop\out\*.pch" >nul 2>&1
-          del /s /q "%GITHUB_WORKSPACE%\tdesktop\out\*cmake_pch*.obj" >nul 2>&1
           call "%VCVARS64%" -vcvars_ver=14.44
           sccache --start-server
           sccache --show-stats
@@ -434,6 +430,7 @@ jobs:
           cd tdesktop\Telegram
           call configure.bat %CREDS% ^
             -G "Ninja Multi-Config" ^
+            -D CMAKE_DISABLE_PRECOMPILED_HEADERS=ON ^
             -D CMAKE_C_COMPILER_LAUNCHER=sccache ^
             -D CMAKE_CXX_COMPILER_LAUNCHER=sccache ^
             -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^

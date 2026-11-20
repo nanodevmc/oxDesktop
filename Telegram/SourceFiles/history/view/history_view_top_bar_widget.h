@@ -107,6 +107,9 @@ public:
 	[[nodiscard]] rpl::producer<> forwardSelectionRequest() const {
 		return _forwardSelection.events();
 	}
+	[[nodiscard]] rpl::producer<> shotSelectionRequest() const {
+		return _shotSelection.events();
+	}
 	[[nodiscard]] rpl::producer<> sendNowSelectionRequest() const {
 		return _sendNowSelection.events();
 	}
@@ -233,7 +236,8 @@ private:
 	Ui::Animations::Simple _searchShown;
 
 	object_ptr<Ui::RoundButton> _clear;
-	object_ptr<Ui::RoundButton> _forward, _sendNow, _delete;
+	object_ptr<Ui::RoundButton> _forward, _shot, _sendNow, _delete;
+	rpl::event_stream<> _shotSelection;
 	object_ptr<Ui::InputField> _searchField = { nullptr };
 	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _chooseFromUser
 		= { nullptr };

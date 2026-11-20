@@ -55,6 +55,22 @@ extern "system" {
     fn GdipCreateBitmapFromStream(stream: *mut c_void, bitmap: *mut *mut c_void) -> i32;
     fn GdipDisposeImage(image: *mut c_void) -> i32;
     fn GdipDrawImageRectI(graphics: *mut c_void, image: *mut c_void, x: i32, y: i32, w: i32, h: i32) -> i32;
+    fn GdipDrawImageRectRectI(
+        graphics: *mut c_void,
+        image: *mut c_void,
+        dstx: i32,
+        dsty: i32,
+        dstwidth: i32,
+        dstheight: i32,
+        srcx: i32,
+        srcy: i32,
+        srcwidth: i32,
+        srcheight: i32,
+        src_unit: i32,
+        image_attributes: *mut c_void,
+        callback: *mut c_void,
+        callback_data: *mut c_void,
+    ) -> i32;
     fn GdipGetImageWidth(image: *mut c_void, width: *mut u32) -> i32;
     fn GdipGetImageHeight(image: *mut c_void, height: *mut u32) -> i32;
 }
@@ -147,6 +163,40 @@ impl GdiImage {
         if !self.ptr.is_null() {
             unsafe {
                 GdipDrawImageRectI(graphics, self.ptr, x, y, w, h);
+            }
+        }
+    }
+
+    pub fn draw_part(
+        &self,
+        graphics: *mut c_void,
+        dx: i32,
+        dy: i32,
+        dw: i32,
+        dh: i32,
+        sx: i32,
+        sy: i32,
+        sw: i32,
+        sh: i32,
+    ) {
+        if !self.ptr.is_null() {
+            unsafe {
+                GdipDrawImageRectRectI(
+                    graphics,
+                    self.ptr,
+                    dx,
+                    dy,
+                    dw,
+                    dh,
+                    sx,
+                    sy,
+                    sw,
+                    sh,
+                    2, // UnitPixel
+                    null_mut(),
+                    null_mut(),
+                    null_mut(),
+                );
             }
         }
     }

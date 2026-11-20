@@ -3,12 +3,16 @@
 #include "history/history_item.h"
 #include "history/view/history_view_element.h"
 #include "window/window_session_controller.h"
+#include "data/data_peer.h"
+#include "ui/userpic_view.h"
 #include "ui/chat/chat_style.h"
 #include "ui/chat/chat_theme.h"
 #include "ui/painter.h"
 #include "lang/lang_keys.h"
 #include "styles/style_basic.h"
 
+#include <QtCore/QBuffer>
+#include <QtCore/QMimeData>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QPainter>
@@ -27,6 +31,7 @@ struct RenderedMessage {
 	int width = 0;
 	int height = 0;
 	bool isOut = false;
+	PeerData *peer = nullptr;
 };
 
 std::optional<RenderedMessage> RenderSingleItem(
@@ -107,11 +112,16 @@ std::optional<RenderedMessage> RenderSingleItem(
 	const auto contentW = int(std::ceil(contentImage.width() / ratio));
 	const auto contentH = int(std::ceil(contentImage.height() / ratio));
 
+	const auto peer = item->from()
+		? item->from()
+		: item->history()->peer.get();
+
 	return RenderedMessage{
 		.image = std::move(contentImage),
 		.width = contentW,
 		.height = contentH,
 		.isOut = view->hasOutLayout(),
+		.peer = peer,
 	};
 }
 
@@ -124,7 +134,7 @@ void TakeMessagesShot(
 		return;
 	}
 
-	const auto ratio = style::DevicePixelRatio();
+	const auto ratio = std::max(style::DevicePixelRatio() * 2.0, 2.0);
 	auto rendered = std::vector<RenderedMessage>();
 	rendered.reserve(items.size());
 
@@ -151,7 +161,9 @@ void TakeMessagesShot(
 	const auto padX = 26;
 	const auto padY = 22;
 	const auto bottomBarH = 20;
-	const auto shotW = maxContentW + padX * 2;
+	const auto avatarSize = 36;
+	const auto avatarSkip = 10;
+	const auto shotW = maxContentW + padX * 2 + avatarSize + avatarSkip;
 	const auto shotH = totalContentH + padY * 2 + bottomBarH;
 
 	auto finalImage = QImage(
@@ -177,10 +189,13 @@ void TakeMessagesShot(
 		p.drawRoundedRect(cardRect, 14.0, 14.0);
 
 		int curY = padY;
+		auto userpicView = Ui::PeerUserpicView();
 		for (const auto &msg : rendered) {
-			const auto itemX = msg.isOut
-				? (shotW - padX - msg.width)
-				: padX;
+			const auto itemX = padX + avatarSize + avatarSkip;
+			if (msg.peer) {
+				const auto avatarY = curY + std::max(0, msg.height - avatarSize);
+				msg.peer->paintUserpic(p, userpicView, padX, avatarY, avatarSize, true);
+			}
 			p.drawImage(itemX, curY, msg.image);
 			curY += msg.height + spacing;
 		}
@@ -193,7 +208,18 @@ void TakeMessagesShot(
 			u"oxDesktop"_q);
 	}
 
-	QGuiApplication::clipboard()->setImage(finalImage);
+	auto mime = std::make_unique<QMimeData>();
+	mime->setImageData(finalImage);
+	QByteArray pngBytes;
+	{
+		QBuffer buffer(&pngBytes);
+		buffer.open(QIODevice::WriteOnly);
+		finalImage.save(&buffer, "PNG");
+	}
+	mime->setData(u"image/png"_q, pngBytes);
+	mime->setData(u"PNG"_q, pngBytes);
+	QGuiApplication::clipboard()->setMimeData(mime.release());
+
 	if (rendered.size() > 1) {
 		controller->showToast(tr::lng_oxd_toast_shots_copied(tr::now));
 	} else {

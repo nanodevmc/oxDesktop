@@ -17,8 +17,8 @@ pub const COLOR_TEXT_MUTED: u32 = 0xFF505A69;
 pub const COLOR_BTN_SECONDARY: u32 = 0xFF1E2530;
 pub const COLOR_BTN_SECONDARY_HOVER: u32 = 0xFF283241;
 
-pub const WIN_WIDTH: i32 = 540;
-pub const WIN_HEIGHT: i32 = 400;
+pub const WIN_WIDTH: i32 = 600;
+pub const WIN_HEIGHT: i32 = 440;
 
 #[inline]
 pub fn argb_to_colorref(argb: u32) -> u32 {

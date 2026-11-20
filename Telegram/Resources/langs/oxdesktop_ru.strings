@@ -653,7 +653,7 @@
 "lng_oxd_plugin_settings_off" = "Настройки доступны после включения плагина.";
 "lng_oxd_guard_run" = "Проверить плагин";
 "lng_oxd_plugin_reloaded" = "Плагин {name} перезагружен";
-"lng_oxd_message_shot" = "Shot";
+"lng_oxd_message_shot" = "Снимок";
 "lng_oxd_toast_shot_copied" = "Снимок сообщения скопирован в буфер обмена";
 "lng_oxd_toast_shots_copied" = "Снимок сообщений скопирован в буфер обмена";
 "lng_oxd_ghost_mode" = "Режим призрака";

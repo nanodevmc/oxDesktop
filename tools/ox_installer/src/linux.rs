@@ -6,6 +6,8 @@ use zip::ZipArchive;
 static PAYLOAD_ZIP: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/payload.zip"));
 static ICON_PNG: &[u8] = include_bytes!("../assets/delta_avatar.png");
 
+pub const INSTALLER_VERSION: &str = env!("OX_VERSION");
+
 pub fn run_linux_installer() {
     let args: Vec<String> = std::env::args().collect();
     let silent = args.iter().any(|a| a == "-y" || a == "--silent" || a == "-s");
@@ -35,9 +37,10 @@ fn which(cmd: &str) -> bool {
 }
 
 fn run_terminal_flow(target_dir: &Path, home: &str, silent: bool) {
+    let header = format!("oxDesktop v{}", INSTALLER_VERSION.strip_prefix('v').unwrap_or(INSTALLER_VERSION));
     println!("\x1b[38;2;245;92;37m");
     println!("╭────────────────────────────────────────────────────────╮");
-    println!("│                oxDesktop v7.4.3.3.1                    │");
+    println!("│{:^56}│", header);
     println!("│     Быстрый и безопасный клиент Telegram Desktop       │");
     println!("╰────────────────────────────────────────────────────────╯\x1b[0m");
     println!("  • Канал: https://t.me/oxDesktop");
@@ -74,7 +77,8 @@ fn run_terminal_flow(target_dir: &Path, home: &str, silent: bool) {
 
 fn run_zenity_flow(target_dir: &Path, home: &str) {
     let question = format!(
-        "Установить oxDesktop v7.4.3.3.1 в:\n{}\n\nКанал: t.me/oxDesktop",
+        "Установить oxDesktop v{} в:\n{}\n\nКанал: t.me/oxDesktop",
+        INSTALLER_VERSION.strip_prefix('v').unwrap_or(INSTALLER_VERSION),
         target_dir.display()
     );
 

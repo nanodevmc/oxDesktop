@@ -31,6 +31,7 @@ const IID_IPERSIST_FILE: GUID = GUID {
 #[link(name = "ole32")]
 extern "system" {
     fn CoInitializeEx(pv_reserved: *mut c_void, dw_co_init: u32) -> i32;
+    fn CoUninitialize();
     fn CoCreateInstance(
         rclsid: *const GUID,
         p_unk_outer: *mut c_void,
@@ -66,6 +67,7 @@ pub fn create_shortcut(
         );
 
         if hr != 0 || shell_link_ptr.is_null() {
+            CoUninitialize();
             return false;
         }
 
@@ -120,6 +122,7 @@ pub fn create_shortcut(
         }
 
         release_fn(shell_link_ptr);
+        CoUninitialize();
         success
     }
 }

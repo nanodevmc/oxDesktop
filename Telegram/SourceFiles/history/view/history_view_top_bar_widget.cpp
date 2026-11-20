@@ -120,6 +120,7 @@ TopBarWidget::TopBarWidget(
 , _primaryWindow(controller->isPrimary())
 , _clear(this, tr::lng_selected_clear(), st::topBarClearButton)
 , _forward(this, tr::lng_selected_forward(), st::defaultActiveButton)
+, _shot(this, tr::lng_oxd_message_shot(), st::defaultActiveButton)
 , _sendNow(this, tr::lng_selected_send_now(), st::defaultActiveButton)
 , _delete(this, tr::lng_selected_delete(), st::defaultActiveButton)
 , _back(this, st::historyTopBarBack)
@@ -135,6 +136,7 @@ TopBarWidget::TopBarWidget(
 
 	_clear->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
 	_forward->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
+	_shot->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
 	_sendNow->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
 	_delete->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
 
@@ -145,6 +147,8 @@ TopBarWidget::TopBarWidget(
 
 	_forward->setClickedCallback([=] { _forwardSelection.fire({}); });
 	_forward->setWidthChangedCallback([=] { updateControlsGeometry(); });
+	_shot->setClickedCallback([=] { _shotSelection.fire({}); });
+	_shot->setWidthChangedCallback([=] { updateControlsGeometry(); });
 	_sendNow->setClickedCallback([=] { _sendNowSelection.fire({}); });
 	_sendNow->setWidthChangedCallback([=] { updateControlsGeometry(); });
 	_delete->setClickedCallback([=] { _deleteSelection.fire({}); });
@@ -1153,16 +1157,18 @@ void TopBarWidget::updateControlsGeometry() {
 	auto buttonsLeft = st::topBarActionSkip
 		+ (_controller->adaptive().isOneColumn() ? 0 : st::lineWidth);
 	auto buttonsWidth = (_forward->isHidden() ? 0 : _forward->contentWidth())
+		+ (_shot->isHidden() ? 0 : _shot->contentWidth())
 		+ (_sendNow->isHidden() ? 0 : _sendNow->contentWidth())
 		+ (_delete->isHidden() ? 0 : _delete->contentWidth())
 		+ _clear->width();
-	buttonsWidth += buttonsLeft + st::topBarActionSkip * 3;
+	buttonsWidth += buttonsLeft + st::topBarActionSkip * 4;
 
 	auto widthLeft = std::min(
 		width() - buttonsWidth,
 		-2 * st::defaultActiveButton.width);
 	auto buttonFullWidth = std::min(-(widthLeft / 2), 0);
 	_forward->setFullWidth(buttonFullWidth);
+	_shot->setFullWidth(buttonFullWidth);
 	_sendNow->setFullWidth(buttonFullWidth);
 	_delete->setFullWidth(buttonFullWidth);
 
@@ -1171,6 +1177,11 @@ void TopBarWidget::updateControlsGeometry() {
 	_forward->moveToLeft(buttonsLeft, selectedButtonsTop);
 	if (!_forward->isHidden()) {
 		buttonsLeft += _forward->width() + st::topBarActionSkip;
+	}
+
+	_shot->moveToLeft(buttonsLeft, selectedButtonsTop);
+	if (!_shot->isHidden()) {
+		buttonsLeft += _shot->width() + st::topBarActionSkip;
 	}
 
 	_sendNow->moveToLeft(buttonsLeft, selectedButtonsTop);
@@ -1187,6 +1198,7 @@ void TopBarWidget::updateControlsGeometry() {
 			: st::buttonRadius;
 		const auto buttons = std::array{
 			_forward.data(),
+			_shot.data(),
 			_sendNow.data(),
 			_delete.data(),
 		};
@@ -1334,6 +1346,7 @@ void TopBarWidget::updateControlsVisibility() {
 	_clear->setVisible(visible);
 	_delete->setVisible(_canDelete && visible);
 	_forward->setVisible(_canForward && visible);
+	_shot->setVisible((_selectedCount > 0) && visible);
 	_sendNow->setVisible(_canSendNow && visible);
 
 
@@ -1481,15 +1494,14 @@ void TopBarWidget::updateMembersShowArea() {
 }
 
 bool TopBarWidget::showSelectedState() const {
-	return (_selectedCount > 0)
-		&& (_canDelete || _canForward || _canSendNow);
+	return (_selectedCount > 0);
 }
 
 void TopBarWidget::showSelected(SelectedState state) {
 	auto canDelete = (state.count > 0 && state.count == state.canDeleteCount);
 	auto canForward = (state.count > 0 && state.count == state.canForwardCount);
 	auto canSendNow = (state.count > 0 && state.count == state.canSendNowCount);
-	auto count = (!canDelete && !canForward && !canSendNow) ? 0 : state.count;
+	auto count = state.count;
 	if (_selectedCount == count
 		&& _canDelete == canDelete
 		&& _canForward == canForward
@@ -1514,10 +1526,12 @@ void TopBarWidget::showSelected(SelectedState state) {
 	const auto nowSelectedState = showSelectedState();
 	if (nowSelectedState) {
 		_forward->setNumbersText(_selectedCount);
+		_shot->setNumbersText(_selectedCount);
 		_sendNow->setNumbersText(_selectedCount);
 		_delete->setNumbersText(_selectedCount);
 		if (!wasSelectedState) {
 			_forward->finishNumbersAnimation();
+			_shot->finishNumbersAnimation();
 			_sendNow->finishNumbersAnimation();
 			_delete->finishNumbersAnimation();
 		}

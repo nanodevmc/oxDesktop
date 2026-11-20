@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/fade_wrap.h"
 
 #include "extera/extera_utils.h"
+#include "extera/extera_shot.h"
 
 #include "extera/extera_config.h"
 #include "core/version.h"
@@ -1167,6 +1168,10 @@ HistoryWidget::HistoryWidget(
 	_topBar->forwardSelectionRequest(
 	) | rpl::on_next([=] {
 		forwardSelected();
+	}, _topBar->lifetime());
+	_topBar->shotSelectionRequest(
+	) | rpl::on_next([=] {
+		shotSelected();
 	}, _topBar->lifetime());
 	_topBar->deleteSelectionRequest(
 	) | rpl::on_next([=] {
@@ -11284,6 +11289,17 @@ void HistoryWidget::forwardSelected() {
 				strong->clearSelected();
 			}
 		});
+}
+
+void HistoryWidget::shotSelected() {
+	if (!_list) {
+		return;
+	}
+	const auto items = _list->selectedItemsForExport();
+	if (!items.empty()) {
+		Extera::TakeMessagesShot(controller(), items);
+		clearSelected();
+	}
 }
 
 void HistoryWidget::confirmDeleteSelected() {
