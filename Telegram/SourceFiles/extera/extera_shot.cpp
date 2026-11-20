@@ -1,6 +1,7 @@
 #include "extera/extera_shot.h"
 
 #include "history/history_item.h"
+#include "history/history.h"
 #include "history/view/history_view_element.h"
 #include "window/window_session_controller.h"
 #include "data/data_peer.h"
