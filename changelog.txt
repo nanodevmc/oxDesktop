@@ -11,6 +11,7 @@ Ru:
 - Восстановлена работа ссылок добавления прокси (tg://proxy?server=...&port=...) без ложного открытия настроек
 - Исправлено зависание голосовых и видеозвонков на этапе обмена ключами при блокировках UDP ([Звонки](tg://settings/calls))
 - Добавлено автоматическое создание папки oxDesktop с закрепленными каналами новостей при входе ([Папки с чатами](tg://settings/folders))
+- Новый диалог обновления в стиле Material Design 3: круглая иконка приложения, карточка актуального статуса, карточка синхронизации настроек с отметкой времени и кнопка повторной проверки ([Обновления](tg://settings/extera))
 - Обновлена проверка и загрузка обновлений: принудительный обход любого прокси и статус для бета-версий ([Обновления](tg://settings/extera))
 - Центрирован интерфейс инсталлятора Windows и включен максимальный уровень сжатия
 
@@ -25,6 +26,7 @@ En:
 - Fixed proxy deep links (tg://proxy?server=...&port=...) to properly open the Add Proxy confirmation dialog
 - Fixed voice and video calls freezing on key exchange under UDP restrictions ([Calls](tg://settings/calls))
 - Added automatic creation of oxDesktop folder with pinned news channels on login ([Chat Folders](tg://settings/folders))
+- Material Design 3 Update Dialog: round app icon header, clean status card, settings sync card with timestamp, and check again pill action ([Updates](tg://settings/extera))
 - Enhanced update check and download: direct bypass of all proxies and beta/dev build status ([Updates](tg://settings/extera))
 - Centered Windows installer layout and enabled maximum payload compression
 

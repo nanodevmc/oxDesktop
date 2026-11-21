@@ -2324,31 +2324,9 @@ void PartOther2(SectionBuilder &builder) {
 			.title = tr::lng_extera_check_updates(),
 			.icon = { &st::menuIconRestore },
 			.onClick = [=] {
-				using Result = Extera::Update::CheckResult;
-				const auto weak = base::make_weak(controller);
-				Extera::Update::CheckNow([=](Result result) {
-					const auto strong = weak.get();
-					if (!strong) {
-						return;
-					}
-					switch (result) {
-					case Result::Available:
-						Extera::Update::ShowUpdateBox(strong);
-						break;
-					case Result::Latest:
-						strong->showToast(
-							tr::lng_extera_updates_latest(tr::now));
-						break;
-					case Result::Beta:
-						strong->showToast(
-							u"У вас установлена предварительная версия (бета/dev)!"_q);
-						break;
-					case Result::Failed:
-						strong->showToast(
-							tr::lng_extera_updates_failed(tr::now));
-						break;
-					}
-				});
+				if (controller) {
+					Extera::Update::ShowUpdateBox(controller);
+				}
 			},
 			.keywords = { u"update"_q, u"version"_q },
 		});

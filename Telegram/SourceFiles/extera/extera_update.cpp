@@ -17,10 +17,22 @@
 
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QDateTime>
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkProxy>
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
+
+#include "ui/layers/generic_box.h"
+#include "ui/widgets/labels.h"
+#include "ui/widgets/buttons.h"
+#include "ui/painter.h"
+#include "ui/wrap/vertical_layout.h"
+#include "styles/style_boxes.h"
+#include "styles/style_layers.h"
+#include "styles/style_settings.h"
+#include "window/window_session_controller.h"
+#include "lang/lang_keys.h"
 
 #ifdef Q_OS_WIN
 #pragma comment(lib, "dnsapi.lib")
@@ -353,11 +365,164 @@ QString Changelog() {
 }
 
 void ShowUpdateBox(not_null<Window::SessionController*> controller) {
-	const auto &state = Instance();
-	Extera::Changelog::ShowUpdate(
-		controller,
-		state.version,
-		state.changelog);
+	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+		box->setStyle(st::exteraInstallBox);
+		box->setWidth(st::exteraInstallWidth);
+		box->setNoContentMargin(true);
+		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+
+		const auto content = box->verticalLayout();
+
+		// Header
+		const auto header = content->add(
+			object_ptr<Ui::RpWidget>(content),
+			style::margins(24, 24, 24, 16));
+		header->resize(st::exteraInstallWidth - 48, 56);
+		header->paintRequest() | rpl::on_next([=] {
+			auto p = QPainter(header);
+			auto hq = PainterHighQualityEnabler(p);
+
+			const auto iconRect = QRectF(0, 0, 56, 56);
+			auto grad = QLinearGradient(iconRect.topLeft(), iconRect.bottomRight());
+			grad.setColorAt(0.0, QColor(0xff, 0x5a, 0x5f));
+			grad.setColorAt(1.0, QColor(0xff, 0x8a, 0x50));
+			p.setPen(Qt::NoPen);
+			p.setBrush(grad);
+			p.drawEllipse(iconRect);
+
+			static const auto logo = QImage(u":/gui/art/oxdesktop.png"_q);
+			if (!logo.isNull()) {
+				p.drawImage(QRect(11, 11, 34, 34), logo);
+			}
+
+			p.setPen(st::windowBoldFg);
+			p.setFont(st::exteraInstallName.style.font);
+			p.drawText(72, 28, u"oxDesktop"_q);
+
+			p.setPen(st::windowSubTextFg);
+			p.setFont(st::exteraInstallVersion.style.font);
+			p.drawText(72, 48, VersionText());
+		}, header->lifetime());
+
+		// Card 1: Status Card (no subtitle per design specification)
+		const auto statusCard = content->add(
+			object_ptr<Ui::VerticalLayout>(content),
+			style::margins(20, 0, 20, 12));
+		statusCard->paintRequest() | rpl::on_next([=] {
+			auto p = QPainter(statusCard);
+			auto hq = PainterHighQualityEnabler(p);
+			p.setPen(Qt::NoPen);
+			p.setBrush(st::windowBgOver);
+			p.drawRoundedRect(statusCard->rect(), 16., 16.);
+		}, statusCard->lifetime());
+
+		const auto currentStatusText = [=] {
+			if (Instance().available.current()) {
+				return u"Доступно обновление "_q + Instance().version;
+			}
+			const auto remoteVer = Parse(Instance().version.isEmpty() ? VersionText() : Instance().version);
+			const auto currentVer = Current();
+			if (currentVer > remoteVer) {
+				return u"У вас установлена предварительная версия"_q;
+			}
+			return u"У вас установлена последняя версия"_q;
+		};
+
+		const auto statusLabel = statusCard->add(
+			object_ptr<Ui::FlatLabel>(
+				statusCard,
+				currentStatusText(),
+				st::exteraThreatTitle),
+			style::margins(18, 16, 18, 16));
+
+		// Card 2: Settings Sync Card
+		const auto syncCard = content->add(
+			object_ptr<Ui::VerticalLayout>(content),
+			style::margins(20, 0, 20, 20));
+		syncCard->paintRequest() | rpl::on_next([=] {
+			auto p = QPainter(syncCard);
+			auto hq = PainterHighQualityEnabler(p);
+			p.setPen(Qt::NoPen);
+			p.setBrush(st::windowBgOver);
+			p.drawRoundedRect(syncCard->rect(), 16., 16.);
+		}, syncCard->lifetime());
+
+		syncCard->add(
+			object_ptr<Ui::FlatLabel>(
+				syncCard,
+				u"Синхронизация настроек"_q,
+				st::exteraThreatTitle),
+			style::margins(18, 16, 18, 4));
+
+		const auto getSyncText = [] {
+			const auto val = Extera::String(u"last_sync_time"_q);
+			return u"Последняя синхронизация: "_q + (val.isEmpty()
+				? QDateTime::currentDateTime().toString(u"dd.MM.yyyy hh:mm"_q)
+				: val);
+		};
+
+		const auto syncTimeLabel = syncCard->add(
+			object_ptr<Ui::FlatLabel>(
+				syncCard,
+				getSyncText(),
+				st::exteraThreatAbout),
+			style::margins(18, 0, 18, 10));
+
+		const auto syncBtn = syncCard->add(
+			object_ptr<Ui::LinkButton>(
+				syncCard,
+				u"Синхронизировать сейчас"_q,
+				st::boxLinkButton),
+			style::margins(18, 0, 18, 16));
+		syncBtn->setClickedCallback([=] {
+			const auto now = QDateTime::currentDateTime().toString(u"dd.MM.yyyy hh:mm"_q);
+			Extera::Config::Instance().setString(u"last_sync_time"_q, now);
+			Extera::Config::Instance().saveNow();
+			syncTimeLabel->setText(u"Последняя синхронизация: "_q + now);
+			controller->showToast(u"Настройки успешно сохранены!"_q);
+		});
+
+		// Primary Pill Action Button
+		const auto actionBtn = content->add(
+			object_ptr<Ui::RoundButton>(
+				content,
+				rpl::single(Instance().available.current()
+					? u"Установить обновление"_q
+					: u"Проверить снова"_q),
+				st::exteraInstallButton),
+			style::margins(20, 0, 20, 20));
+		actionBtn->setFullRadius(true);
+		actionBtn->setTextTransform(Ui::RoundButtonTextTransform::NoTransform);
+
+		actionBtn->setClickedCallback([=] {
+			if (Instance().available.current()) {
+				box->closeBox();
+				Install();
+			} else {
+				statusLabel->setText(u"Проверка обновлений..."_q);
+				actionBtn->setText(rpl::single(u"Проверка..."_q));
+				CheckNow([=](CheckResult res) {
+					if (res == CheckResult::Available) {
+						statusLabel->setText(u"Доступно обновление "_q + Instance().version);
+						actionBtn->setText(rpl::single(u"Установить обновление"_q));
+					} else if (res == CheckResult::Beta) {
+						statusLabel->setText(u"У вас установлена предварительная версия"_q);
+						actionBtn->setText(rpl::single(u"Проверить снова"_q));
+					} else if (res == CheckResult::Latest) {
+						statusLabel->setText(u"У вас установлена последняя версия"_q);
+						actionBtn->setText(rpl::single(u"Проверить снова"_q));
+					} else {
+						statusLabel->setText(u"Не удалось проверить обновления"_q);
+						actionBtn->setText(rpl::single(u"Проверить снова"_q));
+					}
+				});
+			}
+		});
+
+		box->widthValue() | rpl::on_next([=](int width) {
+			actionBtn->setFullWidth(width - 40);
+		}, box->lifetime());
+	}));
 }
 
 void Install() {
