@@ -389,6 +389,7 @@ fn generate_relay_init(proto_tag: [u8; 4], dc_idx: i16) -> (Vec<u8>, Aes256Ctr, 
     (result, tg_enc, tg_dec)
 }
 
+#[allow(dead_code)]
 enum BackendStream {
     Ws(WebSocketStream<MaybeTlsStream<TcpStream>>),
     Tcp(TcpStream),
@@ -403,34 +404,14 @@ async fn race_backend_connection(
     actual_dc: u8,
     ips: &'static [&'static str],
     candidate_hosts: &[String],
+    cf_domains: Arc<Vec<String>>,
     tls_connector: Arc<TlsConnector>,
     logger: &Logger,
     peer: SocketAddr,
 ) -> Option<BackendConn> {
     let (tx, mut rx) = mpsc::channel::<BackendConn>(1);
 
-    // 1. Parallel Direct TCP probes to DC IPs (fastest path: ~30-50ms)
-    for &ip in ips {
-        for &port in &[443u16, 80u16] {
-            let tx = tx.clone();
-            tokio::spawn(async move {
-                if let Ok(Ok(tcp)) = tokio::time::timeout(
-                    Duration::from_millis(1500),
-                    TcpStream::connect(format!("{}:{}", ip, port)),
-                )
-                .await
-                {
-                    let _ = tcp.set_nodelay(true);
-                    let _ = tx.send(BackendConn {
-                        stream: BackendStream::Tcp(tcp),
-                        desc: format!("Direct TCP ({}:{})", ip, port),
-                    }).await;
-                }
-            });
-        }
-    }
-
-    // 2. Parallel Direct WS probes
+    // 1. Parallel Direct WS probes
     for host in candidate_hosts {
         let tx = tx.clone();
         let direct_url = format!("wss://{}/apiws", host);
@@ -456,7 +437,7 @@ async fn race_backend_connection(
         });
     }
 
-    // 3. Parallel TLS Domain Fronting probes to DC IPs (using genuine Telegram SNI)
+    // 2. Parallel TLS Domain Fronting probes to DC IPs (using genuine Telegram SNI)
     let primary_target_host = candidate_hosts[0].clone();
     for &ip in ips {
         let connector = tls_connector.clone();
@@ -477,6 +458,39 @@ async fn race_backend_connection(
         });
     }
 
+    // 3. Parallel Cloudflare Worker probes across DC IPs (slight 40ms headstart for direct paths)
+    let cf_domains_clone = cf_domains.clone();
+    let tx_cf = tx.clone();
+    let ips_vec = ips.to_vec();
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(40)).await;
+        for (i, cf_domain) in cf_domains_clone.iter().take(6).enumerate() {
+            let target_ip = ips_vec[i % ips_vec.len()];
+            let cf_url = format!("wss://{}/apiws?dst={}&dc={}", cf_domain, target_ip, actual_dc);
+            let tx = tx_cf.clone();
+            let domain_name = cf_domain.clone();
+            tokio::spawn(async move {
+                if let Ok(mut req) = cf_url.into_client_request() {
+                    req.headers_mut().insert(
+                        "Sec-WebSocket-Protocol",
+                        HeaderValue::from_static("binary"),
+                    );
+                    if let Ok(Ok((ws, _))) = tokio::time::timeout(
+                        Duration::from_millis(3500),
+                        tokio_tungstenite::connect_async(req),
+                    )
+                    .await
+                    {
+                        let _ = tx.send(BackendConn {
+                            stream: BackendStream::Ws(ws),
+                            desc: format!("CF Relay ({})", domain_name),
+                        }).await;
+                    }
+                }
+            });
+        }
+    });
+
     drop(tx);
 
     match tokio::time::timeout(Duration::from_millis(5000), rx.recv()).await {
@@ -494,7 +508,7 @@ async fn handle_client(
     mut client_socket: TcpStream,
     peer: SocketAddr,
     secret: Arc<Vec<u8>>,
-    _cf_domains: Arc<Vec<String>>,
+    cf_domains: Arc<Vec<String>>,
     tls_connector: Arc<TlsConnector>,
     logger: Logger,
 ) {
@@ -615,6 +629,7 @@ async fn handle_client(
         actual_dc,
         ips,
         &candidate_hosts,
+        Arc::clone(&cf_domains),
         tls_connector,
         &logger,
         peer,
