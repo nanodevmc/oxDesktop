@@ -3282,6 +3282,16 @@ void BuildAiChat(SectionBuilder &builder) {
 				}
 			},
 		});
+		builder.addButton({
+			.id = u"extera/ai_check"_q,
+			.title = rpl::single(u"Проверить подключение"_q),
+			.icon = { &st::menuIconRestore },
+			.onClick = [=] {
+				if (controller) {
+					Extera::TestAiConnection(controller);
+				}
+			},
+		});
 		AddChoice(
 			builder,
 			u"ai_chat_model"_q,

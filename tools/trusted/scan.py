@@ -82,7 +82,11 @@ def load_state():
 
 def trusted_chats():
     sources = json.loads(BADGES.read_text(encoding='utf-8')).get('trusted', [])
-    return {-1000000000000 - int(source['id']) for source in sources}
+    res = {}
+    for source in sources:
+        chat_id = -1000000000000 - int(source['id'])
+        res[chat_id] = source.get('username')
+    return res
 
 
 def add(state, known, message, chat, message_id):
@@ -141,21 +145,34 @@ def read_updates(state, known, trusted):
 
 # History
 
-def backfill(state, known, chat):
+def backfill(state, known, chat, username=None):
     key = str(bare(chat))
     latest = state['latest'].get(key, 0)
     message_id = 0
     misses = 0
     skipped = 0
+    target_from = f"@{username}" if username else chat
     while message_id < latest or misses < MISS_LIMIT:
         message_id += 1
         try:
-            message = call(
-                'forwardMessage',
-                chat_id=DUMP,
-                from_chat_id=chat,
-                message_id=message_id,
-                disable_notification=True)
+            try:
+                message = call(
+                    'forwardMessage',
+                    chat_id=DUMP,
+                    from_chat_id=target_from,
+                    message_id=message_id,
+                    disable_notification=True)
+            except ApiError as e:
+                if username and 'chat not found' in str(e).lower() and target_from != chat:
+                    target_from = chat
+                    message = call(
+                        'forwardMessage',
+                        chat_id=DUMP,
+                        from_chat_id=target_from,
+                        message_id=message_id,
+                        disable_notification=True)
+                else:
+                    raise
         except ApiError as error:
             text = str(error).lower()
             if 'message' in text and 'not found' in text:
@@ -218,10 +235,10 @@ def main():
     state = load_state()
     known = {entry['sha256'] for entry in state['hashes']}
     try:
-        read_updates(state, known, trusted)
+        read_updates(state, known, set(trusted.keys()))
         for chat in sorted(trusted):
             if str(bare(chat)) not in state['scanned']:
-                backfill(state, known, chat)
+                backfill(state, known, chat, trusted.get(chat))
     finally:
         OUT.write_text(
             json.dumps(state, ensure_ascii=False, indent=2) + '\n',

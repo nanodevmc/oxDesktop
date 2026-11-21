@@ -3175,6 +3175,7 @@ void HistoryWidget::applyComposeStash(Data::ComposeStash &&stash) {
 		if (!applyDraft() && reply) {
 			replyToMessage(reply);
 		}
+		_history->clearLocalDraft(MsgId(), PeerId());
 		saveDraftWithTextNow();
 		saveCloudDraft();
 	}
@@ -4397,6 +4398,9 @@ void HistoryWidget::saveDraftWithTextNow() {
 	_saveDraftText = true;
 	_saveDraftStart = crl::now();
 	saveDraft();
+	if (_field && _field->empty()) {
+		saveCloudDraft();
+	}
 }
 
 void HistoryWidget::refreshSuggestPostToggle() {
@@ -6216,6 +6220,7 @@ void HistoryWidget::sendRichDraft(
 		_preview->apply({ .removed = true });
 	}
 	saveDraftWithTextNow();
+	saveCloudDraft();
 	if (session().supportMode()) {
 		updateCmdStartShown();
 		updateControlsVisibility();
@@ -6314,6 +6319,7 @@ void HistoryWidget::sendTextWithTags(
 		_preview->apply({ .removed = true });
 	}
 	saveDraftWithTextNow();
+	saveCloudDraft();
 
 	hideSelectorControlsAnimated();
 

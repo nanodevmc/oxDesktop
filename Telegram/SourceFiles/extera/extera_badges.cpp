@@ -52,6 +52,7 @@ struct ProfilesState {
 	base::flat_map<uint64, Profile> items;
 	base::flat_set<uint64> requestedIds;
 	std::vector<TrustedSource> trustedSources;
+	base::flat_set<QString> trustedHashes;
 	int64 lastSyncTimestamp = 0;
 	QNetworkAccessManager *manager = nullptr;
 };
@@ -258,6 +259,21 @@ void SaveToCache() {
 	}
 }
 
+void ApplyTrustedHashes(const QByteArray &bytes) {
+	const auto doc = QJsonDocument::fromJson(bytes);
+	if (!doc.isObject()) {
+		return;
+	}
+	auto &state = State();
+	const auto array = doc.object().value(u"hashes"_q).toArray();
+	for (const auto &entry : array) {
+		const auto hash = entry.toObject().value(u"sha256"_q).toString().toLower();
+		if (!hash.isEmpty()) {
+			state.trustedHashes.insert(hash);
+		}
+	}
+}
+
 void RefreshProfiles(QNetworkAccessManager *manager) {
 	const auto fetchUrl = [=](const QString &url, bool incremental) {
 		auto request = QNetworkRequest(QUrl(url));
@@ -276,6 +292,21 @@ void RefreshProfiles(QNetworkAccessManager *manager) {
 		});
 	};
 	fetchUrl(u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/badges.json"_q, false);
+
+	const auto fetchHashes = [=](const QString &url) {
+		auto request = QNetworkRequest(QUrl(url));
+		request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+		request.setRawHeader("Accept", "application/json");
+		request.setTransferTimeout(10000);
+		const auto reply = manager->get(request);
+		QObject::connect(reply, &QNetworkReply::finished, [=] {
+			reply->deleteLater();
+			if (reply->error() == QNetworkReply::NoError) {
+				ApplyTrustedHashes(reply->readAll());
+			}
+		});
+	};
+	fetchHashes(u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/trusted_hashes.json"_q);
 }
 
 void MaybeFetchProfile(not_null<PeerData*> peer) {
@@ -359,6 +390,16 @@ void StartBadges() {
 		auto f = QFile(p);
 		if (f.open(QIODevice::ReadOnly)) {
 			ApplyProfiles(f.readAll(), true);
+		}
+	}
+
+	for (const auto &p : {
+			cWorkingDir() + u"trusted_hashes.json"_q,
+			u":/trusted_hashes.json"_q,
+			cWorkingDir() + u"tdata/trusted_hashes.json"_q }) {
+		auto f = QFile(p);
+		if (f.open(QIODevice::ReadOnly)) {
+			ApplyTrustedHashes(f.readAll());
 		}
 	}
 
@@ -505,7 +546,11 @@ std::optional<std::vector<TrustedSource>> TrustedSources() {
 }
 
 bool IsTrustedHash(const QString &sha256) {
-	return !sha256.isEmpty();
+	if (sha256.isEmpty()) {
+		return false;
+	}
+	const auto &state = State();
+	return state.trustedHashes.contains(sha256.toLower());
 }
 
 } // namespace Extera

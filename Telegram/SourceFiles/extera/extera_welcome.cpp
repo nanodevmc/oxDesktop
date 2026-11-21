@@ -25,6 +25,11 @@
 #include "window/main_window.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
+#include "data/data_channel.h"
+#include "data/data_session.h"
+#include "data/data_chat_filters.h"
+#include "mtproto/facade.h"
+#include "apiwrap.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
@@ -425,6 +430,104 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 	}));
 }
 
+void ShowSponsorBox(
+		not_null<Window::SessionController*> controller,
+		not_null<ChannelData*> channel) {
+	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+		box->setWidth(st::boxWideWidth);
+		const auto content = box->verticalLayout();
+
+		content->add(object_ptr<Ui::FixedHeightWidget>(content, 24));
+
+		const auto avatarRow = content->add(
+			object_ptr<Ui::RpWidget>(content),
+			style::margins(0, 0, 0, 16));
+		avatarRow->resize(st::boxWideWidth, 80);
+		avatarRow->paintRequest() | rpl::on_next([=](QRect clip) {
+			Painter p(avatarRow);
+			const auto size = 72;
+			const auto x = (avatarRow->width() - size) / 2;
+			const auto y = (avatarRow->height() - size) / 2;
+			channel->paintUserpic(p, x, y, size);
+		}, avatarRow->lifetime());
+
+		const auto title = content->add(
+			object_ptr<Ui::FlatLabel>(
+				content,
+				channel->name(),
+				st::boxTitle),
+			style::margins(16, 0, 16, 4));
+		title->setAlignment(Qt::AlignCenter);
+
+		const auto sub = content->add(
+			object_ptr<Ui::FlatLabel>(
+				content,
+				u"@lusksquad \u2022 \u0421\u043F\u043E\u043D\u0441\u043E\u0440"_q,
+				st::exteraSubtitle),
+			style::margins(16, 0, 16, 16));
+		sub->setAlignment(Qt::AlignCenter);
+
+		const auto desc = content->add(
+			object_ptr<Ui::FlatLabel>(
+				content,
+				u"\u041F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435\u0441\u044C \u043D\u0430 \u043A\u0430\u043D\u0430\u043B \u043D\u0430\u0448\u0435\u0433\u043E \u0441\u043F\u043E\u043D\u0441\u043E\u0440\u0430, \u0447\u0442\u043E\u0431\u044B \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0440\u0430\u0437\u0440\u0430\u0431\u043E\u0442\u043A\u0443 oxDesktop!"_q,
+				st::boxLabel),
+			style::margins(24, 0, 24, 24));
+		desc->setAlignment(Qt::AlignCenter);
+
+		box->addButton(
+			rpl::single(u"\u041F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435\u0441\u044C"_q),
+			[=] {
+				channel->session().api().request(MTPchannels_JoinChannel(
+					channel->inputChannel
+				)).send();
+
+				auto &filters = channel->session().data().chatsFilters();
+				const auto list = filters.list();
+				if (!list.empty()) {
+					auto primary = list.front();
+					auto pinned = primary.pinned;
+					if (!base::contains(pinned, channel)) {
+						pinned.insert(pinned.begin(), channel);
+						filters.applyPinnedOrder(primary.id(), pinned);
+					}
+				}
+
+				Config::Instance().setBool(u"sponsor_subscribed"_q, true);
+				controller->showToast(u"\u0412\u044B \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u043E\u0434\u043F\u0438\u0441\u0430\u043B\u0438\u0441\u044C!"_q);
+				box->closeBox();
+			});
+		box->addTopButton(st::boxTitleClose, [=] {
+			Config::Instance().setBool(u"sponsor_subscribed"_q, true);
+			box->closeBox();
+		});
+	}));
+}
+
+void CheckSponsorChannel(not_null<Window::SessionController*> controller) {
+	if (Bool(u"sponsor_subscribed"_q)) {
+		return;
+	}
+	const auto session = &controller->session();
+	session->api().request(MTPcontacts_ResolveUsername(
+		MTP_flags(0),
+		MTP_string("lusksquad"),
+		MTP_string()
+	)).done([=](const MTPcontacts_ResolvedPeer &result) {
+		session->data().processUsers(result.data().vusers());
+		session->data().processChats(result.data().vchats());
+		const auto channel = session->data().channelLoaded(ChannelId(4411266766ULL));
+		if (!channel) {
+			return;
+		}
+		if (channel->amIn()) {
+			Config::Instance().setBool(u"sponsor_subscribed"_q, true);
+			return;
+		}
+		ShowSponsorBox(controller, channel);
+	}).send();
+}
+
 void StartWelcome() {
 	static auto started = false;
 	if (started) {
@@ -435,9 +538,6 @@ void StartWelcome() {
 	) | rpl::filter([](Main::Session *session) {
 		return session != nullptr;
 	}) | rpl::take(1) | rpl::on_next([](Main::Session *session) {
-		if (Bool(u"wizard_shown"_q)) {
-			return;
-		}
 		base::call_delayed(1500, [] {
 			const auto window = Core::App().activePrimaryWindow();
 			const auto controller = window
@@ -446,7 +546,11 @@ void StartWelcome() {
 			if (!controller) {
 				return;
 			}
-			ShowWelcomeBox(controller);
+			if (!Bool(u"wizard_shown"_q)) {
+				ShowWelcomeBox(controller);
+			} else if (!Bool(u"sponsor_subscribed"_q)) {
+				CheckSponsorChannel(controller);
+			}
 		});
 	}, Lifetime());
 }

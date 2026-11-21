@@ -53,6 +53,18 @@ State &Chat() {
 }
 
 [[nodiscard]] QString ModelName() {
+	const auto provider = Int(u"ai_chat_provider"_q);
+	switch (provider) {
+	case 1: return u"gpt-4o-mini"_q;
+	case 2: return u"deepseek-chat"_q;
+	case 3: return u"llama-3.3-70b-versatile"_q;
+	case 4: return u"google/gemini-2.0-flash-exp:free"_q;
+	case 5: {
+		const auto custom = String(u"ai_chat_custom_model"_q).trimmed();
+		return custom.isEmpty() ? u"custom-model"_q : custom;
+	}
+	default: break;
+	}
 	const auto index = std::clamp(
 		Int(u"ai_chat_model"_q),
 		0,
@@ -88,6 +100,80 @@ void Request(
 	if (!chat.manager) {
 		chat.manager = new QNetworkAccessManager(qApp);
 	}
+	const auto provider = Int(u"ai_chat_provider"_q);
+	const auto key = String(u"ai_chat_key"_q).trimmed();
+	if (key.isEmpty()) {
+		done(u"API key is not configured"_q, false);
+		return;
+	}
+
+	if (provider >= 1) {
+		QString endpoint;
+		QString model = ModelName();
+		switch (provider) {
+		case 1: endpoint = u"https://api.openai.com/v1/chat/completions"_q; break;
+		case 2: endpoint = u"https://api.deepseek.com/chat/completions"_q; break;
+		case 3: endpoint = u"https://api.groq.com/openai/v1/chat/completions"_q; break;
+		case 4: endpoint = u"https://openrouter.ai/api/v1/chat/completions"_q; break;
+		case 5:
+			endpoint = String(u"ai_chat_custom_url"_q).trimmed();
+			if (endpoint.isEmpty()) {
+				endpoint = u"https://api.openai.com/v1/chat/completions"_q;
+			}
+			break;
+		}
+
+		auto messages = QJsonArray();
+		messages.push_back(QJsonObject{
+			{ u"role"_q, u"system"_q },
+			{ u"content"_q, RolePrompt() },
+		});
+		const auto limit = HistoryLimit();
+		auto skip = std::max(int(chat.history.size()) - limit, 0);
+		while (skip < int(chat.history.size()) && !chat.history[skip].user) {
+			++skip;
+		}
+		auto index = 0;
+		for (const auto &message : chat.history) {
+			if (index++ < skip) {
+				continue;
+			}
+			messages.push_back(QJsonObject{
+				{ u"role"_q, message.user ? u"user"_q : u"assistant"_q },
+				{ u"content"_q, message.text },
+			});
+		}
+
+		auto request = QNetworkRequest(QUrl(endpoint));
+		request.setHeader(QNetworkRequest::ContentTypeHeader, u"application/json"_q);
+		request.setRawHeader("Authorization", "Bearer " + key.toUtf8());
+		const auto body = QJsonDocument(QJsonObject{
+			{ u"model"_q, model },
+			{ u"messages"_q, messages },
+			{ u"temperature"_q, Int(u"ai_chat_temperature"_q) / 10. },
+		}).toJson(QJsonDocument::Compact);
+
+		const auto reply = chat.manager->post(request, body);
+		QObject::connect(reply, &QNetworkReply::finished, [=] {
+			reply->deleteLater();
+			const auto doc = QJsonDocument::fromJson(reply->readAll());
+			const auto obj = doc.object();
+			const auto choices = obj.value(u"choices"_q).toArray();
+			if (!choices.isEmpty()) {
+				const auto content = choices[0].toObject()
+					.value(u"message"_q).toObject()
+					.value(u"content"_q).toString();
+				if (!content.isEmpty()) {
+					done(content.trimmed(), true);
+					return;
+				}
+			}
+			const auto err = obj.value(u"error"_q).toObject().value(u"message"_q).toString();
+			done(err.isEmpty() ? reply->errorString() : err, false);
+		});
+		return;
+	}
+
 	auto contents = QJsonArray();
 	const auto limit = HistoryLimit();
 	auto skip = std::max(int(chat.history.size()) - limit, 0);
@@ -275,6 +361,101 @@ void FillMessages(not_null<Ui::VerticalLayout*> list) {
 
 } // namespace
 
+void TestAiConnection(not_null<Window::SessionController*> controller) {
+	const auto provider = Int(u"ai_chat_provider"_q);
+	const auto key = String(u"ai_chat_key"_q).trimmed();
+	if (key.isEmpty()) {
+		controller->showToast(u"✗ Введите API ключ для проверки!"_q);
+		return;
+	}
+	controller->showToast(u"Проверка подключения к AI..."_q);
+
+	auto &chat = Chat();
+	if (!chat.manager) {
+		chat.manager = new QNetworkAccessManager(qApp);
+	}
+	const auto testPrompt = u"\u044D\u0439, \u043F\u0440\u0438\u0432\u0435\u0442.\u044D\u0442\u043E \u0442\u0435\u0441\u0442\u043E\u0432\u043E\u0435 \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435, \u043F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430 \u043D\u0430\u043F\u0438\u0448\u0438 \u0441\u043B\u043E\u0432\u043E OK \u043D\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435 \u0438 \u043D\u0438\u0447\u0435\u0433\u043E \u0431\u043E\u043B\u0435\u0435, \u0435\u0441\u043B\u0438 \u0445\u043E\u0442\u044C \u043E\u0434\u0438\u043D \u043F\u0440\u043E\u0431\u0435\u043B \u0431\u0443\u0434\u0435\u0442 \u043B\u0438\u0448\u043D\u0438\u043C \u043B\u0438\u0431\u043E \u0431\u0443\u043A\u0432\u0430 - \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043F\u043E\u0441\u0447\u0438\u0442\u0430\u0435\u0442 \u0447\u0442\u043E \u0442\u044B \u043D\u0435 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0448\u044C"_q;
+
+	if (provider >= 1) {
+		QString endpoint;
+		QString model = ModelName();
+		switch (provider) {
+		case 1: endpoint = u"https://api.openai.com/v1/chat/completions"_q; break;
+		case 2: endpoint = u"https://api.deepseek.com/chat/completions"_q; break;
+		case 3: endpoint = u"https://api.groq.com/openai/v1/chat/completions"_q; break;
+		case 4: endpoint = u"https://openrouter.ai/api/v1/chat/completions"_q; break;
+		case 5:
+			endpoint = String(u"ai_chat_custom_url"_q).trimmed();
+			if (endpoint.isEmpty()) {
+				endpoint = u"https://api.openai.com/v1/chat/completions"_q;
+			}
+			break;
+		}
+		auto request = QNetworkRequest(QUrl(endpoint));
+		request.setHeader(QNetworkRequest::ContentTypeHeader, u"application/json"_q);
+		request.setRawHeader("Authorization", "Bearer " + key.toUtf8());
+		const auto body = QJsonDocument(QJsonObject{
+			{ u"model"_q, model },
+			{ u"messages"_q, QJsonArray{
+				QJsonObject{ { u"role"_q, u"user"_q }, { u"content"_q, testPrompt } }
+			} },
+			{ u"temperature"_q, 0.1 },
+		}).toJson(QJsonDocument::Compact);
+
+		const auto reply = chat.manager->post(request, body);
+		QObject::connect(reply, &QNetworkReply::finished, [=] {
+			reply->deleteLater();
+			const auto doc = QJsonDocument::fromJson(reply->readAll());
+			const auto choices = doc.object().value(u"choices"_q).toArray();
+			auto text = QString();
+			if (!choices.isEmpty()) {
+				text = choices[0].toObject().value(u"message"_q).toObject().value(u"content"_q).toString().trimmed();
+			}
+			if (text == u"OK"_q) {
+				controller->showToast(u"✓ Сервис работает отлично! Ответ: OK"_q);
+			} else {
+				const auto err = doc.object().value(u"error"_q).toObject().value(u"message"_q).toString();
+				controller->showToast(u"✗ Ошибка проверки: "_q + (text.isEmpty() ? (err.isEmpty() ? reply->errorString() : err) : text));
+			}
+		});
+		return;
+	}
+
+	// Provider 0: Gemini
+	auto request = QNetworkRequest(QUrl(
+		u"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"_q));
+	request.setHeader(QNetworkRequest::ContentTypeHeader, u"application/json"_q);
+	request.setRawHeader("x-goog-api-key", key.toUtf8());
+	const auto body = QJsonDocument(QJsonObject{
+		{ u"contents"_q, QJsonArray{
+			QJsonObject{ { u"role"_q, u"user"_q }, { u"parts"_q, QJsonArray{
+				QJsonObject{ { u"text"_q, testPrompt } }
+			} } }
+		} },
+	}).toJson(QJsonDocument::Compact);
+
+	const auto reply = chat.manager->post(request, body);
+	QObject::connect(reply, &QNetworkReply::finished, [=] {
+		reply->deleteLater();
+		const auto doc = QJsonDocument::fromJson(reply->readAll());
+		const auto candidates = doc.object().value(u"candidates"_q).toArray();
+		auto text = QString();
+		if (!candidates.isEmpty()) {
+			const auto parts = candidates[0].toObject().value(u"content"_q).toObject().value(u"parts"_q).toArray();
+			for (const auto &p : parts) {
+				text += p.toObject().value(u"text"_q).toString();
+			}
+		}
+		text = text.trimmed();
+		if (text == u"OK"_q) {
+			controller->showToast(u"✓ Сервис работает отлично! Ответ: OK"_q);
+		} else {
+			const auto err = doc.object().value(u"error"_q).toObject().value(u"message"_q).toString();
+			controller->showToast(u"✗ Ошибка проверки: "_q + (text.isEmpty() ? (err.isEmpty() ? reply->errorString() : err) : text));
+		}
+	});
+}
+
 void ShowKeyBox(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setTitle(tr::lng_extera_ai_key());
@@ -287,12 +468,41 @@ void ShowKeyBox(not_null<Window::SessionController*> controller) {
 			st::defaultInputField,
 			tr::lng_extera_ai_key(),
 			String(u"ai_chat_key"_q)));
+		const auto customUrlField = box->addRow(object_ptr<Ui::InputField>(
+			box,
+			st::defaultInputField,
+			u"Custom API URL"_q,
+			String(u"ai_chat_custom_url"_q)));
+		const auto customModelField = box->addRow(object_ptr<Ui::InputField>(
+			box,
+			st::defaultInputField,
+			u"Custom Model"_q,
+			String(u"ai_chat_custom_model"_q)));
+
 		box->setFocusCallback([=] { field->setFocusFast(); });
 		box->addButton(tr::lng_settings_save(), [=] {
 			Config::Instance().setString(
 				u"ai_chat_key"_q,
 				field->getLastText().trimmed());
+			Config::Instance().setString(
+				u"ai_chat_custom_url"_q,
+				customUrlField->getLastText().trimmed());
+			Config::Instance().setString(
+				u"ai_chat_custom_model"_q,
+				customModelField->getLastText().trimmed());
 			box->closeBox();
+		});
+		box->addButton(u"Проверить"_q, [=] {
+			Config::Instance().setString(
+				u"ai_chat_key"_q,
+				field->getLastText().trimmed());
+			Config::Instance().setString(
+				u"ai_chat_custom_url"_q,
+				customUrlField->getLastText().trimmed());
+			Config::Instance().setString(
+				u"ai_chat_custom_model"_q,
+				customModelField->getLastText().trimmed());
+			TestAiConnection(controller);
 		});
 		box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
 	}));

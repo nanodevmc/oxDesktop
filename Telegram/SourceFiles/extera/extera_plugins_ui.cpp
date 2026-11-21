@@ -48,6 +48,8 @@
 #include "extera/extera_config.h"
 #include "base/timer.h"
 #include "core/click_handler_types.h"
+#include <QtWidgets/QTextEdit>
+#include <QtCore/QRegularExpression>
 #include "ui/effects/animations.h"
 #include "ui/boxes/confirm_box.h"
 #include "styles/style_layers.h"
@@ -1892,6 +1894,38 @@ void PaintPuzzle(QPainter &p, QRectF rect, QColor color) {
 	p.drawImage(rect.topLeft(), i->second);
 }
 
+QString HighlightPythonCode(const QString &source) {
+	if (source.isEmpty()) {
+		return QString();
+	}
+	auto escaped = source.toHtmlEscaped();
+	QStringList lines = escaped.split('\n');
+	static const QRegularExpression commentRegex(u"(#.*$)"_q);
+	static const QRegularExpression stringRegex(u"(&quot;.*?&quot;|&#39;.*?&#39;)"_q);
+	static const QRegularExpression keywordRegex(u"\\b(def|class|import|from|return|if|elif|else|for|while|try|except|finally|with|as|in|is|not|and|or|pass|break|continue|lambda|yield|global|nonlocal|assert|async|await|True|False|None)\\b"_q);
+	static const QRegularExpression numberRegex(u"\\b(\\d+)\\b"_q);
+	static const QRegularExpression decoratorRegex(u"(@[a-zA-Z0-9_]+)"_q);
+
+	QString result = u"<div style=\"font-family: 'Consolas', 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; line-height: 1.5; color: #e2e8f0; white-space: pre-wrap;\">"_q;
+	for (auto &line : lines) {
+		auto commentMatch = commentRegex.match(line);
+		QString commentPart;
+		if (commentMatch.hasMatch()) {
+			int commentIdx = commentMatch.capturedStart();
+			commentPart = u"<span style=\"color: #64748b; font-style: italic;\">"_q + line.mid(commentIdx) + u"</span>"_q;
+			line = line.left(commentIdx);
+		}
+		line.replace(stringRegex, u"<span style=\"color: #10b981;\">\\1</span>"_q);
+		line.replace(keywordRegex, u"<span style=\"color: #c084fc; font-weight: bold;\">\\1</span>"_q);
+		line.replace(numberRegex, u"<span style=\"color: #fb923c;\">\\1</span>"_q);
+		line.replace(decoratorRegex, u"<span style=\"color: #38bdf8;\">\\1</span>"_q);
+
+		result += line + commentPart + u"<br/>"_q;
+	}
+	result += u"</div>"_q;
+	return result;
+}
+
 void ShowSourceBox(
 		not_null<Window::SessionController*> controller,
 		const QString &path) {
@@ -1902,18 +1936,17 @@ void ShowSourceBox(
 		box->setTitle(rpl::single(QFileInfo(path).fileName()));
 		box->setWidth(st::boxWideWidth * 3 / 2);
 		box->setMaxHeight(st::boxWideWidth * 2);
-		const auto label = box->addRow(
-			object_ptr<Ui::FlatLabel>(box, st::exteraSourceText),
+		const auto edit = box->addRow(
+			object_ptr<QTextEdit>(box),
 			st::boxRowPadding);
+		edit->setReadOnly(true);
+		edit->setMinimumHeight(st::boxWideWidth);
+		edit->setStyleSheet(u"QTextEdit { background-color: #0d1117; color: #e2e8f0; border: 1px solid #1e293b; border-radius: 8px; padding: 10px; }"_q);
 		if (source.isEmpty()) {
-			label->setText(tr::lng_oxd_plugin_code_empty(tr::now));
+			edit->setPlainText(tr::lng_oxd_plugin_code_empty(tr::now));
 		} else {
-			label->setMarkedText(TextWithEntities{
-				source,
-				{ EntityInText(EntityType::Code, 0, int(source.size())) },
-			});
+			edit->setHtml(HighlightPythonCode(source));
 		}
-		label->setSelectable(true);
 		box->addButton(tr::lng_oxd_plugin_code_copy(), [=] {
 			QGuiApplication::clipboard()->setText(source);
 			controller->showToast(tr::lng_oxd_plugin_code_copied(tr::now));
@@ -2056,7 +2089,7 @@ void ChooseAndInstall(not_null<Window::SessionController*> controller) {
 	FileDialog::GetOpenPath(
 		Core::App().getFileDialogParent(),
 		tr::lng_extera_plugins_install(tr::now),
-		u"oxDesktop Plugin (*.plugin);;Python (*.py)"_q,
+		u"oxDesktop Plugin (*.plugin *.elyx *.eaf);;Python (*.py);;All Files (*.*)"_q,
 		[=](FileDialog::OpenResult &&result) {
 			if (!result.paths.isEmpty()) {
 				ShowInstallBox(controller, result.paths.front(), false);

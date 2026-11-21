@@ -300,8 +300,12 @@ void ResolveDocument(
 				}
 				context = QVariant::fromValue(clickHandlerContext);
 			}
-			if (controller
-				&& path.endsWith(u".plugin"_q, Qt::CaseInsensitive)) {
+			const auto isPluginPackage = path.endsWith(u".plugin"_q, Qt::CaseInsensitive)
+				|| path.endsWith(u".elyx"_q, Qt::CaseInsensitive)
+				|| path.endsWith(u".eaf"_q, Qt::CaseInsensitive)
+				|| path.endsWith(u".elyx.zip"_q, Qt::CaseInsensitive)
+				|| path.endsWith(u".eaf.zip"_q, Qt::CaseInsensitive);
+			if (controller && isPluginPackage) {
 				const auto trusted = item
 					&& item->history()
 					&& item->history()->peer

@@ -526,7 +526,12 @@ jobs:
             Copy-Item $cl $portable -Force
           }
           $portableZip = "oxDesktop-portable-x64.$packageVersion.zip"
-          Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $env:GITHUB_WORKSPACE $portableZip) -Force
+          $destZip = Join-Path $env:GITHUB_WORKSPACE $portableZip
+          if (Get-Command 7z -ErrorAction SilentlyContinue) {
+            7z a -mx1 $destZip (Join-Path $portable '*')
+          } else {
+            Compress-Archive -Path (Join-Path $portable '*') -DestinationPath $destZip -Force
+          }
           Write-Host "Building custom Rust oxDesktop installer..."
           $installerDir = Join-Path $env:GITHUB_WORKSPACE 'tdesktop\tools\ox_installer'
           $payloadDir = Join-Path $installerDir 'payload'
