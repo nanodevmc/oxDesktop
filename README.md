@@ -66,7 +66,7 @@
       <h3>Messages</h3>
       <ul>
         <li>Quick actions bar</li>
-        <li>Message details</li>
+        <li>GhostMode</li>
         <li>Built-in QuoteReply</li>
         <li>Scheduled posting for channel editors</li>
         <li>Forwarding messages from other accounts</li>
@@ -113,7 +113,7 @@
     <td width="50%" valign="top">
       <h3>Plugins and AI</h3>
       <ul>
-        <li>Python plugin engine [in development]</li>
+        <li>Python plugin engine</li>
         <li>Plugin settings</li>
         <li>Plugin export</li>
         <li>Install plugins from file</li>
@@ -143,7 +143,6 @@ irm https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.ps1 | iex
 |:--|:--|
 | Windows | `oxDesktop-setup-x64.*.exe` installer or `oxDesktop-portable-x64.*.zip` portable version |
 | Linux | `oxDesktop-linux-x64.*.tar.gz`, run `oxDesktop` from the archive |
-| macOS | `oxDesktop-macos-arm64.*.dmg` or `.zip` for Apple Silicon |
 
 All files are available on the [releases page](https://github.com/nanodevmc/oxDesktop/releases/latest). oxDesktop installs beside Telegram Desktop and keeps its data separate.
 

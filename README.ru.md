@@ -143,7 +143,6 @@ irm https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.ps1 | iex
 |:--|:--|
 | Windows | установщик `oxDesktop-setup-x64.*.exe` или портативная версия `oxDesktop-portable-x64.*.zip` |
 | Linux | `oxDesktop-linux-x64.*.tar.gz`, запуск файла `oxDesktop` из архива |
-| macOS | `oxDesktop-macos-arm64.*.dmg` или `.zip` для Apple Silicon |
 
 Все файлы доступны на [странице релизов](https://github.com/nanodevmc/oxDesktop/releases/latest). oxDesktop устанавливается рядом с Telegram Desktop и хранит данные отдельно.
 
