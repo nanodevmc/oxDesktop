@@ -1926,6 +1926,24 @@ QString HighlightPythonCode(const QString &source) {
 	return result;
 }
 
+class CodeViewWidget final : public Ui::RpWidget {
+public:
+	CodeViewWidget(QWidget *parent, const QString &source) : Ui::RpWidget(parent) {
+		auto edit = new QTextEdit(this);
+		edit->setReadOnly(true);
+		edit->setStyleSheet(u"QTextEdit { background-color: #0d1117; color: #e2e8f0; border: 1px solid #1e293b; border-radius: 8px; padding: 10px; }"_q);
+		if (source.isEmpty()) {
+			edit->setPlainText(tr::lng_oxd_plugin_code_empty(tr::now));
+		} else {
+			edit->setHtml(HighlightPythonCode(source));
+		}
+		resize(st::boxWideWidth * 3 / 2 - st::boxRowPadding.left() - st::boxRowPadding.right(), 360);
+		sizeValue() | rpl::on_next([=](QSize s) {
+			edit->resize(s);
+		}, lifetime());
+	}
+};
+
 void ShowSourceBox(
 		not_null<Window::SessionController*> controller,
 		const QString &path) {
@@ -1936,17 +1954,9 @@ void ShowSourceBox(
 		box->setTitle(rpl::single(QFileInfo(path).fileName()));
 		box->setWidth(st::boxWideWidth * 3 / 2);
 		box->setMaxHeight(st::boxWideWidth * 2);
-		const auto edit = box->addRow(
-			object_ptr<QTextEdit>(box),
+		box->addRow(
+			object_ptr<CodeViewWidget>(box, source),
 			st::boxRowPadding);
-		edit->setReadOnly(true);
-		edit->setMinimumHeight(st::boxWideWidth);
-		edit->setStyleSheet(u"QTextEdit { background-color: #0d1117; color: #e2e8f0; border: 1px solid #1e293b; border-radius: 8px; padding: 10px; }"_q);
-		if (source.isEmpty()) {
-			edit->setPlainText(tr::lng_oxd_plugin_code_empty(tr::now));
-		} else {
-			edit->setHtml(HighlightPythonCode(source));
-		}
 		box->addButton(tr::lng_oxd_plugin_code_copy(), [=] {
 			QGuiApplication::clipboard()->setText(source);
 			controller->showToast(tr::lng_oxd_plugin_code_copied(tr::now));

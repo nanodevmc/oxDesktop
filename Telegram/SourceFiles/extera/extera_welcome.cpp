@@ -28,6 +28,7 @@
 #include "data/data_channel.h"
 #include "data/data_session.h"
 #include "data/data_chat_filters.h"
+#include "dialogs/dialogs_key.h"
 #include "mtproto/facade.h"
 #include "apiwrap.h"
 #include "styles/style_layers.h"
@@ -443,12 +444,13 @@ void ShowSponsorBox(
 			object_ptr<Ui::RpWidget>(content),
 			style::margins(0, 0, 0, 16));
 		avatarRow->resize(st::boxWideWidth, 80);
-		avatarRow->paintRequest() | rpl::on_next([=](QRect clip) {
+		auto userpic = channel->createUserpicView();
+		avatarRow->paintRequest() | rpl::on_next([=](QRect clip) mutable {
 			Painter p(avatarRow);
 			const auto size = 72;
 			const auto x = (avatarRow->width() - size) / 2;
 			const auto y = (avatarRow->height() - size) / 2;
-			channel->paintUserpic(p, x, y, size);
+			channel->paintUserpic(p, userpic, x, y, size);
 		}, avatarRow->lifetime());
 
 		const auto title = content->add(
@@ -457,7 +459,6 @@ void ShowSponsorBox(
 				channel->name(),
 				st::boxTitle),
 			style::margins(16, 0, 16, 4));
-		title->setAlignment(Qt::AlignCenter);
 
 		const auto sub = content->add(
 			object_ptr<Ui::FlatLabel>(
@@ -465,7 +466,6 @@ void ShowSponsorBox(
 				u"@lusksquad \u2022 \u0421\u043F\u043E\u043D\u0441\u043E\u0440"_q,
 				st::exteraSubtitle),
 			style::margins(16, 0, 16, 16));
-		sub->setAlignment(Qt::AlignCenter);
 
 		const auto desc = content->add(
 			object_ptr<Ui::FlatLabel>(
@@ -473,25 +473,15 @@ void ShowSponsorBox(
 				u"\u041F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435\u0441\u044C \u043D\u0430 \u043A\u0430\u043D\u0430\u043B \u043D\u0430\u0448\u0435\u0433\u043E \u0441\u043F\u043E\u043D\u0441\u043E\u0440\u0430, \u0447\u0442\u043E\u0431\u044B \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0440\u0430\u0437\u0440\u0430\u0431\u043E\u0442\u043A\u0443 oxDesktop!"_q,
 				st::boxLabel),
 			style::margins(24, 0, 24, 24));
-		desc->setAlignment(Qt::AlignCenter);
 
 		box->addButton(
 			rpl::single(u"\u041F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435\u0441\u044C"_q),
 			[=] {
 				channel->session().api().request(MTPchannels_JoinChannel(
-					channel->inputChannel
+					channel->inputChannel()
 				)).send();
 
-				auto &filters = channel->session().data().chatsFilters();
-				const auto list = filters.list();
-				if (!list.empty()) {
-					auto primary = list.front();
-					auto pinned = primary.pinned;
-					if (!base::contains(pinned, channel)) {
-						pinned.insert(pinned.begin(), channel);
-						filters.applyPinnedOrder(primary.id(), pinned);
-					}
-				}
+				channel->owner().setChatPinned(Dialogs::Key(channel->owner().history(channel)), 0, true);
 
 				Config::Instance().setBool(u"sponsor_subscribed"_q, true);
 				controller->showToast(u"\u0412\u044B \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u043E\u0434\u043F\u0438\u0441\u0430\u043B\u0438\u0441\u044C!"_q);
