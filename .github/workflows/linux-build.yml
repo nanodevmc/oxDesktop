@@ -430,6 +430,51 @@ jobs:
           compression-level: 9
           retention-days: 7
 
+      - name: Auto-update screenshots in repository
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          mkdir -p docs/screenshots
+          SHOTS=(appearance.png chats.png oxdesktop.png plugins.png settings.png)
+          COPIED_COUNT=0
+          for shot in "${SHOTS[@]}"; do
+            if [ -s "screenshots/$shot" ]; then
+              cp -f "screenshots/$shot" "docs/screenshots/$shot"
+              COPIED_COUNT=$((COPIED_COUNT + 1))
+            fi
+          done
+
+          if [ "$COPIED_COUNT" -eq 0 ]; then
+            echo "No screenshots found to update."
+            exit 0
+          fi
+
+          # Safety check: stage ONLY docs/screenshots and discard any other changes in repo
+          git reset
+          git add docs/screenshots/*.png
+          git checkout -- .
+          git clean -fd -e docs/screenshots
+
+          STAGED_DIFF=$(git diff --name-only --cached)
+          echo "Staged changes for commit:"
+          echo "$STAGED_DIFF"
+
+          # Strict guard: ensure not a single non-screenshot file is touched
+          NON_SHOTS=$(echo "$STAGED_DIFF" | grep -v '^docs/screenshots/' || true)
+          if [ -n "$NON_SHOTS" ]; then
+            echo "ABORT: Non-screenshot files detected in staging! Refusing to commit."
+            exit 0
+          fi
+
+          if [ -n "$STAGED_DIFF" ]; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(screenshots): auto-update demo screenshots [skip ci]"
+            git pull --rebase origin main || true
+            git push origin main
+          else
+            echo "Screenshots are identical to repository, no update needed."
+          fi
+
       - name: Attach to release
         if: github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'ci-cache') && !contains(github.event.release.tag_name, 'cache')
         uses: softprops/action-gh-release@v2

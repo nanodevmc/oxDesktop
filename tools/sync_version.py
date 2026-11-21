@@ -150,6 +150,18 @@ def main():
         else:
             print(f"[sync_version] Unchanged: {flatpak_path}")
 
+    # 8. Update tests/test_plugin_full_suite.py fallback
+    test_suite_path = os.path.join(root_dir, "tests", "test_plugin_full_suite.py")
+    if os.path.exists(test_suite_path):
+        with open(test_suite_path, "r", encoding="utf-8") as f:
+            ts_content = f.read()
+        ts_content = re.sub(r'(_cur_ver\s*=\s*)"[^"]*"', rf'\g<1>"{version_str}"', ts_content)
+        ts_content = re.sub(r'(_cur_full\s*=\s*)\d+', rf'\g<1>{version_full}', ts_content)
+        if write_if_changed(test_suite_path, ts_content):
+            print(f"[sync_version] Updated {test_suite_path}")
+        else:
+            print(f"[sync_version] Unchanged: {test_suite_path}")
+
     print(f"[sync_version] Version successfully synchronized to {version_str} (full={version_full}, 4part={version_4_dot})")
 
 

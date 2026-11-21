@@ -33,10 +33,21 @@ mock_extera.current_peer = lambda: 123456789
 mock_extera.get_selected_account = lambda: 0
 mock_extera.self_id = lambda: 99999
 mock_extera.peer_info = lambda pid: '{"type":"user","name":"Test Client","bare_id":123456789}'
-mock_extera.APP_VERSION = "7.4.3.3"
-mock_extera.APP_VERSION_FULL = 7004003
-mock_extera.app_version = lambda: "7.4.3.3"
-mock_extera.app_version_full = lambda: 7004003
+_v_txt = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "version.txt"))
+_cur_ver = "7.4.4"
+if os.path.exists(_v_txt):
+    try:
+        with open(_v_txt, "r", encoding="utf-8") as _vf:
+            _cur_ver = _vf.read().strip()
+    except Exception:
+        pass
+_vm = re.match(r"^(\d+)\.(\d+)(?:\.(\d+))?", _cur_ver)
+_cur_full = (int(_vm.group(1)) * 1000000 + int(_vm.group(2)) * 1000 + int(_vm.group(3) or 0)) if _vm else 7004004
+
+mock_extera.APP_VERSION = _cur_ver
+mock_extera.APP_VERSION_FULL = _cur_full
+mock_extera.app_version = lambda: _cur_ver
+mock_extera.app_version_full = lambda: _cur_full
 
 sys.modules["_extera"] = mock_extera
 import cactuslib
