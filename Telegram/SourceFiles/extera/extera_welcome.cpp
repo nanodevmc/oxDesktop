@@ -463,19 +463,19 @@ void ShowSponsorBox(
 		const auto sub = content->add(
 			object_ptr<Ui::FlatLabel>(
 				content,
-				u"@lusksquad \u2022 \u0421\u043F\u043E\u043D\u0441\u043E\u0440"_q,
+				tr::lng_oxd_sponsor_sub(),
 				st::exteraSubtitle),
 			style::margins(16, 0, 16, 16));
 
 		const auto desc = content->add(
 			object_ptr<Ui::FlatLabel>(
 				content,
-				u"\u041F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435\u0441\u044C \u043D\u0430 \u043A\u0430\u043D\u0430\u043B \u043D\u0430\u0448\u0435\u0433\u043E \u0441\u043F\u043E\u043D\u0441\u043E\u0440\u0430, \u0447\u0442\u043E\u0431\u044B \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0440\u0430\u0437\u0440\u0430\u0431\u043E\u0442\u043A\u0443 oxDesktop!"_q,
+				tr::lng_oxd_sponsor_about(),
 				st::boxLabel),
 			style::margins(24, 0, 24, 24));
 
 		box->addButton(
-			rpl::single(u"\u041F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435\u0441\u044C"_q),
+			tr::lng_oxd_sponsor_subscribe(),
 			[=] {
 				channel->session().api().request(MTPchannels_JoinChannel(
 					channel->inputChannel()
@@ -484,7 +484,7 @@ void ShowSponsorBox(
 				channel->owner().setChatPinned(Dialogs::Key(channel->owner().history(channel)), 0, true);
 
 				Config::Instance().setBool(u"sponsor_subscribed"_q, true);
-				controller->showToast(u"\u0412\u044B \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u043F\u043E\u0434\u043F\u0438\u0441\u0430\u043B\u0438\u0441\u044C!"_q);
+				controller->showToast(tr::lng_oxd_sponsor_success(tr::now));
 				box->closeBox();
 			});
 		box->addTopButton(st::boxTitleClose, [=] {

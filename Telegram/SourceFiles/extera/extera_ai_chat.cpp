@@ -471,12 +471,12 @@ void ShowKeyBox(not_null<Window::SessionController*> controller) {
 		const auto customUrlField = box->addRow(object_ptr<Ui::InputField>(
 			box,
 			st::defaultInputField,
-			rpl::single(u"Custom API URL"_q),
+			tr::lng_oxd_ai_custom_url(),
 			String(u"ai_chat_custom_url"_q)));
 		const auto customModelField = box->addRow(object_ptr<Ui::InputField>(
 			box,
 			st::defaultInputField,
-			rpl::single(u"Custom Model"_q),
+			tr::lng_oxd_ai_custom_model(),
 			String(u"ai_chat_custom_model"_q)));
 
 		box->setFocusCallback([=] { field->setFocusFast(); });
@@ -492,7 +492,7 @@ void ShowKeyBox(not_null<Window::SessionController*> controller) {
 				customModelField->getLastText().trimmed());
 			box->closeBox();
 		});
-		box->addButton(rpl::single(u"Проверить"_q), [=] {
+		box->addButton(tr::lng_oxd_ai_test_button(), [=] {
 			Config::Instance().setString(
 				u"ai_chat_key"_q,
 				field->getLastText().trimmed());
