@@ -546,6 +546,16 @@ TopBar::TopBar(
 			});
 		} else {
 			_badge->setPremiumClickCallback([controller, peer = _peer] {
+				if (peer->isSelf() && Extera::BadgeKindFor(peer) != Extera::BadgeKind::None) {
+					const auto custom = Extera::BadgeCustomText(peer);
+					if (!custom.isEmpty()) {
+						controller->showToast({
+							.text = TextWithEntities{ custom },
+							.duration = crl::time(4000),
+						});
+						return;
+					}
+				}
 				::Settings::ShowEmojiStatusPremium(controller, peer);
 			});
 		}

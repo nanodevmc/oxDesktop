@@ -302,7 +302,6 @@ Data::CustomEmojiSizeTag Badge::sizeTag() const {
 
 rpl::producer<Badge::Content> BadgeContentForPeer(not_null<PeerData*> peer) {
 	const auto statusOnlyForPremium = peer->isUser();
-	const auto extera = Extera::BadgeEmoji(peer);
 	return rpl::combine(
 		BadgeValue(peer),
 		EmojiStatusIdValue(peer)
@@ -317,10 +316,6 @@ rpl::producer<Badge::Content> BadgeContentForPeer(not_null<PeerData*> peer) {
 			emojiStatusId = EmojiStatusId();
 		} else if (emojiStatusId && badge == BadgeType::None) {
 			badge = BadgeType::Premium;
-		}
-		if (!emojiStatusId && extera) {
-			badge = BadgeType::Premium;
-			emojiStatusId = EmojiStatusId{ .documentId = extera };
 		}
 		return Badge::Content{ badge, emojiStatusId };
 	});

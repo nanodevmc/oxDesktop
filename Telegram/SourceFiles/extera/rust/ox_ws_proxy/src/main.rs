@@ -389,8 +389,13 @@ fn generate_relay_init(proto_tag: [u8; 4], dc_idx: i16) -> (Vec<u8>, Aes256Ctr, 
     (result, tg_enc, tg_dec)
 }
 
+enum BackendStream {
+    Ws(WebSocketStream<MaybeTlsStream<TcpStream>>),
+    Tcp(TcpStream),
+}
+
 struct BackendConn {
-    stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    stream: BackendStream,
     desc: String,
 }
 
@@ -398,14 +403,34 @@ async fn race_backend_connection(
     actual_dc: u8,
     ips: &'static [&'static str],
     candidate_hosts: &[String],
-    cf_domains: Arc<Vec<String>>,
     tls_connector: Arc<TlsConnector>,
     logger: &Logger,
     peer: SocketAddr,
-) -> Option<WebSocketStream<MaybeTlsStream<TcpStream>>> {
+) -> Option<BackendConn> {
     let (tx, mut rx) = mpsc::channel::<BackendConn>(1);
 
-    // 1. Parallel Direct WS probes
+    // 1. Parallel Direct TCP probes to DC IPs (fastest path: ~30-50ms)
+    for &ip in ips {
+        for &port in &[443u16, 80u16] {
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                if let Ok(Ok(tcp)) = tokio::time::timeout(
+                    Duration::from_millis(1500),
+                    TcpStream::connect(format!("{}:{}", ip, port)),
+                )
+                .await
+                {
+                    let _ = tcp.set_nodelay(true);
+                    let _ = tx.send(BackendConn {
+                        stream: BackendStream::Tcp(tcp),
+                        desc: format!("Direct TCP ({}:{})", ip, port),
+                    }).await;
+                }
+            });
+        }
+    }
+
+    // 2. Parallel Direct WS probes
     for host in candidate_hosts {
         let tx = tx.clone();
         let direct_url = format!("wss://{}/apiws", host);
@@ -423,7 +448,7 @@ async fn race_backend_connection(
                 .await
                 {
                     let _ = tx.send(BackendConn {
-                        stream: ws,
+                        stream: BackendStream::Ws(ws),
                         desc: format!("Direct WS ({})", host_name),
                     }).await;
                 }
@@ -431,7 +456,7 @@ async fn race_backend_connection(
         });
     }
 
-    // 2. Parallel TLS Domain Fronting probes to DC IPs (using genuine Telegram SNI)
+    // 3. Parallel TLS Domain Fronting probes to DC IPs (using genuine Telegram SNI)
     let primary_target_host = candidate_hosts[0].clone();
     for &ip in ips {
         let connector = tls_connector.clone();
@@ -445,45 +470,12 @@ async fn race_backend_connection(
             .await
             {
                 let _ = tx.send(BackendConn {
-                    stream: ws,
+                    stream: BackendStream::Ws(ws),
                     desc: format!("Fronted WS ({}:443)", ip),
                 }).await;
             }
         });
     }
-
-    // 3. Parallel Cloudflare Worker probes across DC IPs (slight 40ms headstart for direct paths)
-    let cf_domains_clone = cf_domains.clone();
-    let tx_cf = tx.clone();
-    let ips_vec = ips.to_vec();
-    tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(40)).await;
-        for (i, cf_domain) in cf_domains_clone.iter().take(6).enumerate() {
-            let target_ip = ips_vec[i % ips_vec.len()];
-            let cf_url = format!("wss://{}/apiws?dst={}&dc={}", cf_domain, target_ip, actual_dc);
-            let tx = tx_cf.clone();
-            let domain_name = cf_domain.clone();
-            tokio::spawn(async move {
-                if let Ok(mut req) = cf_url.into_client_request() {
-                    req.headers_mut().insert(
-                        "Sec-WebSocket-Protocol",
-                        HeaderValue::from_static("binary"),
-                    );
-                    if let Ok(Ok((ws, _))) = tokio::time::timeout(
-                        Duration::from_millis(3500),
-                        tokio_tungstenite::connect_async(req),
-                    )
-                    .await
-                    {
-                        let _ = tx.send(BackendConn {
-                            stream: ws,
-                            desc: format!("CF Relay ({})", domain_name),
-                        }).await;
-                    }
-                }
-            });
-        }
-    });
 
     drop(tx);
 
@@ -492,7 +484,7 @@ async fn race_backend_connection(
             logger
                 .log(&format!("[{}] Connected via {} to DC{}", peer, backend.desc, actual_dc))
                 .await;
-            Some(backend.stream)
+            Some(backend)
         }
         _ => None,
     }
@@ -502,7 +494,7 @@ async fn handle_client(
     mut client_socket: TcpStream,
     peer: SocketAddr,
     secret: Arc<Vec<u8>>,
-    cf_domains: Arc<Vec<String>>,
+    _cf_domains: Arc<Vec<String>>,
     tls_connector: Arc<TlsConnector>,
     logger: Logger,
 ) {
@@ -619,18 +611,15 @@ async fn handle_client(
         _ => vec![format!("kws{}.web.telegram.org", actual_dc)],
     };
 
-    let ws_stream = race_backend_connection(
+    let backend = match race_backend_connection(
         actual_dc,
         ips,
         &candidate_hosts,
-        cf_domains,
         tls_connector,
         &logger,
         peer,
-    ).await;
-
-    let mut ws = match ws_stream {
-        Some(w) => w,
+    ).await {
+        Some(b) => b,
         None => {
             logger
                 .warn(&format!("[{}] Failed to connect to any backend for DC{}", peer, actual_dc))
@@ -639,76 +628,133 @@ async fn handle_client(
         }
     };
 
-    // Send initial relay frame
-    if let Err(e) = ws.send(Message::Binary(relay_init.into())).await {
-        logger.warn(&format!("[{}] Failed to send relay init: {}", peer, e)).await;
-        return;
-    }
-
-    let (mut ws_sink, mut ws_src) = ws.split();
     let (mut client_reader, mut client_writer) = client_socket.into_split();
-
-    let mut splitter = MsgSplitter::new(proto_tag);
     let bytes_up = Arc::new(AtomicU64::new(0));
     let bytes_down = Arc::new(AtomicU64::new(0));
 
-    let bytes_up_clone = Arc::clone(&bytes_up);
-    let client_to_ws = async {
-        let mut buf = vec![0u8; 65536];
-        loop {
-            let n = match client_reader.read(&mut buf).await {
-                Ok(0) => break,
-                Ok(n) => n,
-                Err(_) => break,
-            };
+    match backend.stream {
+        BackendStream::Tcp(mut tcp_stream) => {
+            if let Err(e) = tcp_stream.write_all(&relay_init).await {
+                logger.warn(&format!("[{}] Failed to send relay init via TCP: {}", peer, e)).await;
+                return;
+            }
 
-            bytes_up_clone.fetch_add(n as u64, Ordering::Relaxed);
-            let chunk = &buf[..n];
-            let mut plain = chunk.to_vec();
-            clt_dec.apply_keystream(&mut plain);
-
-            let mut cipher_chunk = plain.clone();
-            tg_enc.apply_keystream(&mut cipher_chunk);
-
-            let parts = splitter.split(&cipher_chunk, &plain);
-            if parts.is_empty() {
-                if let Err(_) = ws_sink.send(Message::Binary(cipher_chunk.into())).await {
-                    break;
-                }
-            } else {
-                for part in parts {
-                    if let Err(_) = ws_sink.send(Message::Binary(part.into())).await {
-                        return;
+            let (mut tcp_reader, mut tcp_writer) = tcp_stream.into_split();
+            let bytes_up_clone = Arc::clone(&bytes_up);
+            let client_to_tcp = async {
+                let mut buf = vec![0u8; 65536];
+                loop {
+                    let n = match client_reader.read(&mut buf).await {
+                        Ok(0) => break,
+                        Ok(n) => n,
+                        Err(_) => break,
+                    };
+                    bytes_up_clone.fetch_add(n as u64, Ordering::Relaxed);
+                    let chunk = &buf[..n];
+                    let mut plain = chunk.to_vec();
+                    clt_dec.apply_keystream(&mut plain);
+                    let mut cipher_chunk = plain;
+                    tg_enc.apply_keystream(&mut cipher_chunk);
+                    if let Err(_) = tcp_writer.write_all(&cipher_chunk).await {
+                        break;
                     }
                 }
-            }
-        }
-    };
-
-    let bytes_down_clone = Arc::clone(&bytes_down);
-    let ws_to_client = async {
-        while let Some(msg_res) = ws_src.next().await {
-            let msg = match msg_res {
-                Ok(m) => m,
-                Err(_) => break,
             };
 
-            if let Message::Binary(data) = msg {
-                bytes_down_clone.fetch_add(data.len() as u64, Ordering::Relaxed);
-                let mut data_vec = data.to_vec();
-                tg_dec.apply_keystream(&mut data_vec);
-                clt_enc.apply_keystream(&mut data_vec);
-
-                if let Err(_) = client_writer.write_all(&data_vec).await {
-                    break;
+            let bytes_down_clone = Arc::clone(&bytes_down);
+            let tcp_to_client = async {
+                let mut buf = vec![0u8; 65536];
+                loop {
+                    let n = match tcp_reader.read(&mut buf).await {
+                        Ok(0) => break,
+                        Ok(n) => n,
+                        Err(_) => break,
+                    };
+                    bytes_down_clone.fetch_add(n as u64, Ordering::Relaxed);
+                    let chunk = &buf[..n];
+                    let mut plain = chunk.to_vec();
+                    tg_dec.apply_keystream(&mut plain);
+                    let mut cipher_chunk = plain;
+                    clt_enc.apply_keystream(&mut cipher_chunk);
+                    if let Err(_) = client_writer.write_all(&cipher_chunk).await {
+                        break;
+                    }
                 }
+            };
+
+            tokio::select! {
+                _ = client_to_tcp => {},
+                _ = tcp_to_client => {},
             }
         }
-    };
+        BackendStream::Ws(mut ws) => {
+            if let Err(e) = ws.send(Message::Binary(relay_init.into())).await {
+                logger.warn(&format!("[{}] Failed to send relay init via WS: {}", peer, e)).await;
+                return;
+            }
 
-    tokio::select! {
-        _ = client_to_ws => {},
-        _ = ws_to_client => {},
+            let (mut ws_sink, mut ws_src) = ws.split();
+            let mut splitter = MsgSplitter::new(proto_tag);
+
+            let bytes_up_clone = Arc::clone(&bytes_up);
+            let client_to_ws = async {
+                let mut buf = vec![0u8; 65536];
+                loop {
+                    let n = match client_reader.read(&mut buf).await {
+                        Ok(0) => break,
+                        Ok(n) => n,
+                        Err(_) => break,
+                    };
+
+                    bytes_up_clone.fetch_add(n as u64, Ordering::Relaxed);
+                    let chunk = &buf[..n];
+                    let mut plain = chunk.to_vec();
+                    clt_dec.apply_keystream(&mut plain);
+
+                    let mut cipher_chunk = plain.clone();
+                    tg_enc.apply_keystream(&mut cipher_chunk);
+
+                    let parts = splitter.split(&cipher_chunk, &plain);
+                    if parts.is_empty() {
+                        if let Err(_) = ws_sink.send(Message::Binary(cipher_chunk.into())).await {
+                            break;
+                        }
+                    } else {
+                        for part in parts {
+                            if let Err(_) = ws_sink.send(Message::Binary(part.into())).await {
+                                return;
+                            }
+                        }
+                    }
+                }
+            };
+
+            let bytes_down_clone = Arc::clone(&bytes_down);
+            let ws_to_client = async {
+                while let Some(msg_res) = ws_src.next().await {
+                    let msg = match msg_res {
+                        Ok(m) => m,
+                        Err(_) => break,
+                    };
+
+                    if let Message::Binary(data) = msg {
+                        bytes_down_clone.fetch_add(data.len() as u64, Ordering::Relaxed);
+                        let mut data_vec = data.to_vec();
+                        tg_dec.apply_keystream(&mut data_vec);
+                        clt_enc.apply_keystream(&mut data_vec);
+
+                        if let Err(_) = client_writer.write_all(&data_vec).await {
+                            break;
+                        }
+                    }
+                }
+            };
+
+            tokio::select! {
+                _ = client_to_ws => {},
+                _ = ws_to_client => {},
+            }
+        }
     }
 
     logger

@@ -259,11 +259,11 @@ void SaveToCache() {
 }
 
 void RefreshProfiles(QNetworkAccessManager *manager) {
-	manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	const auto fetchUrl = [=](const QString &url, bool incremental) {
 		auto request = QNetworkRequest(QUrl(url));
 		request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 		request.setRawHeader("Accept", "application/json");
+		request.setTransferTimeout(10000);
 		const auto reply = manager->get(request);
 		QObject::connect(reply, &QNetworkReply::finished, [=] {
 			reply->deleteLater();
@@ -293,12 +293,12 @@ void MaybeFetchProfile(not_null<PeerData*> peer) {
 	state.requestedIds.insert(bare);
 	if (!state.manager) {
 		state.manager = new QNetworkAccessManager(qApp);
-		state.manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	}
 	const auto url = u"https://api.exteragram.app/api/v1/profiles/"_q + QString::number(bare);
 	auto request = QNetworkRequest(QUrl(url));
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 	request.setRawHeader("Accept", "application/json");
+	request.setTransferTimeout(8000);
 	const auto reply = state.manager->get(request);
 	const auto session = &peer->session();
 	QObject::connect(reply, &QNetworkReply::finished, [reply, peer, session] {
@@ -326,23 +326,7 @@ void StartBadges() {
 	}
 	started = true;
 
-	auto loadedLocal = false;
-	for (const auto &p : {
-			cWorkingDir() + u"badges.json"_q,
-			u":/badges.json"_q,
-			CachePath(),
-			LegacyProfilesPath(),
-			LegacyBadgesPath() }) {
-		auto f = QFile(p);
-		if (f.open(QIODevice::ReadOnly)) {
-			if (ApplyProfiles(f.readAll(), loadedLocal)) {
-				loadedLocal = true;
-			}
-		}
-	}
-
-	if (!loadedLocal) {
-		static const auto kFallbackJson = R"({
+	static const auto kBuiltinBadgesJson = R"({
   "types": {
     "owner": { "emoji": "5425060246269736415", "text": "Создатель oxDesktop" },
     "developer": { "emoji": "5395339798430919126", "text": "Разработчик oxDesktop" },
@@ -364,11 +348,21 @@ void StartBadges() {
     { "id": 4469639949, "username": "oxDesktop", "name": "oxDesktop" }
   ]
 })";
-		ApplyProfiles(QByteArray(kFallbackJson), false);
+	ApplyProfiles(QByteArray(kBuiltinBadgesJson), false);
+
+	for (const auto &p : {
+			cWorkingDir() + u"badges.json"_q,
+			u":/badges.json"_q,
+			CachePath(),
+			LegacyProfilesPath(),
+			LegacyBadgesPath() }) {
+		auto f = QFile(p);
+		if (f.open(QIODevice::ReadOnly)) {
+			ApplyProfiles(f.readAll(), true);
+		}
 	}
 
 	const auto manager = new QNetworkAccessManager(qApp);
-	manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	RefreshProfiles(manager);
 
 	const auto timer = new QTimer(manager);

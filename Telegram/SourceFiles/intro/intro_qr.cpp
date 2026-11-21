@@ -58,7 +58,8 @@ namespace {
 }
 
 [[nodiscard]] QColor QrActiveColor() {
-	return QColor(0x40, 0xA7, 0xE3); // Default windowBgActive.
+	const auto c = st::windowBgActive->c;
+	return (c.blue() > c.red() + 15) ? QColor(0x00, 0xC8, 0x53) : c;
 }
 
 [[nodiscard]] not_null<Ui::RpWidget*> PrepareQrWidget(

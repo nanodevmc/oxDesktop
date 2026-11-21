@@ -1,27 +1,31 @@
-7.4.4 (17.11.2026)
+7.4.4 (21.11.2026)
 
 Ru:
-- Оптимизирован сетевой движок oxWsProxy: параллельная гонка подключений, мгновенный старт и загрузка аватарок, видеокружков и голосовых ([Обход блокировок](tg://settings/proxy))
+- Функция «Снимок» (Shot): локализация кнопки («Снимок»), HD-суперсэмплинг без размытия, экспорт в буфер обмена с прозрачным альфа-каналом (без белых углов), левостороннее выравнивание с круглыми аватарками авторов и отдельная кнопка «Снимок» в верхней панели при выделении нескольких сообщений
+- Исправлена загрузка файлов, фотографий, стикеров и кастомных реакций: в oxWsProxy восстановлен быстрый параллельный коннект (TCP + TLS Fronted WS) для надежной связи со всеми медиа-датацентрами DC1, DC2, DC4, DC5 ([Обход блокировок](tg://settings/proxy))
+- Устранено дублирование значков в профилях: значок oxDesktop больше не задваивается и отображается в единственном числе
+- Защита от случайной смены значка в своем профиле: клик по значку у себя выводит информационный тост/окно вместо вызова меню смены статуса ([Поддержка проекта](tg://support))
+- Восстановлена загрузка значков ExteraGram API (сняты сетевые ограничения NoProxy, добавлена обработка таймаутов)
+- Встроенная система значков badges.json зафиксирована как обязательная базовая система проекта с защитой ролей создателя и разработчиков
+- Экран входа в аккаунт (Intro) приведен к фирменному стилю: синий градиент заменен на тёмный Liquid Glass с изумрудным неоном ([Темы оформления](tg://settings/appearance))
 - Восстановлена работа ссылок добавления прокси (tg://proxy?server=...&port=...) без ложного открытия настроек
 - Исправлено зависание голосовых и видеозвонков на этапе обмена ключами при блокировках UDP ([Звонки](tg://settings/calls))
-- Исправлена смена тем оформления: полное обновление цветов и интерфейса без остаточных артефактов ([Темы оформления](tg://settings/appearance))
 - Добавлено автоматическое создание папки oxDesktop с закрепленными каналами новостей при входе ([Папки с чатами](tg://settings/folders))
 - Обновлена проверка и загрузка обновлений: принудительный обход любого прокси и статус для бета-версий ([Обновления](tg://settings/extera))
-- Убрана лишняя кнопка перевода из модального окна списка изменений
-- Улучшено окно поддержки: компактные отступы, точный статус бейджа и защита от клика в своем профиле ([Поддержка проекта](tg://support))
-- Обновлены реквизиты поддержки проекта: актуальный TON кошелек и прямая связь ([Поддержать проект](tg://settings/extera))
 - Центрирован интерфейс инсталлятора Windows и включен максимальный уровень сжатия
 
 En:
-- Optimized oxWsProxy network engine: parallel connection race, instant startup and loading of avatars, video notes, and voice messages ([Proxy settings](tg://settings/proxy))
+- Message "Shot" feature: Russian localization ("Снимок"), high-res supersampling, clipboard export with true alpha transparency (no white corners), left-aligned cards with round author avatars, and top-bar batch selection button
+- Fixed media, photo, file, sticker, and custom reaction loading: restored fast parallel connection race (TCP + TLS Fronted WS) in oxWsProxy across all media datacenters DC1, DC2, DC4, DC5 ([Proxy settings](tg://settings/proxy))
+- Resolved profile badge duplication: oxDesktop badges now render as a single verified badge
+- Prevented accidental badge modification on self-profile: clicking your own badge displays info toast instead of opening the emoji status selector ([Project Support](tg://support))
+- Restored ExteraGram API badge fetching by removing restrictive NoProxy and adding network timeouts
+- badges.json established as a mandatory built-in badge system preserving creator and developer roles
+- Login Intro screen restyled: default blue gradient replaced with signature dark Liquid Glass and emerald neon ([Themes](tg://settings/appearance))
 - Fixed proxy deep links (tg://proxy?server=...&port=...) to properly open the Add Proxy confirmation dialog
 - Fixed voice and video calls freezing on key exchange under UDP restrictions ([Calls](tg://settings/calls))
-- Fixed theme switching: full palette refresh across all widgets without residual colors ([Themes](tg://settings/appearance))
 - Added automatic creation of oxDesktop folder with pinned news channels on login ([Chat Folders](tg://settings/folders))
 - Enhanced update check and download: direct bypass of all proxies and beta/dev build status ([Updates](tg://settings/extera))
-- Removed redundant translate button from changelog modal
-- Improved support modal: compact spacing, accurate badge status, and disabled badge edit on self profile ([Project Support](tg://support))
-- Updated donation options: new TON wallet address and direct contact button ([Donate](tg://settings/extera))
 - Centered Windows installer layout and enabled maximum payload compression
 
 7.4.3.3.2 (16.11.2026)
