@@ -6,11 +6,11 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 "lng_language_name" = "English";
-"lng_switch_to_this" = "Continue in English";
+"lng_switch_to_this" = "Продовжити по-англійському";
 
-"lng_menu_contacts" = "Contacts";
-"lng_menu_calls" = "Calls";
-"lng_menu_settings" = "Settings";
+"lng_menu_contacts" = "Знайомці";
+"lng_menu_calls" = "Дзвінки";
+"lng_menu_settings" = "Налади";
 "lng_menu_about" = "About";
 "lng_menu_update" = "Update";
 "lng_menu_night_mode" = "Night Mode";
@@ -9962,5 +9962,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_oxd_toast_shots_copied" = "Messages shot copied to clipboard";
 "lng_oxd_ghost_mode" = "Ghost Mode";
 "lng_oxd_ghost_mode_about" = "Master switch to toggle stealth reading across all chats and channels.";
+
+"lng_oxd_sponsor_sub" = "@lusksquad • Sponsor";
+"lng_oxd_sponsor_about" = "Subscribe to our sponsor channel to support oxDesktop development!";
+"lng_oxd_sponsor_subscribe" = "Subscribe";
+"lng_oxd_sponsor_success" = "You have successfully subscribed!";
+
+"lng_oxd_ai_custom_url" = "Custom API URL";
+"lng_oxd_ai_custom_model" = "Custom Model";
+"lng_oxd_ai_test_button" = "Test Connection";
+"lng_oxd_ai_test_success" = "Success! API is working properly.";
+"lng_oxd_ai_test_error" = "API verification failed! Check your key, URL, and model.";
 
 // Keys finished
