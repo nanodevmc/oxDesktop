@@ -1,4 +1,5 @@
 #include "extera/extera_welcome.h"
+#include "history/history.h"
 #include "extera/extera_changelog.h"
 
 #include "base/call_delayed.h"

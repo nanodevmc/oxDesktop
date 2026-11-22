@@ -169,7 +169,7 @@ base::options::toggle ShowChannelJoinedBelowAbout({
 		return raw;
 	} else if (peer->isChat()) {
 		return u"-"_q + raw;
-	} else if (peer->isChannel()) {
+	} else if (peer->isChannel() || peer->isMegagroup()) {
 		return u"-100"_q + raw;
 	}
 	return raw;
