@@ -395,7 +395,7 @@ jobs:
                 7z x $firstVol -y | Out-Null
                 Remove-Item "oxDesktop-out-win64.7z.*" -Force -ErrorAction SilentlyContinue
                 # Retain out build tree intact
-                "OUT_CACHE_HIT=true" >> $env:GITHUB_ENV
+                [System.IO.File]::AppendAllText($env:GITHUB_ENV, "OUT_CACHE_HIT=true`n", [System.Text.Encoding]::ASCII)
                 Write-Host "Out build tree restored successfully."
                 exit 0
               }
@@ -404,7 +404,7 @@ jobs:
             Write-Host "Exception checking or restoring out cache: $_"
           }
           Write-Host "No out cache volumes found in ci-cache, starting fresh build."
-          "OUT_CACHE_HIT=false" >> $env:GITHUB_ENV
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "OUT_CACHE_HIT=false`n", [System.Text.Encoding]::ASCII)
 
       - name: Restore Git modification times
         if: steps.diff_check.outputs.skip_cpp_build != 'true'
@@ -427,7 +427,7 @@ jobs:
             echo No API secrets, using TEST ONLY credentials
             set "CREDS=-D TDESKTOP_API_TEST=ON"
           )
-          if "%OUT_CACHE_HIT%"=="true" if exist "tdesktop\out\build-Release.ninja" (
+          if "%OUT_CACHE_HIT%"=="true" (if exist "tdesktop\out\build-Release.ninja" goto do_build & if exist "tdesktop\out\build.ninja" goto do_build)
             echo Using restored out build tree configuration.
             goto do_build
           )
