@@ -270,7 +270,7 @@ void Histories::readInboxTill(
 		not_null<History*> history,
 		MsgId tillId,
 		bool force) {
-	Expects(IsServerMsgId(tillId) || (!tillId && !force));
+	Expects(IsServerMsgId(tillId) || !tillId);
 
 	const auto isGhostHidden = [&] {
 		if (!Extera::Bool(u"ghost_mode"_q)) {

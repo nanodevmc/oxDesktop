@@ -427,6 +427,10 @@ jobs:
             echo No API secrets, using TEST ONLY credentials
             set "CREDS=-D TDESKTOP_API_TEST=ON"
           )
+          if "%OUT_CACHE_HIT%"=="true" if exist "tdesktop\out\build-Release.ninja" (
+            echo Using restored out build tree configuration.
+            goto do_build
+          )
           cd tdesktop\Telegram
           call configure.bat %CREDS% ^
             -G "Ninja Multi-Config" ^
@@ -436,6 +440,7 @@ jobs:
             -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
             -D CMAKE_POLICY_CMP0141=NEW
           cd ..\..
+          :do_build
           cd tdesktop\out
           cmake --build . --config Release --target Telegram --parallel
 
