@@ -104,13 +104,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_weeks#other" = "тижнів";
 "lng_months#one" = "місяць";
 "lng_months#other" = "місяців";
-"lng_years#one" = "літо";
-"lng_years#other" = "літ";
+"lng_years#one" = "{count} рік";
+"lng_years#other" = "{count} років";
 
-"lng_seconds_tiny#one" = "с";
-"lng_seconds_tiny#other" = "с";
-"lng_minutes_tiny#one" = "хв";
-"lng_minutes_tiny#other" = "хв";
+"lng_seconds_tiny#one" = "{count} с";
+"lng_seconds_tiny#other" = "{count} с";
+"lng_minutes_tiny#one" = "{count} хв";
+"lng_minutes_tiny#other" = "{count} хв";
 "lng_hours_tiny#one" = "год";
 "lng_hours_tiny#other" = "год";
 "lng_days_tiny#one" = "дн.";
