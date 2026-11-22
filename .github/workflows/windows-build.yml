@@ -427,9 +427,15 @@ jobs:
             echo No API secrets, using TEST ONLY credentials
             set "CREDS=-D TDESKTOP_API_TEST=ON"
           )
-          if "%OUT_CACHE_HIT%"=="true" (if exist "tdesktop\out\build-Release.ninja" goto do_build & if exist "tdesktop\out\build.ninja" goto do_build)
-            echo Using restored out build tree configuration.
-            goto do_build
+          if "%OUT_CACHE_HIT%"=="true" (
+            if exist "tdesktop\out\build-Release.ninja" (
+              echo Using restored out build tree configuration.
+              goto do_build
+            )
+            if exist "tdesktop\out\build.ninja" (
+              echo Using restored out build tree configuration.
+              goto do_build
+            )
           )
           cd tdesktop\Telegram
           call configure.bat %CREDS% ^
