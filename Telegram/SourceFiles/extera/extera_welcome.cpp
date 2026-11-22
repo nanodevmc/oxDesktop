@@ -481,7 +481,10 @@ void ShowSponsorBox(
 					channel->inputChannel()
 				)).send();
 
-				channel->owner().setChatPinned(Dialogs::Key(channel->owner().history(channel)), 0, true);
+				const auto history = channel->owner().history(channel);
+				if (history && history->folderKnown()) {
+					channel->owner().setChatPinned(Dialogs::Key(history), 0, true);
+				}
 
 				Config::Instance().setBool(u"sponsor_subscribed"_q, true);
 				controller->showToast(tr::lng_oxd_sponsor_success(tr::now));

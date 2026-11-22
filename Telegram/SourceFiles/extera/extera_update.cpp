@@ -479,7 +479,7 @@ void ShowUpdateBox(not_null<Window::SessionController*> controller) {
 			Extera::Config::Instance().setString(u"last_sync_time"_q, now);
 			Extera::Config::Instance().saveNow();
 			syncTimeLabel->setText(u"Последняя синхронизация: "_q + now);
-			controller->showToast(u"Настройки успешно сохранены!"_q);
+			syncBtn->setText(u"Сохранено ✓"_q);
 		});
 
 		// Primary Pill Action Button

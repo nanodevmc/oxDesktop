@@ -2765,6 +2765,9 @@ void Session::setChatPinned(
 		Dialogs::Key key,
 		FilterId filterId,
 		bool pinned) {
+	if (!key.entry()->folderKnown()) {
+		return;
+	}
 	Expects(key.entry()->folderKnown());
 
 	const auto list = (filterId

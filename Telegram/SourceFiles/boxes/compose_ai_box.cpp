@@ -106,7 +106,8 @@ enum class CardState {
 		const style::color &color,
 		float64 alpha) {
 	auto result = color->c;
-	result.setAlphaF(result.alphaF() * alpha);
+	const auto computedAlpha = std::clamp(result.alphaF() * alpha, 0.0, 1.0);
+	result.setAlphaF(std::isfinite(computedAlpha) ? computedAlpha : 1.0);
 	return result;
 }
 

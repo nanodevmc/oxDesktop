@@ -27,6 +27,17 @@ struct State {
 	std::unique_ptr<base::Timer> restartTimer;
 	int restarts = 0;
 	bool stopping = false;
+
+	~State() {
+		if (process) {
+			if (process->state() != QProcess::NotRunning) {
+				process->kill();
+				process->waitForFinished(500);
+			}
+			delete process;
+			process = nullptr;
+		}
+	}
 };
 
 State &Instance() {

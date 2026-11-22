@@ -5,6 +5,7 @@ Runs comprehensive local tests without cluttering CI or GitHub Actions.
 
 import json
 import os
+import re
 import sys
 import tempfile
 import types
@@ -1247,8 +1248,8 @@ def test_client_utils_peer_id_resolution():
         dialog_id = 777888
     assert client_utils._peer_id(ObjPeer()) == 777888
     assert client_utils.get_selected_account() == 0
-    assert client_utils.get_app_version() == "7.4.3.3"
-    assert client_utils.get_app_version_full() == 7004003
+    assert client_utils.get_app_version() == _cur_ver
+    assert client_utils.get_app_version_full() == _cur_full
     print("  -> PASSED")
 
 
