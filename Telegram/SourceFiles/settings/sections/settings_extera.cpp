@@ -1182,7 +1182,7 @@ void AddCoreToggle(
 		.id = u"extera/"_q + id,
 		.title = std::move(title),
 		.st = &st::settingsButtonNoIcon,
-		.toggled = Extera::Config::Instance().boolChanges(id) | rpl::start_with(get()),
+		.toggled = rpl::single(get()),
 	});
 	if (button) {
 		button->toggledValue(
