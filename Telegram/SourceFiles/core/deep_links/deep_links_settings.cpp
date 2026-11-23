@@ -568,11 +568,7 @@ void RegisterSettingsHandlers(Router &router) {
 		if (!highlight.isEmpty()) {
 			ctx.controller->setHighlightControlId(highlight);
 		}
-		const auto targetSection = ResolveSectionForHighlight(
-			&ctx.controller->session(),
-			highlight,
-			sectionId);
-		ctx.controller->showSettings(targetSection);
+		ctx.controller->showSettings(sectionId);
 		return Result::Handled;
 	};
 
