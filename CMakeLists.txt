@@ -14,7 +14,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt")
     file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" _ver_line LIMIT_COUNT 1)
     string(STRIP "${_ver_line}" APP_VERSION)
-    if (APP_VERSION MATCHES "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?")
+    if (APP_VERSION MATCHES "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?(\\.(.*))?")
         set(_ver_major "${CMAKE_MATCH_1}")
         set(_ver_minor "${CMAKE_MATCH_2}")
         if (CMAKE_MATCH_4)

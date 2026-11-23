@@ -467,6 +467,22 @@ bool InitializeFromSaved(Saved &&saved) {
 		LOG(("Theme Error: Could not load theme from '%1' (%2)").arg(
 			saved.object.pathRelative,
 			saved.object.pathAbsolute));
+		if (!saved.cache.colors.isEmpty()) {
+			GlobalBackground.createIfNull();
+			if (style::main_palette::load(saved.cache.colors)) {
+				Background()->saveAdjustableColors();
+				if (!saved.cache.background.isEmpty()) {
+					QDataStream stream(saved.cache.background);
+					QImageReader reader(stream.device());
+					reader.setAutoTransform(true);
+					QImage bg;
+					if (reader.read(&bg) && !bg.isNull()) {
+						applyBackground(std::move(bg), saved.cache.tiled, nullptr);
+					}
+				}
+				return true;
+			}
+		}
 		return false;
 	}
 
@@ -1812,3 +1828,5 @@ std::unique_ptr<Ui::ChatTheme> DefaultChatThemeOn(rpl::lifetime &lifetime) {
 
 } // namespace Theme
 } // namespace Window
+
+// OxDesktop Custom UX/UI Update

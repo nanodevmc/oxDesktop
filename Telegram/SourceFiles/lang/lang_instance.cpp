@@ -9,6 +9,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "extera/extera_lang.h"
 
+namespace Extera {
+bool ApplyCustom(const QString &twoLetterCode, Fn<void(const QByteArray&, const QByteArray&)> apply);
+[[nodiscard]] QString LookupCustom(const QString &twoLetterCode, std::string_view key);
+} // namespace Extera
+
 #include "core/application.h"
 #include "storage/serialize_common.h"
 #include "storage/localstorage.h"
@@ -782,15 +787,15 @@ void Instance::applyValue(const QByteArray &key, const QByteArray &value) {
 }
 
 void Instance::updatePluralRules() {
-	if (LanguageIdOrDefault(_id).startsWith(u"ru"_q)) {
-		Extera::ApplyRussian([&](
-				const QByteArray &key,
-				const QByteArray &value) {
-			if (!_nonDefaultValues.contains(key)) {
-				applyValue(key, value);
-			}
-		});
-	}
+	const auto langCode = LanguageIdOrDefault(_id);
+	const auto twoLetter = langCode.left(2).toLower();
+	Extera::ApplyCustom(twoLetter, [&](
+			const QByteArray &key,
+			const QByteArray &value) {
+		if (!_nonDefaultValues.contains(key)) {
+			applyValue(key, value);
+		}
+	});
 	if (_pluralId.isEmpty()) {
 		_pluralId = isCustom()
 			? PluralCodeForCustom(

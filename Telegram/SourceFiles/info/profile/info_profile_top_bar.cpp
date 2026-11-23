@@ -1039,10 +1039,17 @@ void TopBar::finalizeActions(
 			/ (st::infoProfileTopBarActionButtonsHeight
 				+ st::infoLayerTopBarHeight);
 		const auto h = st::infoProfileTopBarActionButtonSize;
-		const auto resultHeight = (ratio >= 1.)
-			? h
-			: (ratio <= 0.5)
+		int visibleCount = 0;
+		for (const auto &button : buttons) {
+			if (!button->isHidden()) {
+				++visibleCount;
+			}
+		}
+		const auto collapseSingle = (ratio < 0.95 && visibleCount <= 1);
+		const auto resultHeight = (collapseSingle || ratio <= 0.5)
 			? 0
+			: (ratio >= 1.)
+			? h
 			: int(h * (ratio - 0.5) / 0.5);
 		_actions->setGeometry(
 			padding.left(),

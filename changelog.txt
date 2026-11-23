@@ -1,3 +1,43 @@
+7.4.4.1 (23.11.2026)
+
+Ru:
+- Оптимизация локализации и Crowdin: база оригинального Telegram (lang.strings) исключена из синхронизации Crowdin, оставлены только кастомные строки oxDesktop (oxdesktop_*.strings), что полностью устраняет проблему лимита слов Crowdin Free плана ([Перевод](tg://settings/extera))
+- Интеллектуальный мультиязычный фоллбэк: встроенная поддержка загрузки и применения кастомных файлов перевода oxdesktop_%two_letters_code%.strings (RU/EN/ES/BE/UK) с надежным переходом к оригинальным фразам Telegram Desktop при отсутствии ключа ([Язык](tg://settings/language))
+- Обновление версии клиента до v7.4.4.1: полная синхронизация номера версии в version.txt, CMakeLists.txt, манифестах Windows (Telegram.rc), заголовках сборки и тестовом наборе ([О клиенте](tg://settings/extera))
+- Полное сохранение настроек: метод Config::set больше не удаляет дефолтные значения и сохраняет всё актуальное состояние настроек клиента в tdata/extera.json ([Настройки oxDesktop](tg://settings/extera))
+- Автоматическая ротация резервных копий: сохранение до 3 предыдущих версий конфигурации (extera_config.backup.1.json, .2.json, .3.json) при перезаписи настроек ([Резервные копии](tg://settings/extera))
+- Безопасный парсер диплинков: поддержка ссылок быстрого изменения настроек вида tg://settings/extera?[key]=[value] ([Настройки](tg://settings/extera))
+- Режим стримера: параметр streamer_mode теперь по умолчанию всегда выключен (false) ([Конфиденциальность](tg://settings/privacy))
+- Устранение сброса темы оформления: исправлена ошибка очистки кэша темы при перезапуске клиента, предотвращающая возврат к дефолтной теме ([Темы оформления](tg://settings/appearance))
+- Локальный Ghost Mode: локальный сброс счетчиков непрочитанных без отправки сетевых запросов MTP на сервер до ответа пользователя ([Режим призрака](tg://settings/extera))
+- Сеть и oxWsProxy: автоматическое включение прокси при задержке подключения свыше 10 секунд (по дефолту выключено), перенос журнала ws_proxy.log в корень приложения, удаление устаревшего модуля python tgws, прямой пропуск WebRTC-звонков, исправление загрузки стикеров, реакций и аватарок CDN/DC2/DC4 ([Прокси](tg://settings/proxy))
+- AyuGram Shot: холст скриншотов с чистой прозрачностью (без белых углов), сброс выделения сообщений после съемки, векторный рендеринг высокого разрешения 2x/3x ([Снимок](tg://settings/extera))
+- Пометка [Удалено]: аккуратный Material Design 3 pill badge вместо текстовой приписки ([Чаты](tg://settings/chats))
+- Адаптивный профиль чатов и каналов: динамическое скрытие/схлопывание кнопок Звук/Обсуждение/Подарок при прокрутке ([Профиль](tg://settings/chats))
+- Режим «Поверх всех окон»: подключение флага Qt::WindowStaysOnTopHint для опции фиксации окна ([Оформление](tg://settings/appearance))
+- Диалог обновления: устранен ложный баннер о предварительной версии для официальных релизов ([Обновления](tg://settings/extera))
+- Постоянное хранилище удаленных сообщений: шифрованное хранение удаленных сообщений и медиафайлов в tdata/deletes/ (ids/, messages/, media/, files/) ([Удаленные сообщения](tg://settings/chats))
+- Мультиязычный инсталлятор: поддержка испанского языка (ES) и автоматическое определение языка операционной системы для RU/EN/ES ([Установка](https://github.com/nanodevmc/oxDesktop))
+
+En:
+- Crowdin & Localization Quota Optimization: base Telegram strings (lang.strings) removed from Crowdin sync, keeping exclusively oxDesktop custom strings (oxdesktop_*.strings) to permanently respect Crowdin Free tier quotas ([Translation](tg://settings/extera))
+- Client Multi-Language Fallback: built-in lookup for custom translations in oxdesktop_%two_letters_code%.strings (RU/EN/ES/BE/UK) with graceful fallback to built-in Telegram Desktop translations for missing keys ([Language](tg://settings/language))
+- Client Version Bump to v7.4.4.1: complete synchronization across version.txt, CMakeLists.txt, Windows resources (Telegram.rc), build headers, and test suite ([About oxDesktop](tg://settings/extera))
+- Full Settings State Persistence: Config::set preserves all client options in tdata/extera.json without dropping default values ([oxDesktop Settings](tg://settings/extera))
+- Rolling Config Backup Rotation: preserves up to 3 versions of configuration backups (extera_config.backup.1.json, .2.json, .3.json) ([Backups](tg://settings/extera))
+- Safe Deep-Links Router: parsed and validated tg://settings/extera?[key]=[value] queries safely ([Settings](tg://settings/extera))
+- Streamer Mode Default False: guaranteed streamer mode is disabled by default across clean installs and resets ([Privacy](tg://settings/privacy))
+- Theme Reset Fix: eliminated cache clearance that caused custom themes to reset to default on client restart ([Themes](tg://settings/appearance))
+- Local Ghost Mode: client-side unread status clearing without dispatching network read history requests to server until user responds ([Ghost Mode](tg://settings/extera))
+- Network & oxWsProxy Upgrade: auto-enable after 10s connection timeout (default disabled), root logging for ws_proxy.log, cleanup of legacy python tgws, direct bypass for WebRTC calls, fixed CDN/DC2/DC4 media, reaction, and sticker routing ([Proxy](tg://settings/proxy))
+- AyuGram Shot Enhancements: true alpha canvas transparency (no white corners), automatic message deselection after shot export, vector Hi-DPI 2x/3x rendering ([Shot](tg://settings/extera))
+- Material Design 3 [Deleted] Pill Badge: modern pill badge for locally preserved deleted messages instead of raw text tag ([Chats](tg://settings/chats))
+- Profile Header Adaptive Collapse: seamless collapse of Sound/Discuss/Gift action buttons when scrolling and space is constrained ([Profile](tg://settings/chats))
+- Always On Top Window Hint: wired window_always_on_top configuration to Qt::WindowStaysOnTopHint ([Appearance](tg://settings/appearance))
+- Update Dialog False Beta Suppress: removed false preview/beta warning banner for official release builds ([Updates](tg://settings/extera))
+- Persistent Encrypted Deletions Storage: secure local storage in tdata/deletes/ (ids/, messages/, media/, files/) ([Deleted Messages](tg://settings/chats))
+- Multi-Language Installer: added Spanish localization and automatic OS language detection for RU/EN/ES in native installer ([Setup](https://github.com/nanodevmc/oxDesktop))
+
 7.4.4 (21.11.2026)
 
 Ru:

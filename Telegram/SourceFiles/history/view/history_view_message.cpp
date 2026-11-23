@@ -3179,6 +3179,29 @@ void Message::paintText(
 	if (appearingClip) {
 		p.restore();
 	}
+
+	const auto customMark = Extera::String(u"deleted_mark_text"_q);
+	const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
+	if (data()->originalText().text.endsWith(mark)) {
+		p.save();
+		p.setRenderHint(QPainter::Antialiasing);
+		const auto font = st::defaultTextStyle.font;
+		const auto textW = font->width(mark);
+		const auto badgeH = font->height + 4;
+		const auto badgeW = textW + 12;
+		const auto badgeX = trect.x();
+		const auto badgeY = trect.y() + trect.height() - badgeH;
+		const auto badgeRect = QRectF(badgeX, badgeY, badgeW, badgeH);
+
+		p.setBrush(QColor(230, 70, 70, 36));
+		p.setPen(Qt::NoPen);
+		p.drawRoundedRect(badgeRect, 6.0, 6.0);
+
+		p.setFont(font);
+		p.setPen(QColor(235, 75, 75));
+		p.drawText(badgeRect, Qt::AlignCenter, mark);
+		p.restore();
+	}
 }
 
 void Message::paintRichText(
@@ -7464,3 +7487,5 @@ void Message::paintSummarize(
 }
 
 } // namespace HistoryView
+
+// OxDesktop Custom UX/UI Update

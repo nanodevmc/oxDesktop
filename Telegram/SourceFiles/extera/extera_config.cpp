@@ -3,6 +3,8 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QFile>
 #include <QtCore/QSaveFile>
+#include <QtCore/QFileInfo>
+#include <QtCore/QDir>
 
 namespace Extera {
 namespace {
@@ -128,7 +130,8 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"app_icon"_q, QString() },
 		{ u"app_icon_square"_q, false },
 		{ u"full_members"_q, true },
-		{ u"ws_proxy"_q, true },
+		{ u"ws_proxy"_q, false },
+		{ u"ws_proxy_auto"_q, false },
 		{ u"ws_proxy_secret"_q, QString() },
 		{ u"ws_proxy_port"_q, 0 },
 		{ u"welcome_shown"_q, false },
@@ -161,6 +164,7 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"static_reactions_list"_q, u"❤️,👍,🔥,🎉,👏,⚡,🥰,😂,🤩,🙏"_q },
 		{ u"smart_bug_report_helper"_q, true },
 		{ u"mini_player_always_on_top"_q, false },
+		{ u"window_always_on_top"_q, false },
 		{ u"mini_player_compact"_q, false },
 		{ u"media_deduplication"_q, true },
 		{ u"polls_in_pm"_q, true },
@@ -219,14 +223,22 @@ void Config::load() {
 		return;
 	}
 	_loaded = true;
+	_values = Defaults();
 	auto file = QFile(path());
 	if (!file.open(QIODevice::ReadOnly)) {
 		return;
 	}
 	const auto document = QJsonDocument::fromJson(file.readAll());
 	if (document.isObject()) {
-		_values = document.object();
+		const auto loaded = document.object();
+		for (auto i = loaded.constBegin(); i != loaded.constEnd(); ++i) {
+			_values.insert(i.key(), i.value());
+		}
 	}
+}
+
+bool Config::hasKey(const QString &key) const {
+	return Defaults().contains(key);
 }
 
 QJsonValue Config::value(const QString &key) const {
@@ -240,16 +252,10 @@ QJsonValue Config::value(const QString &key) const {
 
 void Config::set(const QString &key, QJsonValue value) {
 	load();
-	if (value == Defaults().value(key)) {
-		if (!_values.contains(key)) {
-			return;
-		}
-		_values.remove(key);
-	} else if (_values.value(key) == value) {
+	if (_values.contains(key) && _values.value(key) == value) {
 		return;
-	} else {
-		_values.insert(key, value);
 	}
+	_values.insert(key, value);
 	_saveTimer.callOnce(kSaveDelay);
 	_changes.fire_copy(key);
 }
@@ -348,6 +354,22 @@ void Config::saveNow() {
 	if (_path.isEmpty()) {
 		return;
 	}
+	// Rolling config backup rotation (keep up to 3 versions)
+	const auto p = path();
+	if (QFile::exists(p)) {
+		const auto dir = QFileInfo(p).dir().absolutePath();
+		const auto b1 = dir + u"/extera_config.backup.1.json"_q;
+		const auto b2 = dir + u"/extera_config.backup.2.json"_q;
+		const auto b3 = dir + u"/extera_config.backup.3.json"_q;
+		if (QFile::exists(b2)) {
+			QFile::remove(b3);
+			QFile::rename(b2, b3);
+		}
+		if (QFile::exists(b1)) {
+			QFile::rename(b1, b2);
+		}
+		QFile::copy(p, b1);
+	}
 	auto file = QSaveFile(path());
 	if (!file.open(QIODevice::WriteOnly)) {
 		return;
@@ -358,6 +380,14 @@ void Config::saveNow() {
 
 bool IsBoolKey(const QString &key) {
 	return Defaults().value(key).isBool();
+}
+
+bool HasKey(const QString &key) {
+	return Defaults().contains(key);
+}
+
+void Set(const QString &key, QJsonValue value) {
+	Config::Instance().set(key, std::move(value));
 }
 
 bool Bool(const QString &key) {

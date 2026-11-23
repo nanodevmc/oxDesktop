@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/components/scheduled_messages.h"
 #include "data/components/welcome_messages.h"
 #include "data/notify/data_notify_settings.h"
+#include "data/data_changes.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
 #include "data/data_document.h"
@@ -277,16 +278,22 @@ void Histories::readInboxTill(
 		if (!Extera::Bool(u"ghost_mode"_q)) {
 			return false;
 		}
-		if (history->peer->asChannel()) {
+		if (history->peer->isChat() || history->peer->isMegagroup()) {
+			return Extera::Bool(u"ghost_hide_read_groups"_q);
+		} else if (history->peer->asChannel()) {
 			return Extera::Bool(u"ghost_hide_read_channels"_q);
 		} else if (history->peer->isUser()) {
 			return Extera::Bool(u"ghost_hide_read_pms"_q);
-		} else if (history->peer->isChat() || history->peer->isMegagroup()) {
-			return Extera::Bool(u"ghost_hide_read_groups"_q);
 		}
 		return false;
 	}();
 	if (isGhostHidden && !force) {
+		history->inboxRead(tillId);
+		history->setUnreadCount(0);
+		history->updateChatListEntry();
+		session().changes().historyUpdated(
+			history,
+			Data::HistoryUpdate::Flag::UnreadView);
 		Core::App().notifications().clearIncomingFromHistory(history);
 		return;
 	}

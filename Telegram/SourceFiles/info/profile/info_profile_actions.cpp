@@ -3610,3 +3610,5 @@ void BuildProfileDetailsSections(
 
 } // namespace Profile
 } // namespace Info
+
+// OxDesktop Custom UX/UI Update

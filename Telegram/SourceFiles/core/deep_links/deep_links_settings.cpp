@@ -57,6 +57,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_local_passcode.h"
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_extera.h"
+#include "extera/extera_config.h"
 #include "settings/cloud_password/settings_cloud_password_email_confirm.h"
 #include "settings/cloud_password/settings_cloud_password_input.h"
 #include "settings/cloud_password/settings_cloud_password_start.h"
@@ -524,41 +525,110 @@ void RegisterSettingsHandlers(Router &router) {
 		.action = SettingsSection{ ::Settings::FoldersId() },
 	});
 
+	const auto applyExteraSettings = [](
+			const Context &ctx,
+			::Settings::Type sectionId) -> Result {
+		if (!ctx.controller) {
+			return Result::NeedsAuth;
+		}
+		for (auto i = ctx.params.cbegin(); i != ctx.params.cend(); ++i) {
+			const auto &key = i.key();
+			const auto &val = i.value();
+			if (key == u"highlight"_q || key == u"param"_q || key == u"id"_q) {
+				continue;
+			}
+			if (!Extera::HasKey(key)) {
+				continue;
+			}
+			const auto valLower = val.trimmed().toLower();
+			if (Extera::IsBoolKey(key)) {
+				if (valLower == u"true"_q
+					|| valLower == u"1"_q
+					|| valLower == u"yes"_q
+					|| valLower == u"on"_q) {
+					Extera::Config::Instance().setBool(key, true);
+				} else if (valLower == u"false"_q
+					|| valLower == u"0"_q
+					|| valLower == u"no"_q
+					|| valLower == u"off"_q) {
+					Extera::Config::Instance().setBool(key, false);
+				}
+			} else {
+				bool ok = false;
+				const auto intVal = val.toInt(&ok);
+				if (ok) {
+					Extera::Config::Instance().setInt(key, intVal);
+				} else {
+					Extera::Config::Instance().setString(key, val);
+				}
+			}
+		}
+		Extera::Config::Instance().saveNow();
+		const auto highlight = ctx.params.value(u"highlight"_q);
+		if (!highlight.isEmpty()) {
+			ctx.controller->setHighlightControlId(highlight);
+		}
+		const auto targetSection = ResolveSectionForHighlight(
+			&ctx.controller->session(),
+			highlight,
+			sectionId);
+		ctx.controller->showSettings(targetSection);
+		return Result::Handled;
+	};
+
 	router.add(u"settings"_q, {
 		.path = u"extera"_q,
-		.action = SettingsSection{ ::Settings::ExteraId() },
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraId());
+		}},
 	});
 	router.add(u"settings"_q, {
 		.path = u"extera/general"_q,
-		.action = SettingsSection{ ::Settings::ExteraGeneralId() },
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraGeneralId());
+		}},
 	});
 	router.add(u"settings"_q, {
 		.path = u"extera/appearance"_q,
-		.action = SettingsSection{ ::Settings::ExteraAppearanceId() },
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraAppearanceId());
+		}},
 	});
 	router.add(u"settings"_q, {
 		.path = u"extera/chats"_q,
-		.action = SettingsSection{ ::Settings::ExteraChatsId() },
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraChatsId());
+		}},
 	});
 	router.add(u"settings"_q, {
 		.path = u"extera/plugins"_q,
-		.action = SettingsSection{ ::Settings::ExteraPluginsId() },
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraPluginsId());
+		}},
 	});
 	router.add(u"settings"_q, {
 		.path = u"extera/plugins/engine"_q,
-		.action = SettingsSection{ ::Settings::ExteraPluginsEngineId() },
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraPluginsEngineId());
+		}},
 	});
 	router.add(u"settings"_q, {
 		.path = u"extera/navigation"_q,
-		.action = SettingsSection{ ::Settings::ExteraNavigationId() },
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraNavigationId());
+		}},
 	});
 	router.add(u"settings"_q, {
 		.path = u"extera/aichat"_q,
-		.action = SettingsSection{ ::Settings::ExteraAiChatId() },
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraAiChatId());
+		}},
 	});
 	router.add(u"settings"_q, {
 		.path = u"extera/other"_q,
-		.action = SettingsSection{ ::Settings::ExteraOtherId() },
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraOtherId());
+		}},
 	});
 
 	router.add(u"settings"_q, {
@@ -2259,7 +2329,26 @@ QString SettingsDeepLink(
 		::Settings::Type section,
 		const QString &controlId) {
 	const auto &router = Router::Instance();
-	const auto sectionPath = [&] {
+	const auto sectionPath = [&]() -> std::optional<QString> {
+		if (section == ::Settings::ExteraId()) {
+			return u"extera"_q;
+		} else if (section == ::Settings::ExteraGeneralId()) {
+			return u"extera/general"_q;
+		} else if (section == ::Settings::ExteraAppearanceId()) {
+			return u"extera/appearance"_q;
+		} else if (section == ::Settings::ExteraChatsId()) {
+			return u"extera/chats"_q;
+		} else if (section == ::Settings::ExteraPluginsId()) {
+			return u"extera/plugins"_q;
+		} else if (section == ::Settings::ExteraPluginsEngineId()) {
+			return u"extera/plugins/engine"_q;
+		} else if (section == ::Settings::ExteraNavigationId()) {
+			return u"extera/navigation"_q;
+		} else if (section == ::Settings::ExteraAiChatId()) {
+			return u"extera/aichat"_q;
+		} else if (section == ::Settings::ExteraOtherId()) {
+			return u"extera/other"_q;
+		}
 		return router.findPath(u"settings"_q, [&](const Action &action) {
 			const auto target = std::get_if<SettingsSection>(&action);
 			return target && (target->sectionId == section);

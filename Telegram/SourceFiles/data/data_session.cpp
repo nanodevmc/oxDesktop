@@ -3367,16 +3367,9 @@ void Session::processMessagesDeleted(
 				auto original = item->originalText();
 				const auto customMark = Extera::String(u"deleted_mark_text"_q);
 				const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
-				const auto tag = u"\n"_q + mark;
-				if (!original.text.endsWith(tag) && !original.text.endsWith(mark)) {
-					auto entities = original.entities;
-					const auto offset = int(original.text.size() + 1);
-					const auto length = int(mark.size());
-					entities.push_back(EntityInText(
-						EntityType::Italic,
-						offset,
-						length));
-					item->setText({ original.text + tag, std::move(entities) });
+				const auto tag = u"\n "_q + mark;
+				if (!original.text.endsWith(mark)) {
+					item->setText({ original.text + tag, original.entities });
 					session().changes().messageUpdated(
 						item,
 						Data::MessageUpdate::Flag::Edited);
@@ -3413,16 +3406,9 @@ void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 				auto original = item->originalText();
 				const auto customMark = Extera::String(u"deleted_mark_text"_q);
 				const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
-				const auto tag = u"\n"_q + mark;
-				if (!original.text.endsWith(tag) && !original.text.endsWith(mark)) {
-					auto entities = original.entities;
-					const auto offset = int(original.text.size() + 1);
-					const auto length = int(mark.size());
-					entities.push_back(EntityInText(
-						EntityType::Italic,
-						offset,
-						length));
-					item->setText({ original.text + tag, std::move(entities) });
+				const auto tag = u"\n "_q + mark;
+				if (!original.text.endsWith(mark)) {
+					item->setText({ original.text + tag, original.entities });
 					session().changes().messageUpdated(
 						item,
 						Data::MessageUpdate::Flag::Edited);
@@ -6317,3 +6303,5 @@ HistoryItem *Session::messageWithPeer(PeerId id) const {
 }
 
 } // namespace Data
+
+// OxDesktop Custom UX/UI Update

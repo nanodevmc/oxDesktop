@@ -1,6 +1,14 @@
 #include "extera/extera_lang.h"
 
+#include <QtCore/QFile>
+#include <QtCore/QFileInfo>
+#include <QtCore/QDir>
+#include <QtCore/QCoreApplication>
 #include <cstring>
+#include <vector>
+#include <utility>
+#include <unordered_map>
+#include <string>
 
 namespace Extera {
 namespace {
@@ -664,9 +672,191 @@ constexpr Entry kRussianEntries[] = {
 		{ "lng_oxd_ai_test_error", u"\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 API! \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043A\u043B\u044E\u0447, URL \u0438 \u043C\u043E\u0434\u0435\u043B\u044C." },
 };
 
+using StringPair = std::pair<QByteArray, QByteArray>;
+
+std::vector<StringPair> ParseStringsContent(const QByteArray &content) {
+	std::vector<StringPair> result;
+	const char *p = content.constData();
+	const char *end = p + content.size();
+
+	auto skipWhitespacesAndComments = [&]() {
+		while (p < end) {
+			if (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') {
+				++p;
+			} else if (*p == '/' && p + 1 < end && *(p + 1) == '/') {
+				p += 2;
+				while (p < end && *p != '\n') {
+					++p;
+				}
+			} else if (*p == '/' && p + 1 < end && *(p + 1) == '*') {
+				p += 2;
+				while (p + 1 < end && !(*p == '*' && *(p + 1) == '/')) {
+					++p;
+				}
+				if (p + 1 < end) {
+					p += 2;
+				}
+			} else {
+				break;
+			}
+		}
+	};
+
+	while (p < end) {
+		skipWhitespacesAndComments();
+		if (p >= end) break;
+		if (*p != '"') {
+			++p;
+			continue;
+		}
+		// Read key
+		++p;
+		const char *keyStart = p;
+		while (p < end && *p != '"' && *p != '\n') {
+			++p;
+		}
+		if (p >= end || *p != '"') continue;
+		QByteArray key(keyStart, int(p - keyStart));
+		++p; // skip closing quote
+
+		skipWhitespacesAndComments();
+		if (p >= end || *p != '=') continue;
+		++p; // skip '='
+
+		skipWhitespacesAndComments();
+		if (p >= end || *p != '"') continue;
+		++p; // skip opening quote
+
+		QByteArray value;
+		while (p < end && *p != '"') {
+			if (*p == '\\' && p + 1 < end) {
+				++p;
+				if (*p == 'n') {
+					value.append('\n');
+				} else if (*p == '"') {
+					value.append('"');
+				} else if (*p == '\\') {
+					value.append('\\');
+				} else {
+					value.append('\\');
+					value.append(*p);
+				}
+			} else {
+				value.append(*p);
+			}
+			++p;
+		}
+		if (p < end && *p == '"') {
+			++p; // skip closing quote
+		}
+		skipWhitespacesAndComments();
+		if (p < end && *p == ';') {
+			++p;
+		}
+		result.emplace_back(std::move(key), std::move(value));
+	}
+	return result;
+}
+
+const std::vector<StringPair> &GetCustomEntries(const QString &twoLetterCode) {
+	static std::unordered_map<std::string, std::vector<StringPair>> cache;
+	const auto stdKey = twoLetterCode.toLower().toStdString();
+	auto it = cache.find(stdKey);
+	if (it != cache.end()) {
+		return it->second;
+	}
+
+	const auto fileName = QString::fromLatin1("oxdesktop_%1.strings").arg(twoLetterCode.toLower());
+	const QString candidatePaths[] = {
+		QString::fromLatin1(":/langs/") + fileName,
+		QString::fromLatin1(":/Telegram/Resources/langs/") + fileName,
+		QDir::currentPath() + QString::fromLatin1("/Telegram/Resources/langs/") + fileName,
+		QDir::currentPath() + QString::fromLatin1("/Resources/langs/") + fileName,
+		QDir::currentPath() + QString::fromLatin1("/langs/") + fileName,
+		QDir::currentPath() + QString::fromLatin1("/") + fileName,
+		QCoreApplication::applicationDirPath() + QString::fromLatin1("/Telegram/Resources/langs/") + fileName,
+		QCoreApplication::applicationDirPath() + QString::fromLatin1("/Resources/langs/") + fileName,
+		QCoreApplication::applicationDirPath() + QString::fromLatin1("/langs/") + fileName,
+		QCoreApplication::applicationDirPath() + QString::fromLatin1("/") + fileName,
+		QString::fromLatin1("Telegram/Resources/langs/") + fileName,
+		QString::fromLatin1("Resources/langs/") + fileName,
+		fileName,
+	};
+
+	QByteArray content;
+	for (const auto &path : candidatePaths) {
+		QFile f(path);
+		if (f.open(QIODevice::ReadOnly)) {
+			content = f.readAll();
+			f.close();
+			if (!content.isEmpty()) {
+				break;
+			}
+		}
+	}
+
+	auto &entries = cache[stdKey];
+	if (!content.isEmpty()) {
+		entries = ParseStringsContent(content);
+	}
+	return entries;
+}
+
 } // namespace
 
+bool ApplyCustom(const QString &twoLetterCode, Fn<void(const QByteArray&, const QByteArray&)> apply) {
+	const auto &pairs = GetCustomEntries(twoLetterCode);
+	if (!pairs.empty()) {
+		for (const auto &pair : pairs) {
+			apply(pair.first, pair.second);
+			const auto keyLen = pair.first.size();
+			if (keyLen > 11 && pair.first.startsWith("lng_extera_")) {
+				apply(QByteArray("lng_ox_") + pair.first.mid(11), pair.second);
+			}
+		}
+		return true;
+	}
+	if (twoLetterCode.compare(QString::fromLatin1("ru"), Qt::CaseInsensitive) == 0) {
+		ApplyRussian(apply);
+		return true;
+	}
+	return false;
+}
+
+QString LookupCustom(const QString &twoLetterCode, std::string_view key) {
+	const auto qKey = QByteArray::fromRawData(key.data(), int(key.size()));
+	const auto &pairs = GetCustomEntries(twoLetterCode);
+	for (const auto &pair : pairs) {
+		if (pair.first == qKey) {
+			return QString::fromUtf8(pair.second);
+		}
+	}
+	if (qKey.startsWith("lng_ox_")) {
+		const auto altKey = QByteArray("lng_extera_") + qKey.mid(7);
+		for (const auto &pair : pairs) {
+			if (pair.first == altKey) {
+				return QString::fromUtf8(pair.second);
+			}
+		}
+	}
+	if (twoLetterCode.compare(QString::fromLatin1("ru"), Qt::CaseInsensitive) == 0) {
+		return LookupRussian(key);
+	}
+	return QString();
+}
+
 void ApplyRussian(Fn<void(const QByteArray&, const QByteArray&)> apply) {
+	const auto &pairs = GetCustomEntries(QString::fromLatin1("ru"));
+	if (!pairs.empty()) {
+		for (const auto &pair : pairs) {
+			apply(pair.first, pair.second);
+			const auto keyLen = pair.first.size();
+			if (keyLen > 11 && pair.first.startsWith("lng_extera_")) {
+				apply(QByteArray("lng_ox_") + pair.first.mid(11), pair.second);
+			}
+		}
+		return;
+	}
 	for (const auto &entry : kRussianEntries) {
 		const auto utf8 = QString::fromUtf16(entry.value).toUtf8();
 		apply(QByteArray(entry.key), utf8);
@@ -678,6 +868,10 @@ void ApplyRussian(Fn<void(const QByteArray&, const QByteArray&)> apply) {
 }
 
 QString LookupRussian(std::string_view key) {
+	const auto custom = LookupCustom(QString::fromLatin1("ru"), key);
+	if (!custom.isEmpty()) {
+		return custom;
+	}
 	for (const auto &entry : kRussianEntries) {
 		if (key == entry.key) {
 			return QString::fromUtf16(entry.value);

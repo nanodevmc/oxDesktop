@@ -62,6 +62,10 @@ std::optional<RenderedMessage> RenderSingleItem(
 
 	{
 		Painter p(&fullImage);
+		p.setRenderHint(QPainter::Antialiasing);
+		p.setRenderHint(QPainter::SmoothPixmapTransform);
+		p.setRenderHint(QPainter::TextAntialiasing);
+
 		auto context = controller->preparePaintContext({
 			.theme = controller->currentChatTheme(),
 			.clip = QRect(0, 0, viewW, viewH),
@@ -71,6 +75,11 @@ std::optional<RenderedMessage> RenderSingleItem(
 			.visibleAreaHeight = viewH,
 		});
 		context.outbg = view->hasOutLayout();
+		context.selection = TextSelection();
+		context.fullMessageSelected = false;
+		context.messageSelection = nullptr;
+		context.highlight = Ui::ChatPaintHighlight();
+
 		view->draw(p, context);
 	}
 

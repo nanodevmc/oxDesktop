@@ -1072,10 +1072,10 @@ Window::Theme::Saved readThemeUsingKey(FileKey key) {
 std::optional<QString> InitialLoadThemeUsingKey(FileKey key) {
 	auto read = readThemeUsingKey(key);
 	const auto result = read.object.pathAbsolute;
-	if (read.object.content.isEmpty()) {
-		DEBUG_LOG(("Theme: Could not read content for key: %1").arg(key));
+	if (read.object.content.isEmpty() && read.cache.colors.isEmpty()) {
+		DEBUG_LOG(("Theme: Could not read content or cache for key: %1").arg(key));
 	}
-	if (read.object.content.isEmpty()
+	if ((read.object.content.isEmpty() && read.cache.colors.isEmpty())
 		|| !Window::Theme::Initialize(std::move(read))) {
 		DEBUG_LOG(("Theme: Could not initialized for key: %1").arg(key));
 		return std::nullopt;
@@ -1221,8 +1221,7 @@ void InitialLoadTheme() {
 				).arg(*path));
 		}
 	} else {
-		DEBUG_LOG(("Theme: could not load, clearing.."));
-		clearTheme();
+		DEBUG_LOG(("Theme: could not load, preserving theme settings.."));
 	}
 }
 

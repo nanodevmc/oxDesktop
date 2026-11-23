@@ -229,9 +229,9 @@ void Launch() {
 	const auto process = new QProcess(qApp);
 	state.process = process;
 	const auto nativeBin = NativeBinary();
-	const auto logDir = cWorkingDir() + u"tdata/"_q;
+	const auto logDir = cWorkingDir();
 	QDir().mkpath(logDir);
-	const auto logFile = logDir + u"tgws.log"_q;
+	const auto logFile = logDir + u"ox_ws_proxy.log"_q;
 
 	if (!nativeBin.isEmpty()) {
 		process->setWorkingDirectory(QFileInfo(nativeBin).absolutePath());

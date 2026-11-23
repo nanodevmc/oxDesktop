@@ -19,6 +19,8 @@ public:
 	void setBool(const QString &key, bool value);
 	void setInt(const QString &key, int value);
 	void setString(const QString &key, const QString &value);
+	void set(const QString &key, QJsonValue value);
+	[[nodiscard]] bool hasKey(const QString &key) const;
 
 	[[nodiscard]] rpl::producer<bool> boolChanges(const QString &key) const;
 	[[nodiscard]] rpl::producer<int> intChanges(const QString &key) const;
@@ -35,7 +37,6 @@ private:
 	Config();
 
 	[[nodiscard]] QJsonValue value(const QString &key) const;
-	void set(const QString &key, QJsonValue value);
 	void load();
 	[[nodiscard]] QString path() const;
 
@@ -49,6 +50,8 @@ private:
 
 [[nodiscard]] bool Bool(const QString &key);
 [[nodiscard]] bool IsBoolKey(const QString &key);
+[[nodiscard]] bool HasKey(const QString &key);
+void Set(const QString &key, QJsonValue value);
 [[nodiscard]] int Int(const QString &key);
 [[nodiscard]] QString String(const QString &key);
 [[nodiscard]] int RecentStickersLimit(int serverLimit);

@@ -6103,6 +6103,7 @@ void HistoryWidget::send(Api::SendOptions options) {
 	if (!_history) {
 		return;
 	}
+	session().data().histories().readInbox(_history, true /* force */);
 	if (const auto value = Extera::InlineMathValue(_field->getLastText())) {
 		auto cursor = _field->textCursor();
 		cursor.movePosition(QTextCursor::End);
