@@ -150,7 +150,7 @@ void DecorateMd3Divider(not_null<QWidget*> divider) {
 		}
 		auto hq = PainterHighQualityEnabler(p);
 		auto color = st::shadowFg->c;
-		color.setAlphaF(std::max(color.alphaF(), 0.16));
+		color.setAlphaF(std::max(color.alphaF(), 0.16f));
 		p.setPen(Qt::NoPen);
 		p.setBrush(color);
 		p.drawRoundedRect(QRectF(inset, 0., w, h), h * 0.5, h * 0.5);
