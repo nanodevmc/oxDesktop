@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 360
     env:
       SCCACHE_DIR: "${{ github.workspace }}\\.sccache"
-      SCCACHE_CACHE_SIZE: "3500M"
+      SCCACHE_CACHE_SIZE: "10G"
       SCCACHE_DIRECT: "true"
       SCCACHE_IDLE_TIMEOUT: "0"
       CLEAR_QT_BUILD_TREE: "1"
@@ -238,13 +238,21 @@ jobs:
           $toolsComponent = 'Microsoft.VisualStudio.Component.VC.14.44.17.14.x86.x64'
           $atlComponent = 'Microsoft.VisualStudio.Component.VC.14.44.17.14.ATL'
           $vsPath = @(& $vswhere -latest -products '*' -requires $toolsComponent -property installationPath)[0]
-          if (-not $vsPath) { throw "No Visual Studio instance provides $toolsComponent." }
+          if (-not $vsPath) {
+            $vsPath = @(& $vswhere -latest -products '*' -property installationPath)[0]
+          }
+          if (-not $vsPath) { throw "No Visual Studio instance found." }
 
           $toolset = Get-ChildItem (Join-Path $vsPath 'VC\Tools\MSVC') -Directory |
             Where-Object { $_.Name -like '14.44.*' } |
             Sort-Object Name -Descending |
             Select-Object -First 1
-          if (-not $toolset) { throw "The selected Visual Studio instance has no 14.44 toolset." }
+          if (-not $toolset) {
+            $toolset = Get-ChildItem (Join-Path $vsPath 'VC\Tools\MSVC') -Directory |
+              Sort-Object Name -Descending |
+              Select-Object -First 1
+          }
+          if (-not $toolset) { throw "The selected Visual Studio instance has no suitable MSVC toolset." }
           $header = Join-Path $toolset.FullName 'atlmfc\include\atlbase.h'
           "VCVARS64=$vsPath\VC\Auxiliary\Build\vcvars64.bat" >> $env:GITHUB_ENV
 
@@ -342,32 +350,33 @@ jobs:
           Copy-Item nuget\tools\include "$dest\include" -Recurse -Force
           Copy-Item nuget\tools\libs "$dest\libs" -Recurse -Force
 
+      - name: Enable sccache
+        if: steps.diff_check.outputs.skip_cpp_build != 'true'
+        id: sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+
       - name: Restore Compiler cache (sccache)
         if: steps.diff_check.outputs.skip_cpp_build != 'true'
         uses: actions/cache/restore@v4
         with:
           path: .sccache
-          key: win64-sccache-v3-${{ github.sha }}-${{ github.run_id }}
+          key: windows-sccache-${{ runner.os }}-${{ hashFiles('tdesktop/Telegram/**/*.cpp', 'tdesktop/Telegram/**/*.h', 'Telegram/**/*.cpp', 'Telegram/**/*.h') }}
           restore-keys: |
-            win64-sccache-v3-${{ github.sha }}-
-            win64-sccache-v3-
+            windows-sccache-${{ runner.os }}-
 
       - name: Check restored sccache size
         if: steps.diff_check.outputs.skip_cpp_build != 'true'
         shell: pwsh
         run: |
-          $sizeMb = 0
-          if (Test-Path '.sccache') {
-            $bytes = (Get-ChildItem -Path '.sccache' -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+          $sizeMb = 0.0
+          $sccacheDir = if ($env:SCCACHE_DIR) { $env:SCCACHE_DIR } else { Join-Path $env:GITHUB_WORKSPACE '.sccache' }
+          if (Test-Path $sccacheDir) {
+            $bytes = (Get-ChildItem -Path $sccacheDir -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
             if ($bytes) { $sizeMb = [math]::Round($bytes / 1MB, 2) }
           }
           "RESTORED_SCCACHE_MB=$sizeMb" >> $env:GITHUB_ENV
           Write-Host "Restored sccache size: $sizeMb MB"
-
-      - name: Enable sccache
-        if: steps.diff_check.outputs.skip_cpp_build != 'true'
-        id: sccache
-        uses: mozilla-actions/sccache-action@v0.0.11
+          sccache --version
 
       # -vcvars_ver=14.44 is what docs/building-win.md pins for Windows 7
       # support. If a runner's VS install doesn't ship that exact toolset
@@ -433,22 +442,13 @@ jobs:
           API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
         run: |
           call "%VCVARS64%" -vcvars_ver=14.44
+          set "SCCACHE_CACHE_SIZE=10G"
           sccache --start-server
           sccache --show-stats
           set "CREDS=-D TDESKTOP_API_ID=%API_ID% -D TDESKTOP_API_HASH=%API_HASH%"
           if "%API_ID%"=="" (
             echo No API secrets, using TEST ONLY credentials
             set "CREDS=-D TDESKTOP_API_TEST=ON"
-          )
-          if "%OUT_CACHE_HIT%"=="true" (
-            if exist "tdesktop\out\build-Release.ninja" (
-              echo Using restored out build tree configuration.
-              goto do_build
-            )
-            if exist "tdesktop\out\build.ninja" (
-              echo Using restored out build tree configuration.
-              goto do_build
-            )
           )
           cd tdesktop\Telegram
           call configure.bat %CREDS% ^
@@ -458,13 +458,12 @@ jobs:
             -D CMAKE_CXX_COMPILER_LAUNCHER=sccache ^
             -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
             -D CMAKE_POLICY_CMP0141=NEW
-          cd ..\..
-          :do_build
-          cd tdesktop\out
+          cd /d "%GITHUB_WORKSPACE%\tdesktop\out"
           cmake --build . --config Release --target Telegram --parallel
+          sccache --show-stats
 
       - name: Report sccache statistics and flush
-        if: steps.diff_check.outputs.skip_cpp_build != 'true' && always() && steps.sccache.outcome == 'success'
+        if: always() && steps.diff_check.outputs.skip_cpp_build != 'true' && steps.sccache.outcome == 'success'
         continue-on-error: true
         shell: pwsh
         run: |
@@ -477,18 +476,25 @@ jobs:
 
       - name: Validate sccache size before save
         id: check_sccache
-        if: steps.diff_check.outputs.skip_cpp_build != 'true' && always()
+        if: always() && steps.diff_check.outputs.skip_cpp_build != 'true'
         shell: pwsh
         run: |
-          $currentMb = 0
-          if (Test-Path '.sccache') {
-            $bytes = (Get-ChildItem -Path '.sccache' -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+          $sccacheDir = if ($env:SCCACHE_DIR) { $env:SCCACHE_DIR } else { Join-Path $env:GITHUB_WORKSPACE '.sccache' }
+          $currentMb = 0.0
+          if (Test-Path $sccacheDir) {
+            $bytes = (Get-ChildItem -Path $sccacheDir -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
             if ($bytes) { $currentMb = [math]::Round($bytes / 1MB, 2) }
           }
-          $restoredMb = [double]($env:RESTORED_SCCACHE_MB ?? 0)
+          $restoredMb = 0.0
+          if ($env:RESTORED_SCCACHE_MB -match '^\d+(\.\d+)?$') {
+            $restoredMb = [double]$env:RESTORED_SCCACHE_MB
+          }
           Write-Host "Current sccache: $currentMb MB | Restored sccache: $restoredMb MB"
           $minAllowed = $restoredMb - 100
-          if ($restoredMb -gt 100 -and $currentMb -lt $minAllowed) {
+          if ($currentMb -le 0) {
+            Write-Host "Sccache directory is empty (0 MB). Skipping save."
+            "should_save=false" >> $env:GITHUB_OUTPUT
+          } elseif ($restoredMb -gt 100 -and $currentMb -lt $minAllowed) {
             Write-Warning "Current sccache ($currentMb MB) is smaller than restored ($restoredMb MB) by more than 100 MB. Skipping save to preserve existing cache!"
             "should_save=false" >> $env:GITHUB_OUTPUT
           } else {
@@ -497,11 +503,11 @@ jobs:
           }
 
       - name: Save Compiler cache (sccache)
-        if: steps.diff_check.outputs.skip_cpp_build != 'true' && always() && steps.check_sccache.outputs.should_save == 'true'
+        if: always() && steps.diff_check.outputs.skip_cpp_build != 'true' && steps.check_sccache.outputs.should_save == 'true'
         uses: actions/cache/save@v4
         with:
           path: .sccache
-          key: win64-sccache-v3-${{ github.sha }}-${{ github.run_id }}
+          key: windows-sccache-${{ runner.os }}-${{ hashFiles('tdesktop/Telegram/**/*.cpp', 'tdesktop/Telegram/**/*.h', 'Telegram/**/*.cpp', 'Telegram/**/*.h') }}
 
       - name: Package
         shell: pwsh
@@ -578,13 +584,13 @@ jobs:
           "BUILD_VERSION=$packageVersion" >> $env:GITHUB_ENV
 
       - name: Prune older sccache entries
-        if: steps.diff_check.outputs.skip_cpp_build != 'true' && always()
+        if: always() && steps.diff_check.outputs.skip_cpp_build != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           try {
-            $cachesJson = gh api -H "Accept: application/vnd.github+json" "/repos/${{ github.repository }}/actions/caches?key=win64-sccache-v3-"
+            $cachesJson = gh api -H "Accept: application/vnd.github+json" "/repos/${{ github.repository }}/actions/caches?key=windows-sccache-${{ runner.os }}-"
             $caches = ($cachesJson | ConvertFrom-Json).actions_caches | Sort-Object -Property last_accessed_at -Descending
             if ($caches.Count -gt 1) {
               $toDelete = $caches | Select-Object -Skip 1

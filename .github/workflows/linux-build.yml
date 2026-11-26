@@ -230,7 +230,7 @@ jobs:
 
       - name: Validate ccache size before save
         id: check_ccache
-        if: steps.diff_check.outputs.skip_cpp_build != 'true' && always()
+        if: always() && steps.diff_check.outputs.skip_cpp_build != 'true'
         run: |
           CURRENT_MB=0
           if [ -d ".ccache" ]; then
@@ -248,14 +248,14 @@ jobs:
           fi
 
       - name: Save Compiler cache (ccache)
-        if: steps.diff_check.outputs.skip_cpp_build != 'true' && always() && steps.check_ccache.outputs.should_save == 'true'
+        if: always() && steps.diff_check.outputs.skip_cpp_build != 'true' && steps.check_ccache.outputs.should_save == 'true'
         uses: actions/cache/save@v4
         with:
           path: .ccache
           key: ${{ runner.os }}-ccache-${{ github.sha }}-${{ github.run_id }}
 
       - name: Prune older ccache entries
-        if: steps.diff_check.outputs.skip_cpp_build != 'true' && always()
+        if: always() && steps.diff_check.outputs.skip_cpp_build != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

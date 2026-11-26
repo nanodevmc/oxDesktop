@@ -1,4 +1,4 @@
-﻿# oxDesktop Windows Native Installer
+﻿
 # Usage:
 #   irm https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.ps1 | iex
 
@@ -148,8 +148,41 @@ if ($release -and $release.tag_name) {
             if ($curNums[$k] -gt $relNums[$k]) { $isNewer = $true; break }
             if ($curNums[$k] -lt $relNums[$k]) { break }
         }
+        $isPreRelease = $installedVer -match "(?i)(beta|dev|alpha|preview|rc)"
+        $hasPrereleaseDowngrade = $false
         if ($isNewer) {
-            Write-Step "У вас установлена предварительная версия (бета/dev): $installedVer > $($release.tag_name)" "You have a newer preview/beta version installed: $installedVer > $($release.tag_name)"
+            $hasPrereleaseDowngrade = $true
+        } elseif ($isPreRelease) {
+            $isRelNewer = $false
+            for ($k = 0; $k -lt 5; $k++) {
+                if ($relNums[$k] -gt $curNums[$k]) { $isRelNewer = $true; break }
+                if ($relNums[$k] -lt $curNums[$k]) { break }
+            }
+            if (-not $isRelNewer) {
+                $hasPrereleaseDowngrade = $true
+            }
+        }
+
+        if ($hasPrereleaseDowngrade) {
+            if (-not $Quiet) {
+                Write-Warn "Обнаружена более новая или предварительная (бета/dev) версия oxDesktop ($installedVer)." "A newer or pre-release (beta/dev) version of oxDesktop is installed ($installedVer)."
+                $promptMsg = if ($isRu) {
+                    "Вы действительно хотите установить версию $($release.tag_name)? [Y/N Д/Н]: "
+                } else {
+                    "Do you really want to install version $($release.tag_name)? [Y/N D/N]: "
+                }
+                Write-Host $promptMsg -NoNewline -ForegroundColor Cyan
+                $ans = Read-Host
+                $trimmed = if ($ans) { $ans.Trim().ToLower() } else { "" }
+                if ($trimmed -ne "y" -and $trimmed -ne "yes" -and $trimmed -ne "д" -and $trimmed -ne "да") {
+                    if ($isRu) {
+                        Write-Host "Установка отменена пользователем." -ForegroundColor Yellow
+                    } else {
+                        Write-Host "Installation canceled by user." -ForegroundColor Yellow
+                    }
+                    return
+                }
+            }
         }
     }
 }

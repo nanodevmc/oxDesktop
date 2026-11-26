@@ -2009,7 +2009,7 @@ void Widget::updateControlsVisibility(bool fast) {
 		suggestions->setVisible(!_showAnimation);
 	}
 	_scroll->setVisible(!_suggestions && _hidingSuggestions.empty());
-	updateStoriesVisibility(fast ? anim::type::instant : anim::type::normal);
+	updateStoriesVisibility();
 	if ((_openedFolder || _openedForum || _openedCommunity)
 		&& _searchHasFocus) {
 		setInnerFocus();

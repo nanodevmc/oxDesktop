@@ -3,6 +3,8 @@ use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 
+use crate::version::is_downgrade_or_prerelease;
+
 static PAYLOAD_ZIP: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/payload.zip"));
 static ICON_PNG: &[u8] = include_bytes!("../assets/delta_avatar.png");
 
@@ -36,6 +38,40 @@ fn which(cmd: &str) -> bool {
     false
 }
 
+fn detect_installed_version(target_dir: &Path) -> Option<String> {
+    if let Ok(output) = std::process::Command::new("oxdesktop").arg("--version").output() {
+        if output.status.success() {
+            let s = String::from_utf8_lossy(&output.stdout);
+            if let Some(line) = s.lines().next() {
+                let trimmed = line.trim();
+                if !trimmed.is_empty() {
+                    return Some(trimmed.to_string());
+                }
+            }
+        }
+    }
+
+    let changelog = target_dir.join("changelog.txt");
+    if let Ok(content) = fs::read_to_string(&changelog) {
+        if let Some(line) = content.lines().next() {
+            let trimmed = line.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+
+    let version_file = target_dir.join("version.txt");
+    if let Ok(content) = fs::read_to_string(&version_file) {
+        let trimmed = content.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+    }
+
+    None
+}
+
 fn run_terminal_flow(target_dir: &Path, home: &str, silent: bool) {
     let header = format!("oxDesktop v{}", INSTALLER_VERSION.strip_prefix('v').unwrap_or(INSTALLER_VERSION));
     println!("\x1b[38;2;245;92;37m");
@@ -47,6 +83,24 @@ fn run_terminal_flow(target_dir: &Path, home: &str, silent: bool) {
     println!("  • GitHub: https://github.com/nanodevmc/oxDesktop\n");
 
     println!("Каталог установки: \x1b[1m{}\x1b[0m", target_dir.display());
+
+    let installed_ver = detect_installed_version(target_dir);
+    if let Some(ref cur) = installed_ver {
+        if is_downgrade_or_prerelease(cur, INSTALLER_VERSION) && !silent {
+            let cur_clean = cur.strip_prefix('v').unwrap_or(cur);
+            let target_clean = INSTALLER_VERSION.strip_prefix('v').unwrap_or(INSTALLER_VERSION);
+            println!("\x1b[33mВнимание:\x1b[0m Обнаружена более новая или предварительная (бета/dev) версия oxDesktop ({}).", cur_clean);
+            print!("Вы действительно хотите установить более раннюю версию ({})? [Y/N Д/Н]: ", target_clean);
+            let _ = std::io::stdout().flush();
+            let mut input = String::new();
+            let _ = std::io::stdin().read_line(&mut input);
+            let trimmed = input.trim().to_lowercase();
+            if trimmed != "y" && trimmed != "yes" && trimmed != "д" && trimmed != "да" {
+                println!("Установка отменена пользователем.");
+                return;
+            }
+        }
+    }
 
     if !silent {
         print!("Начать установку? [Y/n]: ");
@@ -76,6 +130,33 @@ fn run_terminal_flow(target_dir: &Path, home: &str, silent: bool) {
 }
 
 fn run_zenity_flow(target_dir: &Path, home: &str) {
+    let installed_ver = detect_installed_version(target_dir);
+    if let Some(ref cur) = installed_ver {
+        if is_downgrade_or_prerelease(cur, INSTALLER_VERSION) {
+            let warn_text = format!(
+                "Обнаружена более новая или предварительная (бета/dev) версия oxDesktop ({}).\n\nВы действительно хотите установить более раннюю версию (v{})?",
+                cur.strip_prefix('v').unwrap_or(cur),
+                INSTALLER_VERSION.strip_prefix('v').unwrap_or(INSTALLER_VERSION)
+            );
+            let warn_status = std::process::Command::new("zenity")
+                .arg("--question")
+                .arg("--title=Предупреждение о версии oxDesktop")
+                .arg(format!("--text={}", warn_text))
+                .arg("--ok-label=Продолжить")
+                .arg("--cancel-label=Отмена")
+                .arg("--width=440")
+                .status();
+
+            if let Ok(st) = warn_status {
+                if !st.success() {
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+    }
+
     let question = format!(
         "Установить oxDesktop v{} в:\n{}\n\nКанал: t.me/oxDesktop",
         INSTALLER_VERSION.strip_prefix('v').unwrap_or(INSTALLER_VERSION),

@@ -61,6 +61,26 @@ pub fn to_wide_null(s: &str) -> Vec<u16> {
     OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
 }
 
+#[link(name = "kernel32")]
+extern "system" {
+    fn GetUserDefaultUILanguage() -> u16;
+}
+
+pub fn is_ru_locale() -> bool {
+    if let Ok(lang) = std::env::var("LANG") {
+        if lang.to_lowercase().contains("ru") {
+            return true;
+        }
+    }
+    if let Ok(lc) = std::env::var("LC_ALL") {
+        if lc.to_lowercase().contains("ru") {
+            return true;
+        }
+    }
+    let lang = unsafe { GetUserDefaultUILanguage() };
+    (lang & 0x3FF) == 0x19
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Screen {
     Welcome,
@@ -275,6 +295,7 @@ pub struct InstallerApp {
     pub target_dir: PathBuf,
     pub installed_version: Option<String>,
     pub is_same_version: bool,
+    pub is_downgrade: bool,
     pub create_desktop_shortcut: bool,
     pub create_start_menu_shortcut: bool,
     pub launch_after_install: bool,
@@ -306,11 +327,18 @@ impl InstallerApp {
             false
         };
 
+        let is_downgrade = if let Some(ref cur) = installed_version {
+            crate::version::is_downgrade_or_prerelease(cur, INSTALLER_VERSION)
+        } else {
+            false
+        };
+
         Self {
             screen: Screen::Welcome,
             target_dir: default_target,
             installed_version,
             is_same_version,
+            is_downgrade,
             create_desktop_shortcut: true,
             create_start_menu_shortcut: true,
             launch_after_install: true,
@@ -434,6 +462,11 @@ impl InstallerApp {
                 SetTextColor(hdc, argb_to_colorref(COLOR_ACCENT));
                 let mut r_status = Rect::new(form_x + 330, ver_y, 190, 18).to_win32_rect();
                 let status_w = to_wide_null("✓ Уже установлено");
+                DrawTextW(hdc, status_w.as_ptr(), -1, &mut r_status, 0x00000000 | 0x00000004);
+            } else if self.is_downgrade {
+                SetTextColor(hdc, 0x002B90E0);
+                let mut r_status = Rect::new(form_x + 330, ver_y, 190, 18).to_win32_rect();
+                let status_w = to_wide_null("! Бета/более новая");
                 DrawTextW(hdc, status_w.as_ptr(), -1, &mut r_status, 0x00000000 | 0x00000004);
             }
         }
@@ -705,6 +738,36 @@ impl InstallerApp {
 
         match btn {
             ButtonId::Install => {
+                if let Some(ref installed) = self.installed_version {
+                    if crate::version::is_downgrade_or_prerelease(installed, INSTALLER_VERSION) {
+                        let is_ru = is_ru_locale();
+                        let title = if is_ru {
+                            "Предупреждение о версии"
+                        } else {
+                            "Version Warning"
+                        };
+                        let msg = if is_ru {
+                            "Обнаружена более новая или предварительная (бета/dev) версия oxDesktop.\n\nВы действительно хотите установить более раннюю версию?"
+                        } else {
+                            "A newer or pre-release (beta/dev) version of oxDesktop is already installed.\n\nDo you really want to install an older version?"
+                        };
+
+                        let title_wide = to_wide_null(title);
+                        let msg_wide = to_wide_null(msg);
+                        let ret = unsafe {
+                            MessageBoxW(
+                                hwnd,
+                                msg_wide.as_ptr(),
+                                title_wide.as_ptr(),
+                                MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2,
+                            )
+                        };
+                        if ret != IDYES {
+                            return false;
+                        }
+                    }
+                }
+
                 self.screen = Screen::Installing;
                 self.progress_percent = 0;
                 let options = InstallOptions {

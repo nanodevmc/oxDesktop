@@ -1,7 +1,6 @@
 #!/bin/sh
 set -eu
 
-# oxDesktop Universal One-Line Installer
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/install.sh | sh
 
@@ -176,6 +175,80 @@ if [ -z "$URL" ]; then
 fi
 
 FILENAME="${URL##*/}"
+
+# Version comparison helpers for downgrade / beta check
+parse_ver_nums() {
+	v="$1"
+	v="${v#oxDesktop}"
+	v="${v# }"
+	v="${v#v}"
+	v="${v#V}"
+	v="${v%%-*}"
+	v="${v%%_*}"
+	v="${v%%(*}"
+	v="${v%% *}"
+	p1="$(echo "$v" | cut -d. -f1 2>/dev/null || echo 0)"
+	p2="$(echo "$v" | cut -d. -f2 2>/dev/null || echo 0)"
+	p3="$(echo "$v" | cut -d. -f3 2>/dev/null || echo 0)"
+	p4="$(echo "$v" | cut -d. -f4 2>/dev/null || echo 0)"
+	case "$p1" in ''|*[!0-9]*) p1=0 ;; esac
+	case "$p2" in ''|*[!0-9]*) p2=0 ;; esac
+	case "$p3" in ''|*[!0-9]*) p3=0 ;; esac
+	case "$p4" in ''|*[!0-9]*) p4=0 ;; esac
+	echo "$p1 $p2 $p3 $p4"
+}
+
+is_ver_greater() {
+	v1_nums="$(parse_ver_nums "$1")"
+	v2_nums="$(parse_ver_nums "$2")"
+	set -- $v1_nums $v2_nums
+	if [ "$1" -gt "$5" ]; then return 0; elif [ "$1" -lt "$5" ]; then return 1; fi
+	if [ "$2" -gt "$6" ]; then return 0; elif [ "$2" -lt "$6" ]; then return 1; fi
+	if [ "$3" -gt "$7" ]; then return 0; elif [ "$3" -lt "$7" ]; then return 1; fi
+	if [ "$4" -gt "$8" ]; then return 0; elif [ "$4" -lt "$8" ]; then return 1; fi
+	return 1
+}
+
+# Check downgrade / pre-release conflict
+if [ -n "$INSTALLED_VER" ]; then
+	REL_TAG="$(grep -m 1 '"tag_name":' "$RELEASE_JSON" 2>/dev/null | sed -E 's/.*"tag_name":[[:space:]]*"([^"]+)".*/\1/' || true)"
+	TARGET_LABEL="${REL_TAG:-$FILENAME}"
+	IS_DOWNGRADE=0
+	case "$INSTALLED_VER" in
+		*[bB][eE][tT][aA]*|*[dD][eE][vV]*|*[aA][lL][pP][hH][aA]*|*[pP][rR][eE][vV][iI][eE][wW]*|*[rR][cC]*)
+			if ! is_ver_greater "$TARGET_LABEL" "$INSTALLED_VER"; then
+				IS_DOWNGRADE=1
+			fi
+			;;
+		*)
+			if is_ver_greater "$INSTALLED_VER" "$TARGET_LABEL"; then
+				IS_DOWNGRADE=1
+			fi
+			;;
+	esac
+
+	if [ "$IS_DOWNGRADE" = 1 ] && [ "$SILENT" = 0 ]; then
+		if [ "$RU" = 1 ]; then
+			printf "Обнаружена более новая или предварительная (бета/dev) версия oxDesktop (%s).\nВы действительно хотите установить версию %s? [Y/N Д/Н]: " "$INSTALLED_VER" "$TARGET_LABEL"
+		else
+			printf "A newer or pre-release (beta/dev) version of oxDesktop is installed (%s).\nDo you really want to install version %s? [Y/N D/N]: " "$INSTALLED_VER" "$TARGET_LABEL"
+		fi
+		read -r answer || answer=""
+		case "$answer" in
+			[yY]|[yY][eE][sS]|[дД]|[дД][аА])
+				;;
+			*)
+				if [ "$RU" = 1 ]; then
+					printf "Установка отменена пользователем.\n"
+				else
+					printf "Installation canceled by user.\n"
+				fi
+				exit 0
+				;;
+		esac
+	fi
+fi
+
 log_step "Downloading $FILENAME..." "Загрузка $FILENAME..."
 PKG_FILE="$TMP/$FILENAME"
 fetch "$URL" "$PKG_FILE"
