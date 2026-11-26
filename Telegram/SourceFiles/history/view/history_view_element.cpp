@@ -349,7 +349,7 @@ void KeyboardStyle::paintButtonBg(
 						sti->msgServiceBg->c,
 						st->windowBg()->c,
 						0.24)
-					: colored.color();
+					: colored.color()->c;
 				if (normal) {
 					surface.setAlpha(std::clamp(
 						std::max(sti->msgServiceBg->c.alpha(), 176),
