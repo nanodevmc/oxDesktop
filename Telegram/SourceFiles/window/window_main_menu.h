@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/unread_badge.h"
 #include "ui/controls/swipe_handler_data.h"
 #include "ui/layers/layer_widget.h"
+#include "styles/style_settings.h"
 
 namespace base {
 enum class EventFilterResult;

@@ -106,7 +106,7 @@ struct FiltersMenu::MdStyles {
 	, iconsOnly(st::windowFiltersButtonIconsOnly) {
 	}
 
-	style::OwnedColor activeBg;
+	style::owned_color activeBg;
 	style::SideBarButton textOnly;
 	style::SideBarButton textAndIcons;
 	style::SideBarButton iconsOnly;

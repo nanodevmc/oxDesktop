@@ -274,7 +274,7 @@ struct MainMenu::MdStyles {
 	, button(st::mainMenuButton) {
 	}
 
-	style::OwnedColor hoverBg;
+	style::owned_color hoverBg;
 	style::SettingsButton button;
 };
 
