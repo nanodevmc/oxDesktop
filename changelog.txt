@@ -1,6 +1,35 @@
+7.4.6 (26.11.2026)
+
+Ru:
+- Обновлена база Telegram до 7.4.6 ([Обновления](tg://settings/extera))
+- Полностью локальный OCR с поддержкой языков ([Чаты](tg://settings/chats))
+- Кнопка OCR прямо в просмотре фото ([Чаты](tg://settings/chats))
+- Защита прокси и автопереключение без сбоев ([Прокси](tg://settings/proxy))
+- Трафик кроме GitHub через прокси ([Прокси](tg://settings/proxy))
+- Починена кнопка подписки на спонсора ([Настройки oxDesktop](tg://settings/extera))
+- Material Design 3 для чатов и панели ([Оформление](tg://settings/appearance))
+- Волновой прогресс-бар в полном плеере ([Настройки oxDesktop](tg://settings/extera))
+- 3D-бейдж и статус прослушивания музыки ([Настройки oxDesktop](tg://settings/extera))
+- Поздравление exteraGram с 5-летием проекта ([Настройки oxDesktop](tg://settings/extera))
+- Починён двойной тег удалённых и ответы ([Чаты](tg://settings/chats))
+
+En:
+- Updated Telegram base to 7.4.6 ([Updates](tg://settings/extera))
+- Offline multilingual OCR with Cyrillic support ([Chats](tg://settings/chats))
+- OCR extract button directly on photos ([Chats](tg://settings/chats))
+- Fixed proxy reconnects and packet handling ([Proxy](tg://settings/proxy))
+- Route non-GitHub traffic through proxy ([Proxy](tg://settings/proxy))
+- Fixed sponsor box crash and subscription ([oxDesktop Settings](tg://settings/extera))
+- Material Design 3 for chats and left panel ([Appearance](tg://settings/appearance))
+- Animated wavy seekbar in full audio player ([oxDesktop Settings](tg://settings/extera))
+- 3D supporter badge and Now Playing status ([oxDesktop Settings](tg://settings/extera))
+- exteraGram 5th anniversary card and channel note ([oxDesktop Settings](tg://settings/extera))
+- Fixed double deleted badge and failed replies ([Chats](tg://settings/chats))
+
 7.4.4.1 (23.11.2026)
 
 Ru:
+- Обновлена база Telegram до 7.4.4.1
 - Авто-прокси при зависании сети ([Прокси](tg://settings/proxy))
 - Починили звонки через прокси ([Звонки](tg://settings/calls))
 - Загрузка стикеров, реакций и аватарок ([Прокси](tg://settings/proxy))
@@ -17,9 +46,9 @@ Ru:
 - Режим стримера выключен по умолчанию ([Конфиденциальность](tg://settings/privacy))
 - Убрана плашка предварительной версии ([Обновления](tg://settings/extera))
 - Испанский язык и автоопределение инсталлера ([Установка](https://github.com/nanodevmc/oxDesktop))
-- Разблокировали переводы в Crowdin ([Перевод](tg://settings/extera))
 
 En:
+- Updated Telegram base to 7.4.4.1
 - Auto-proxy when connection stalls ([Proxy](tg://settings/proxy))
 - Fixed Telegram calls with proxy ([Calls](tg://settings/calls))
 - Fixed stickers, reactions and avatars loading ([Proxy](tg://settings/proxy))
@@ -36,7 +65,6 @@ En:
 - Streamer mode disabled by default ([Privacy](tg://settings/privacy))
 - Removed false beta update banner ([Updates](tg://settings/extera))
 - Spanish installer with auto-detection ([Setup](https://github.com/nanodevmc/oxDesktop))
-- Fixed Crowdin word limits ([Translation](tg://settings/extera))
 
 7.4.4 (21.11.2026)
 

@@ -1,5 +1,6 @@
 #include "extera/extera_full_player.h"
 #include "extera/extera_config.h"
+#include "extera/extera_ws_proxy.h"
 #include "ui/widgets/popup_menu.h"
 #include "core/file_utilities.h"
 #include "base/unixtime.h"
@@ -24,10 +25,12 @@
 #include "media/media_common.h"
 #include "ui/layers/box_content.h"
 #include "base/call_delayed.h"
+#include "base/timer.h"
 #include "styles/style_media_player.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 
+#include <cmath>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
 #include "styles/style_layers.h"
@@ -259,6 +262,7 @@ private:
 	float64 _scrollFrom = 0.;
 	float64 _scrollTo = 0.;
 	Ui::Animations::Simple _scrollAnimation;
+	base::Timer _waveTimer;
 
 };
 
@@ -277,7 +281,17 @@ View::View(
 , _bottom(QColor(18, 18, 22))
 , _wasTop(_top)
 , _wasBottom(_bottom)
-, _network(new QNetworkAccessManager(this)) {
+, _network(new QNetworkAccessManager(this))
+, _waveTimer([=] {
+	if (isVisible()
+		&& Extera::Bool(u"material_design"_q)
+		&& Media::Player::ShowPauseIcon(_state.state)
+		&& !_seeking) {
+		update(sliderRect().marginsAdded({ S(6), S(10), S(6), S(10) }));
+	} else {
+		_waveTimer.cancel();
+	}
+}) {
 	setMouseTracking(true);
 
 	const auto instance = Media::Player::instance();
@@ -288,6 +302,15 @@ View::View(
 		_state = state;
 		if (state.id.audio() != _document) {
 			loadTrack();
+		}
+		if (Extera::Bool(u"material_design"_q)
+			&& Media::Player::ShowPauseIcon(_state.state)
+			&& !_seeking) {
+			if (!_waveTimer.isActive()) {
+				_waveTimer.callEach(33);
+			}
+		} else {
+			_waveTimer.cancel();
 		}
 		updateCurrentLine();
 		update();
@@ -473,6 +496,8 @@ void View::tryLyrics(
 	}
 	auto request = QNetworkRequest(urls[index].first);
 	request.setHeader(QNetworkRequest::UserAgentHeader, u"oxDesktop"_q);
+	Extera::WsProxy::ApplyHttpProxy(_network);
+	Extera::WsProxy::PrepareFrontedRequest(request);
 	const auto single = urls[index].second;
 	const auto reply = _network->get(request);
 	connect(reply, &QNetworkReply::finished, this, [=] {
@@ -543,6 +568,8 @@ void View::tryNetEase(int requestId) {
 	url.setQuery(query);
 	auto request = QNetworkRequest(url);
 	request.setHeader(QNetworkRequest::UserAgentHeader, u"Mozilla/5.0"_q);
+	Extera::WsProxy::ApplyHttpProxy(_network);
+	Extera::WsProxy::PrepareFrontedRequest(request);
 	const auto reply = _network->get(request);
 	connect(reply, &QNetworkReply::finished, this, [=] {
 		reply->deleteLater();
@@ -585,6 +612,8 @@ void View::loadNetEaseLyric(int requestId, qint64 id) {
 	url.setQuery(query);
 	auto request = QNetworkRequest(url);
 	request.setHeader(QNetworkRequest::UserAgentHeader, u"Mozilla/5.0"_q);
+	Extera::WsProxy::ApplyHttpProxy(_network);
+	Extera::WsProxy::PrepareFrontedRequest(request);
 	const auto reply = _network->get(request);
 	connect(reply, &QNetworkReply::finished, this, [=] {
 		reply->deleteLater();
@@ -1039,21 +1068,76 @@ void View::paintControls(QPainter &p) {
 	const auto value = (total > 0)
 		? std::clamp(float64(now) / total, 0., 1.)
 		: 0.;
-	const auto sliderRadius = slider.height() / 2.;
-	p.setPen(Qt::NoPen);
-	p.setBrush(QColor(255, 255, 255, 60));
-	p.drawRoundedRect(slider, sliderRadius, sliderRadius);
-	p.setBrush(Qt::white);
 	const auto filled = int(slider.width() * value);
-	p.drawRoundedRect(
-		QRect(slider.x(), slider.y(), filled, slider.height()),
-		sliderRadius,
-		sliderRadius);
-	if (_over == Button::Slider || _seeking) {
-		p.drawEllipse(
-			QPointF(slider.x() + filled, slider.y() + sliderRadius),
-			S(7),
-			S(7));
+	if (Extera::Bool(u"material_design"_q) && slider.width() > 8) {
+		const auto cy = slider.y() + slider.height() / 2.;
+		const auto trackH = std::max(S(4), slider.height());
+		const auto restW = std::max(0, slider.width() - filled);
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor(255, 255, 255, 64));
+		if (restW > 0) {
+			p.drawRoundedRect(
+				QRectF(slider.x() + filled, cy - trackH / 2., restW, trackH),
+				trackH / 2.,
+				trackH / 2.);
+		}
+		const auto playing = Media::Player::ShowPauseIcon(_state.state)
+			&& !_seeking;
+		if (playing && filled > S(8)) {
+			auto wave = QPainterPath();
+			const auto amplitude = float64(S(3));
+			const auto wavelength = float64(std::max(1, S(22)));
+			const auto phase = (crl::now() % 1200) * (2.0 * M_PI / 1200.0);
+			const auto fade = float64(std::max(1, S(8)));
+			const auto step = 2;
+			for (auto dx = 0; dx <= filled; dx += step) {
+				const auto t = float64(dx);
+				const auto edge = std::min(1.0, std::min(t / fade, (filled - t) / fade));
+				const auto yOffset = std::sin((t / wavelength) * 2.0 * M_PI - phase)
+					* amplitude
+					* edge;
+				const auto pt = QPointF(slider.x() + t, cy + yOffset);
+				if (dx == 0) {
+					wave.moveTo(pt);
+				} else {
+					wave.lineTo(pt);
+				}
+			}
+			wave.lineTo(QPointF(slider.x() + filled, cy));
+			p.setBrush(Qt::NoBrush);
+			p.setPen(QPen(Qt::white, S(3), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+			p.drawPath(wave);
+		} else if (filled > 0) {
+			p.setBrush(Qt::white);
+			p.drawRoundedRect(
+				QRectF(slider.x(), cy - trackH / 2., filled, trackH),
+				trackH / 2.,
+				trackH / 2.);
+		}
+		const auto thumbW = float64(S(4));
+		const auto thumbH = float64((_over == Button::Slider || _seeking) ? S(18) : S(14));
+		p.setPen(Qt::NoPen);
+		p.setBrush(Qt::white);
+		p.drawRoundedRect(
+			QRectF(slider.x() + filled - thumbW / 2., cy - thumbH / 2., thumbW, thumbH),
+			thumbW / 2.,
+			thumbW / 2.);
+	} else {
+		const auto sliderRadius = slider.height() / 2.;
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor(255, 255, 255, 60));
+		p.drawRoundedRect(slider, sliderRadius, sliderRadius);
+		p.setBrush(Qt::white);
+		p.drawRoundedRect(
+			QRect(slider.x(), slider.y(), filled, slider.height()),
+			sliderRadius,
+			sliderRadius);
+		if (_over == Button::Slider || _seeking) {
+			p.drawEllipse(
+				QPointF(slider.x() + filled, slider.y() + sliderRadius),
+				S(7),
+				S(7));
+		}
 	}
 	p.setFont(_timeFont->f);
 	p.setPen(QColor(255, 255, 255, 150));

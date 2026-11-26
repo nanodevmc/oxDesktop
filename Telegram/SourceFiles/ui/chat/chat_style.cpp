@@ -118,14 +118,15 @@ int HistoryServiceMsgInvertedShrink() {
 }
 
 ColorIndexValues SimpleColorIndexValues(QColor color, int patternIndex) {
+	const auto md = Extera::Bool(u"material_design"_q);
 	auto bg = color;
-	bg.setAlpha(kDefaultBgOpacity * 255);
+	bg.setAlpha((md ? 0.16 : kDefaultBgOpacity) * 255);
 	auto result = ColorIndexValues{
 		.name = color,
 		.bg = bg,
 	};
 	result.outlines[0] = color;
-	result.outlines[0].setAlpha(kDefaultOutline1Opacity * 255);
+	result.outlines[0].setAlpha((md ? 0.96 : kDefaultOutline1Opacity) * 255);
 	if (patternIndex > 1) {
 		result.outlines[1] = result.outlines[0];
 		result.outlines[1].setAlpha(kDefaultOutline2Opacity * 255);
@@ -206,7 +207,8 @@ ChatStyle::ColoredPalette &ChatStyle::ColoredPalette::operator=(
 	return *this;
 }
 
-ChatStyle::ChatStyle(rpl::producer<ColorIndicesCompressed> colorIndices) {
+ChatStyle::ChatStyle(rpl::producer<ColorIndicesCompressed> colorIndices)
+: _materialDesign(Extera::Bool(u"material_design"_q)) {
 	if (colorIndices) {
 		_colorIndicesLifetime = std::move(
 			colorIndices
@@ -743,7 +745,33 @@ void ChatStyle::assignPalette(not_null<const style::palette*> palette) {
 	_paletteChanged.fire({});
 }
 
+void ChatStyle::syncMaterialDesign() const {
+	const auto enabled = Extera::Bool(u"material_design"_q);
+	if (_materialDesign == enabled) {
+		return;
+	}
+	_materialDesign = enabled;
+	for (auto &style : _messageStyles) {
+		style.msgBgCornersSmall = {};
+		style.msgBgCornersLarge = {};
+	}
+	for (auto &style : _imageStyles) {
+		style.msgServiceBgCornersSmall = {};
+		style.msgServiceBgCornersLarge = {};
+		style.msgShadowCornersSmall = {};
+		style.msgShadowCornersLarge = {};
+	}
+	_serviceBgCornersNormal = {};
+	_msgBotKbOverBgAddCornersSmall = {};
+	_msgBotKbOverBgAddCornersLarge = {};
+	for (auto &corners : _msgSelectOverlayCorners) {
+		corners = {};
+	}
+	const_cast<ChatStyle*>(this)->clearColorIndexCaches();
+}
+
 const CornersPixmaps &ChatStyle::serviceBgCornersNormal() const {
+	syncMaterialDesign();
 	EnsureCorners(
 		_serviceBgCornersNormal,
 		HistoryServiceMsgRadius(),
@@ -761,6 +789,7 @@ const CornersPixmaps &ChatStyle::serviceBgCornersInverted() const {
 }
 
 const MessageStyle &ChatStyle::messageStyle(bool outbg, bool selected) const {
+	syncMaterialDesign();
 	auto &result = messageStyleRaw(outbg, selected);
 	EnsureCorners(
 		result.msgBgCornersSmall,
@@ -796,6 +825,7 @@ const MessageStyle &ChatStyle::messageStyle(bool outbg, bool selected) const {
 }
 
 const MessageImageStyle &ChatStyle::imageStyle(bool selected) const {
+	syncMaterialDesign();
 	auto &result = imageStyleRaw(selected);
 	EnsureCorners(
 		result.msgDateImgBgCorners,
@@ -869,13 +899,14 @@ ColorIndexValues ChatStyle::computeColorIndexValues(
 			&historyPeer8NameFgSelected(),
 		};
 		const auto paletteIndex = ColorIndexToPaletteIndex(colorIndex);
+		const auto md = Extera::Bool(u"material_design"_q);
 		auto result = ColorIndexValues{
 			.name = (*(selected ? listSelected : list)[paletteIndex])->c,
 		};
 		result.bg = result.name;
-		result.bg.setAlpha(kDefaultBgOpacity * 255);
+		result.bg.setAlpha((md ? 0.16 : kDefaultBgOpacity) * 255);
 		result.outlines[0] = result.name;
-		result.outlines[0].setAlpha(kDefaultOutline1Opacity * 255);
+		result.outlines[0].setAlpha((md ? 0.96 : kDefaultOutline1Opacity) * 255);
 		result.outlines[1] = result.outlines[2] = QColor(0, 0, 0, 0);
 		return result;
 	}
@@ -893,8 +924,9 @@ ColorIndexValues ChatStyle::computeColorIndexValues(
 	auto result = ColorIndexValues{
 		.outlines = { color(0), color(1), color(2) }
 	};
+	const auto md = Extera::Bool(u"material_design"_q);
 	result.bg = result.outlines[0];
-	result.bg.setAlpha(kDefaultBgOpacity * 255);
+	result.bg.setAlpha((md ? 0.16 : kDefaultBgOpacity) * 255);
 	result.name = selected
 		? EnsurePeerNameReadable(
 			result.outlines[0],
@@ -906,6 +938,7 @@ ColorIndexValues ChatStyle::computeColorIndexValues(
 
 not_null<Text::QuotePaintCache*> ChatStyle::serviceQuoteCache(
 		bool twoColored) const {
+	syncMaterialDesign();
 	const auto index = (twoColored ? 1 : 0);
 	const auto &service = msgServiceFg()->c;
 	EnsureBlockquoteCache(
@@ -916,6 +949,7 @@ not_null<Text::QuotePaintCache*> ChatStyle::serviceQuoteCache(
 
 not_null<Text::QuotePaintCache*> ChatStyle::serviceReplyCache(
 		bool twoColored) const {
+	syncMaterialDesign();
 	const auto index = (twoColored ? 1 : 0);
 	const auto &service = msgServiceFg()->c;
 	EnsureBlockquoteCache(
@@ -928,6 +962,7 @@ const ColorIndexValues &ChatStyle::coloredValues(
 		bool selected,
 		uint8 colorIndex) const {
 	Expects(colorIndex >= 0 && colorIndex < kColorIndexCount);
+	syncMaterialDesign();
 
 	const auto shift = (selected ? kColorIndexCount : 0);
 	auto &result = _coloredValues[shift + colorIndex];
@@ -1011,18 +1046,21 @@ not_null<Wallet::CardAngle*> ChatStyle::gramCardAngle() const {
 not_null<Text::QuotePaintCache*> ChatStyle::coloredQuoteCache(
 		bool selected,
 		uint8 colorIndex) const {
+	syncMaterialDesign();
 	return coloredCache(_coloredQuoteCaches, selected, colorIndex);
 }
 
 not_null<Text::QuotePaintCache*> ChatStyle::coloredReplyCache(
 		bool selected,
 		uint8 colorIndex) const {
+	syncMaterialDesign();
 	return coloredCache(_coloredReplyCaches, selected, colorIndex);
 }
 
 not_null<Text::QuotePaintCache*> ChatStyle::collectibleQuoteCache(
 		bool selected,
 		const std::shared_ptr<ColorCollectible> &collectible) const {
+	syncMaterialDesign();
 	auto &entry = resolveCollectibleCaches(collectible);
 	return collectibleCache(
 		selected ? entry.quoteSelected : entry.quote,
@@ -1033,6 +1071,7 @@ not_null<Text::QuotePaintCache*> ChatStyle::collectibleQuoteCache(
 not_null<Text::QuotePaintCache*> ChatStyle::collectibleReplyCache(
 		bool selected,
 		const std::shared_ptr<ColorCollectible> &collectible) const {
+	syncMaterialDesign();
 	auto &entry = resolveCollectibleCaches(collectible);
 	return collectibleCache(
 		selected ? entry.replySelected : entry.reply,
@@ -1060,8 +1099,9 @@ not_null<Text::QuotePaintCache*> ChatStyle::collectibleCache(
 		bool selected) const {
 	EnsureBlockquoteCache(cache, [&] {
 		const auto name = collectibleNameColor(collectible, selected);
+		const auto md = Extera::Bool(u"material_design"_q);
 		auto bg = name;
-		bg.setAlpha(kDefaultBgOpacity * 255);
+		bg.setAlpha((md ? 0.16 : kDefaultBgOpacity) * 255);
 
 		const auto &strip = (_dark && !collectible->darkStrip.empty())
 			? collectible->darkStrip
@@ -1096,6 +1136,7 @@ ChatStyle::CollectibleColors &ChatStyle::resolveCollectibleCaches(
 }
 
 const CornersPixmaps &ChatStyle::msgBotKbOverBgAddCornersSmall() const {
+	syncMaterialDesign();
 	EnsureCorners(
 		_msgBotKbOverBgAddCornersSmall,
 		BubbleRadiusSmall(),
@@ -1104,6 +1145,7 @@ const CornersPixmaps &ChatStyle::msgBotKbOverBgAddCornersSmall() const {
 }
 
 const CornersPixmaps &ChatStyle::msgBotKbOverBgAddCornersLarge() const {
+	syncMaterialDesign();
 	EnsureCorners(
 		_msgBotKbOverBgAddCornersLarge,
 		BubbleRadiusLarge(),
@@ -1113,6 +1155,7 @@ const CornersPixmaps &ChatStyle::msgBotKbOverBgAddCornersLarge() const {
 
 const CornersPixmaps &ChatStyle::msgSelectOverlayCorners(
 		CachedCornerRadius radius) const {
+	syncMaterialDesign();
 	const auto index = static_cast<int>(radius);
 	Assert(index >= 0 && index < int(CachedCornerRadius::kCount));
 

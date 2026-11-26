@@ -1,6 +1,7 @@
 #include "settings/sections/settings_extera.h"
 #include "ui/new_badges.h"
 
+#include <QtCore/QPointer>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QTimer>
 #include <QtGui/QFontDatabase>
@@ -12,6 +13,7 @@
 #include "core/version.h"
 #include "window/notifications_manager.h"
 #include "extera/extera_app_icon.h"
+#include "extera/extera_arrow_3d.h"
 #include "extera/extera_ws_proxy.h"
 #include "ui/style/style_core_font.h"
 #include "core/core_settings.h"
@@ -761,18 +763,27 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 		const auto self = controller->session().user();
 		const auto selfNumber = Extera::BadgeNumber(self);
 		const auto kind = Extera::BadgeKindFor(self);
+		const auto apiError = Extera::BadgeApiError(self);
 		const auto isTeam = (kind == Extera::BadgeKind::Owner || kind == Extera::BadgeKind::Developer || kind == Extera::BadgeKind::Bughunter);
 		const auto isPurchased = (selfNumber > 0) || (kind != Extera::BadgeKind::None);
-		const auto badgeStatusStr = (selfNumber > 0)
+		const auto badgeStatusStr = apiError
+			? u"Ошибка запроса API"_q
+			: (selfNumber > 0)
 			? (u"Активен (#"_q + QString::number(selfNumber) + u")"_q)
 			: (isTeam
 				? u"Активен (Команда oxDesktop)"_q
 				: (isPurchased ? u"Активен"_q : u"Не активен"_q));
 
-		constexpr auto kHeaderHeight = 76;
+		constexpr auto kHeaderHeight = 108;
 		const auto header = box->addRow(
 			object_ptr<Ui::FixedHeightWidget>(box, kHeaderHeight),
 			style::margins(16, 2, 16, 2));
+
+		const auto arrowWidget = Ui::CreateChild<Extera::Arrow3DWidget>(header);
+		arrowWidget->setSupporterNumber(
+			(selfNumber > 0) ? selfNumber : (isTeam ? 1 : 0));
+		arrowWidget->setGeometry(6, (kHeaderHeight - 96) / 2, 96, 96);
+		arrowWidget->show();
 
 		header->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(header);
@@ -780,27 +791,17 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			[[maybe_unused]] const auto w = header->width();
 			const auto h = header->height();
 
-			const auto avSize = 50;
-			const auto avX = 16;
-			const auto avY = (h - avSize) / 2;
-			const auto avRect = QRect(avX, avY, avSize, avSize);
-
-			auto path = QPainterPath();
-			path.addEllipse(QRectF(avRect));
-			p.save();
-			p.setClipPath(path);
-			const auto &logo = Window::Logo();
-			p.drawImage(avRect, logo.scaled(avSize, avSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-			p.restore();
-
-			const auto textX = avX + avSize + 16;
+			const auto textX = 112;
+			const auto centerY = h / 2;
 			p.setFont(st::semiboldFont);
 			p.setPen(st::windowActiveTextFg->c);
-			p.drawText(textX, avY + 20, tr::lng_oxd_badge_get(tr::now));
+			p.drawText(textX, centerY - 6, tr::lng_oxd_badge_get(tr::now));
 
 			p.setFont(st::normalFont);
-			p.setPen(isPurchased ? QColor(72, 199, 116) : QColor(255, 120, 50));
-			p.drawText(textX, avY + 40, u"Статус бейджа: "_q + badgeStatusStr);
+			p.setPen(apiError
+				? QColor(235, 85, 85)
+				: (isPurchased ? QColor(72, 199, 116) : QColor(255, 120, 50)));
+			p.drawText(textX, centerY + 18, u"Статус бейджа: "_q + badgeStatusStr);
 		}, header->lifetime());
 
 		box->addRow(
@@ -864,6 +865,26 @@ void ShowBadgeInfoBox(not_null<Window::SessionController*> controller) {
 			&st::menuIconFaq,
 			u"Поддержка проекта"_q,
 			u"Помощь серверной инфраструктуре TgWsProxy и разработке новых функций."_q);
+
+		const auto nowPlayingLabel = box->addRow(
+			object_ptr<Ui::FlatLabel>(
+				box,
+				rpl::single(QString()),
+				st::exteraSubtitle),
+			style::margins(16, 4, 16, 4));
+		nowPlayingLabel->hide();
+		const auto boxWeak = QPointer<Ui::GenericBox>(box.get());
+		const auto labelWeak = QPointer(&*nowPlayingLabel);
+		Extera::RequestNowPlaying(self, [=](Extera::NowPlayingInfo info) {
+			if (!boxWeak || !labelWeak || !info.playing || info.title.isEmpty()) {
+				return;
+			}
+			const auto text = info.artist.isEmpty()
+				? (u"Сейчас играет: "_q + info.title)
+				: (u"Сейчас играет: "_q + info.artist + u" — "_q + info.title);
+			labelWeak->setText(text);
+			labelWeak->show();
+		});
 
 		box->addButton(
 			rpl::single(isPurchased ? u"Подробнее о бейдже"_q : u"Получить бейдж"_q),

@@ -45,7 +45,22 @@ jobs:
           fetch-depth: 1
 
       - name: Checkout submodules (shallow & parallel)
-        run: git submodule update --init --recursive --depth 1 --jobs 8
+        run: |
+          git submodule update --init --recursive --depth 1 --jobs 8
+          python3 tools/patch_lib_ui.py
+
+      - name: Restore offline OCR cache
+        id: cache-ocr
+        uses: actions/cache@v4
+        with:
+          path: ocr_runtime
+          key: oxdesktop-ocr-v1-linux64-${{ hashFiles('tools/prepare_ocr.py') }}
+
+      - name: Prepare offline OCR runtime and models
+        if: steps.cache-ocr.outputs.cache-hit != 'true'
+        run: |
+          command -v 7z >/dev/null 2>&1 || (sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y p7zip-full)
+          python3 tools/prepare_ocr.py --platform linux64 --out "${{ github.workspace }}/ocr_runtime"
 
       - name: Check for C++ core changes
         id: diff_check
@@ -279,6 +294,10 @@ jobs:
             fi
             mkdir -p "$PKG/python/extera"
             cp -r Telegram/SourceFiles/extera/python/. "$PKG/python/extera/"
+            if [ -d "ocr_runtime" ]; then
+              cp -r ocr_runtime "$PKG/ocr"
+              chmod +x "$PKG/ocr/RapidOcrOnnx" 2>/dev/null || true
+            fi
             chmod +x "$PKG/oxDesktop" "$PKG/oxDesktop-bin" 2>/dev/null || true
             GZIP="-9" tar -C pkg -czf "oxDesktop-linux-x64.$VERSION.tar.gz" oxDesktop
           else
@@ -306,6 +325,10 @@ jobs:
                 ln -sf lib "$PKG/python311/lib64"
                 mkdir -p "$PKG/python/extera"
                 cp -r Telegram/SourceFiles/extera/python/. "$PKG/python/extera/"
+                if [ -d ocr_runtime ]; then
+                  cp -r ocr_runtime "$PKG/ocr"
+                  chmod +x "$PKG/ocr/RapidOcrOnnx" || true
+                fi
                 cp Telegram/SourceFiles/extera/oxDesktop-launcher.sh "$PKG/oxDesktop"
                 chmod +x "$PKG/oxDesktop" "$PKG/oxDesktop-bin"
                 GZIP="-9" tar -C pkg -czf "oxDesktop-linux-x64.$VERSION.tar.gz" oxDesktop

@@ -1,5 +1,6 @@
 #include "extera/extera_lyrics.h"
 
+#include "extera/extera_ws_proxy.h"
 #include "version_generated.h"
 
 #include "ui/layers/generic_box.h"
@@ -61,6 +62,7 @@ void Fetch(
 	}
 
 	static auto *manager = new QNetworkAccessManager(qApp);
+	Extera::WsProxy::ApplyHttpProxy(manager);
 
 	auto url = QUrl(u"https://lrclib.net/api/get"_q);
 	auto query = QUrlQuery();
@@ -73,6 +75,7 @@ void Fetch(
 
 	auto request = QNetworkRequest(url);
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+	Extera::WsProxy::PrepareFrontedRequest(request);
 
 	const auto reply = manager->get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {

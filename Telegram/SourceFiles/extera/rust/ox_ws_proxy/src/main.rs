@@ -4,7 +4,7 @@ use std::io::Write;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::time::Duration;
 
 use aes::Aes256;
@@ -29,15 +29,51 @@ type Aes256Ctr = Ctr128BE<Aes256>;
 const PROTO_TAG_ABRIDGED: [u8; 4] = [0xef, 0xef, 0xef, 0xef];
 const PROTO_TAG_INTERMEDIATE: [u8; 4] = [0xee, 0xee, 0xee, 0xee];
 const PROTO_TAG_SECURE: [u8; 4] = [0xdd, 0xdd, 0xdd, 0xdd];
+const WHITE_SNI_LIST: &[&str] = &["vk.com", "mail.ru", "ya.ru", "yandex.ru", "ok.ru"];
+
+static CF_POOL_CURSOR: AtomicUsize = AtomicUsize::new(0);
 
 fn get_dc_ips(dc: u8) -> &'static [&'static str] {
     match dc {
-        1 => &["149.154.175.50", "149.154.175.53", "149.154.167.220"],
-        2 => &["149.154.167.50", "149.154.167.220"],
-        3 => &["149.154.175.100", "149.154.167.220"],
-        4 => &["149.154.167.91", "149.154.167.220"],
-        5 => &["149.154.171.5", "149.154.167.220"],
-        _ => &["149.154.167.220"],
+        1 => &[
+            "149.154.175.50",
+            "149.154.175.53",
+            "149.154.174.100",
+            "149.154.175.209",
+            "149.154.167.220",
+        ],
+        2 => &[
+            "149.154.167.50",
+            "149.154.167.51",
+            "149.154.167.99",
+            "149.154.167.220",
+        ],
+        3 => &[
+            "149.154.175.100",
+            "149.154.174.100",
+            "149.154.175.209",
+            "149.154.167.220",
+        ],
+        4 => &[
+            "149.154.167.91",
+            "149.154.167.99",
+            "149.154.167.220",
+        ],
+        5 => &[
+            "91.108.56.130",
+            "149.154.171.5",
+            "149.154.170.100",
+            "149.154.171.237",
+            "149.154.170.96",
+            "149.154.171.236",
+            "149.154.167.220",
+        ],
+        _ => &[
+            "149.154.167.220",
+            "149.154.167.99",
+            "149.154.175.53",
+            "91.108.56.130",
+        ],
     }
 }
 
@@ -107,6 +143,10 @@ async fn connect_fronted_ws(
 
     let uri = format!("wss://{}/apiws", target_host);
     let mut request = uri.into_client_request()?;
+    request.headers_mut().insert(
+        "Host",
+        HeaderValue::from_str(target_host)?,
+    );
     request.headers_mut().insert(
         "Sec-WebSocket-Protocol",
         HeaderValue::from_static("binary"),
@@ -268,7 +308,7 @@ impl MsgSplitter {
         while offset < self.cipher_buf.len() {
             let avail = self.cipher_buf.len() - offset;
             let packet_len = match self.next_packet_len(offset, avail) {
-                Some(len) if len > 0 => len,
+                Some(len) if len > 0 && avail >= len => len,
                 _ => break,
             };
 
@@ -294,17 +334,25 @@ impl MsgSplitter {
                 if avail < 4 {
                     return None;
                 }
-                let len = u32::from_le_bytes([
+                let len = (u32::from_le_bytes([
                     self.plain_buf[offset + 1],
                     self.plain_buf[offset + 2],
                     self.plain_buf[offset + 3],
                     0,
-                ]) as usize
-                    * 4;
-                Some(4 + len)
+                ]) as usize)
+                    .checked_mul(4)?;
+                let total_len = 4usize.checked_add(len)?;
+                if avail < total_len {
+                    return None;
+                }
+                Some(total_len)
             } else {
                 let len = ((first & 0x7F) as usize) * 4;
-                Some(1 + len)
+                let total_len = 1usize.checked_add(len)?;
+                if avail < total_len {
+                    return None;
+                }
+                Some(total_len)
             }
         } else {
             // Intermediate & Secure Intermediate (padded)
@@ -317,7 +365,11 @@ impl MsgSplitter {
                 self.plain_buf[offset + 2],
                 self.plain_buf[offset + 3],
             ]) & 0x7FFFFFFF) as usize;
-            Some(4 + len)
+            let total_len = 4usize.checked_add(len)?;
+            if avail < total_len {
+                return None;
+            }
+            Some(total_len)
         }
     }
 }
@@ -400,6 +452,16 @@ struct BackendConn {
     desc: String,
 }
 
+struct AbortOnDrop(Vec<tokio::task::JoinHandle<()>>);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        for handle in &self.0 {
+            handle.abort();
+        }
+    }
+}
+
 async fn race_backend_connection(
     actual_dc: u8,
     ips: &'static [&'static str],
@@ -410,20 +472,21 @@ async fn race_backend_connection(
     peer: SocketAddr,
 ) -> Option<BackendConn> {
     let (tx, mut rx) = mpsc::channel::<BackendConn>(1);
+    let mut guards = AbortOnDrop(Vec::new());
 
     // 1. Parallel Direct WS probes
     for host in candidate_hosts {
         let tx = tx.clone();
         let direct_url = format!("wss://{}/apiws", host);
         let host_name = host.clone();
-        tokio::spawn(async move {
+        guards.0.push(tokio::spawn(async move {
             if let Ok(mut req) = direct_url.into_client_request() {
                 req.headers_mut().insert(
                     "Sec-WebSocket-Protocol",
                     HeaderValue::from_static("binary"),
                 );
                 if let Ok(Ok((ws, _))) = tokio::time::timeout(
-                    Duration::from_millis(2500),
+                    Duration::from_millis(3500),
                     tokio_tungstenite::connect_async(req),
                 )
                 .await
@@ -434,66 +497,70 @@ async fn race_backend_connection(
                     }).await;
                 }
             }
-        });
+        }));
     }
 
-    // 2. Parallel TLS Domain Fronting probes to DC IPs (using genuine Telegram SNI)
+    // 2. Parallel TLS Domain Fronting probes to DC IPs (using white-listed SNIs)
     let primary_target_host = candidate_hosts[0].clone();
-    for &ip in ips {
-        let connector = tls_connector.clone();
-        let target_host = primary_target_host.clone();
-        let tx = tx.clone();
-        tokio::spawn(async move {
-            if let Ok(Ok(ws)) = tokio::time::timeout(
-                Duration::from_millis(2500),
-                connect_fronted_ws(ip, &target_host, "web.telegram.org", &connector),
-            )
-            .await
-            {
-                let _ = tx.send(BackendConn {
-                    stream: BackendStream::Ws(ws),
-                    desc: format!("Fronted WS ({}:443)", ip),
-                }).await;
-            }
-        });
+    for (ip_idx, &ip) in ips.iter().enumerate() {
+        for (sni_idx, &sni) in WHITE_SNI_LIST.iter().enumerate() {
+            let connector = tls_connector.clone();
+            let target_host = if ip_idx == 0 && sni_idx == 0 {
+                primary_target_host.clone()
+            } else {
+                candidate_hosts[(ip_idx + sni_idx) % candidate_hosts.len()].clone()
+            };
+            let tx = tx.clone();
+            guards.0.push(tokio::spawn(async move {
+                if let Ok(Ok(ws)) = tokio::time::timeout(
+                    Duration::from_millis(5000),
+                    connect_fronted_ws(ip, &target_host, sni, &connector),
+                )
+                .await
+                {
+                    let _ = tx.send(BackendConn {
+                        stream: BackendStream::Ws(ws),
+                        desc: format!("Fronted WS ({}:443 via {})", ip, sni),
+                    }).await;
+                }
+            }));
+        }
     }
 
-    // 3. Parallel Cloudflare Worker probes across DC IPs (slight 40ms headstart for direct paths)
-    let cf_domains_clone = cf_domains.clone();
-    let tx_cf = tx.clone();
-    let ips_vec = ips.to_vec();
-    tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(40)).await;
-        for (i, cf_domain) in cf_domains_clone.iter().take(6).enumerate() {
-            let target_ip = ips_vec[i % ips_vec.len()];
+    // 3. Parallel Cloudflare Worker probes across full domain pool & DC IPs
+    if !cf_domains.is_empty() && !ips.is_empty() {
+        let start_offset = CF_POOL_CURSOR.fetch_add(1, Ordering::Relaxed) % cf_domains.len();
+        for i in 0..cf_domains.len() {
+            let cf_domain = cf_domains[(start_offset + i) % cf_domains.len()].clone();
+            let target_ip = ips[i % ips.len()];
             let cf_url = format!("wss://{}/apiws?dst={}&dc={}", cf_domain, target_ip, actual_dc);
-            let tx = tx_cf.clone();
-            let domain_name = cf_domain.clone();
-            tokio::spawn(async move {
+            let tx = tx.clone();
+            guards.0.push(tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(40)).await;
                 if let Ok(mut req) = cf_url.into_client_request() {
                     req.headers_mut().insert(
                         "Sec-WebSocket-Protocol",
                         HeaderValue::from_static("binary"),
                     );
                     if let Ok(Ok((ws, _))) = tokio::time::timeout(
-                        Duration::from_millis(3500),
+                        Duration::from_millis(6500),
                         tokio_tungstenite::connect_async(req),
                     )
                     .await
                     {
                         let _ = tx.send(BackendConn {
                             stream: BackendStream::Ws(ws),
-                            desc: format!("CF Relay ({})", domain_name),
+                            desc: format!("CF Relay ({})", cf_domain),
                         }).await;
                     }
                 }
-            });
+            }));
         }
-    });
+    }
 
     drop(tx);
 
-    match tokio::time::timeout(Duration::from_millis(5000), rx.recv()).await {
+    match tokio::time::timeout(Duration::from_millis(10000), rx.recv()).await {
         Ok(Some(backend)) => {
             logger
                 .log(&format!("[{}] Connected via {} to DC{}", peer, backend.desc, actual_dc))
@@ -504,14 +571,377 @@ async fn race_backend_connection(
     }
 }
 
+fn is_http_method_prefix(buf: &[u8]) -> bool {
+    const METHODS: &[&[u8]] = &[
+        b"CONNECT ",
+        b"GET ",
+        b"POST ",
+        b"HEAD ",
+        b"PUT ",
+        b"DELETE ",
+        b"OPTIONS ",
+    ];
+    METHODS.iter().any(|m| buf.starts_with(m))
+}
+
+fn is_github_host(host: &str) -> bool {
+    let lower = host.to_ascii_lowercase();
+    lower.contains("github.com") || lower.contains("githubusercontent.com")
+}
+
+fn parse_host_port(authority: &str, default_port: u16) -> Option<(String, u16)> {
+    let trimmed = authority.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if let Some(rest) = trimmed.strip_prefix('[') {
+        let end = rest.find(']')?;
+        let host = rest[..end].to_string();
+        let after = &rest[end + 1..];
+        let port = if let Some(p) = after.strip_prefix(':') {
+            p.parse::<u16>().ok()?
+        } else {
+            default_port
+        };
+        return Some((host, port));
+    }
+    if let Some(colon) = trimmed.rfind(':') {
+        let host = &trimmed[..colon];
+        let port_str = &trimmed[colon + 1..];
+        if !host.is_empty() && !port_str.is_empty() {
+            if let Ok(port) = port_str.parse::<u16>() {
+                return Some((host.to_string(), port));
+            }
+        }
+    }
+    Some((trimmed.to_string(), default_port))
+}
+
+async fn read_http_header(stream: &mut TcpStream) -> Option<(String, Vec<u8>)> {
+    let mut buf = Vec::with_capacity(2048);
+    let mut tmp = [0u8; 4096];
+    loop {
+        let n = match tokio::time::timeout(Duration::from_secs(10), stream.read(&mut tmp)).await {
+            Ok(Ok(0)) | Ok(Err(_)) | Err(_) => return None,
+            Ok(Ok(n)) => n,
+        };
+        buf.extend_from_slice(&tmp[..n]);
+        if let Some(pos) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+            let hdr = String::from_utf8_lossy(&buf[..pos]).into_owned();
+            let excess = buf[pos + 4..].to_vec();
+            return Some((hdr, excess));
+        }
+        if let Some(pos) = buf.windows(2).position(|w| w == b"\n\n") {
+            let hdr = String::from_utf8_lossy(&buf[..pos]).into_owned();
+            let excess = buf[pos + 2..].to_vec();
+            return Some((hdr, excess));
+        }
+        if buf.len() >= 32768 {
+            return None;
+        }
+    }
+}
+
+async fn handle_http_proxy(
+    mut client_socket: TcpStream,
+    peer: SocketAddr,
+    listen_port: u16,
+    tls_connector: Arc<TlsConnector>,
+    logger: Logger,
+) {
+    let (header_text, excess) = match read_http_header(&mut client_socket).await {
+        Some(res) => res,
+        None => {
+            let _ = client_socket
+                .write_all(b"HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n")
+                .await;
+            return;
+        }
+    };
+
+    let mut lines = header_text.split('\n').map(|l| l.trim_end_matches('\r'));
+    let req_line = match lines.next() {
+        Some(l) => l,
+        None => return,
+    };
+    let mut parts = req_line.split_whitespace();
+    let method = match parts.next() {
+        Some(m) => m,
+        None => return,
+    };
+    let target = match parts.next() {
+        Some(t) => t,
+        None => return,
+    };
+
+    let raw_headers: Vec<&str> = lines.filter(|l| !l.is_empty()).collect();
+    let host_header = raw_headers.iter().find_map(|line| {
+        let (k, v) = line.split_once(':')?;
+        if k.trim().eq_ignore_ascii_case("host") {
+            Some(v.trim())
+        } else {
+            None
+        }
+    });
+
+    if method.eq_ignore_ascii_case("CONNECT") {
+        let (host, port) = match parse_host_port(target, 443) {
+            Some(hp) => hp,
+            None => {
+                let _ = client_socket
+                    .write_all(b"HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n")
+                    .await;
+                return;
+            }
+        };
+        if (host.eq_ignore_ascii_case("127.0.0.1") || host.eq_ignore_ascii_case("localhost"))
+            && port == listen_port
+        {
+            let _ = client_socket
+                .write_all(b"HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")
+                .await;
+            return;
+        }
+
+        let is_github = is_github_host(&host);
+        logger
+            .log(&format!(
+                "[{}] HTTP CONNECT {}:{} ({})",
+                peer,
+                host,
+                port,
+                if is_github { "direct-github" } else { "tunnel" }
+            ))
+            .await;
+
+        match tokio::time::timeout(
+            Duration::from_secs(10),
+            TcpStream::connect((host.as_str(), port)),
+        )
+        .await
+        {
+            Ok(Ok(mut upstream)) => {
+                let _ = upstream.set_nodelay(true);
+                if client_socket
+                    .write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+                    .await
+                    .is_err()
+                {
+                    return;
+                }
+                if !excess.is_empty() && upstream.write_all(&excess).await.is_err() {
+                    return;
+                }
+                let _ = tokio::io::copy_bidirectional(&mut client_socket, &mut upstream).await;
+            }
+            _ => {
+                logger
+                    .warn(&format!("[{}] HTTP CONNECT failed for {}:{}", peer, host, port))
+                    .await;
+                let _ = client_socket
+                    .write_all(b"HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")
+                    .await;
+            }
+        }
+        return;
+    }
+
+    let mut is_tls_from_header = false;
+    for line in &raw_headers {
+        if let Some((k, v)) = line.split_once(':') {
+            let key = k.trim();
+            if key.eq_ignore_ascii_case("x-ox-tls") && v.trim() == "1" {
+                is_tls_from_header = true;
+                continue;
+            }
+        }
+    }
+
+    let (is_tls, host, port, path) = if let Some(rest) = target.strip_prefix("https://") {
+        let (auth, path) = match rest.find('/') {
+            Some(idx) => (&rest[..idx], &rest[idx..]),
+            None => (rest, "/"),
+        };
+        match parse_host_port(auth, 443) {
+            Some((h, p)) => (true, h, p, path.to_string()),
+            None => return,
+        }
+    } else if let Some(rest) = target.strip_prefix("http://") {
+        let (auth, path) = match rest.find('/') {
+            Some(idx) => (&rest[..idx], &rest[idx..]),
+            None => (rest, "/"),
+        };
+        let def_port = if is_tls_from_header { 443 } else { 80 };
+        match parse_host_port(auth, def_port) {
+            Some((h, p)) => (is_tls_from_header, h, if is_tls_from_header && p == 80 { 443 } else { p }, path.to_string()),
+            None => return,
+        }
+    } else {
+        let def_port = if is_tls_from_header { 443 } else { 80 };
+        match host_header.and_then(|h| parse_host_port(h, def_port)) {
+            Some((h, p))
+                if !(h.eq_ignore_ascii_case("127.0.0.1") || h.eq_ignore_ascii_case("localhost"))
+                    || p != listen_port =>
+            {
+                (is_tls_from_header, h, if is_tls_from_header && p == 80 { 443 } else { p }, target.to_string())
+            }
+            _ => {
+                let _ = client_socket
+                    .write_all(
+                        b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\nContent-Length: 13\r\n\r\noxWsProxy OK\n",
+                    )
+                    .await;
+                return;
+            }
+        }
+    };
+
+    if (host.eq_ignore_ascii_case("127.0.0.1") || host.eq_ignore_ascii_case("localhost"))
+        && port == listen_port
+    {
+        let _ = client_socket
+            .write_all(
+                b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\nContent-Length: 13\r\n\r\noxWsProxy OK\n",
+            )
+            .await;
+        return;
+    }
+
+    let mut rebuilt = format!("{} {} HTTP/1.1\r\n", method, path);
+    let mut has_host = false;
+    for line in &raw_headers {
+        if let Some((k, _)) = line.split_once(':') {
+            let key = k.trim();
+            if key.eq_ignore_ascii_case("proxy-connection")
+                || key.eq_ignore_ascii_case("connection")
+                || key.eq_ignore_ascii_case("x-ox-tls")
+            {
+                continue;
+            }
+            if key.eq_ignore_ascii_case("host") {
+                has_host = true;
+            }
+        }
+        rebuilt.push_str(line);
+        rebuilt.push_str("\r\n");
+    }
+    if !has_host {
+        rebuilt.push_str(&format!("Host: {}\r\n", host));
+    }
+    rebuilt.push_str("Connection: close\r\n\r\n");
+
+    let is_github = is_github_host(&host);
+    logger
+        .log(&format!(
+            "[{}] HTTP {} {}://{}:{}{}",
+            peer,
+            method,
+            if is_tls { "https" } else { "http" },
+            host,
+            port,
+            path
+        ))
+        .await;
+
+    if !is_tls {
+        match tokio::time::timeout(
+            Duration::from_secs(10),
+            TcpStream::connect((host.as_str(), port)),
+        )
+        .await
+        {
+            Ok(Ok(mut upstream)) => {
+                let _ = upstream.set_nodelay(true);
+                if upstream.write_all(rebuilt.as_bytes()).await.is_err() {
+                    return;
+                }
+                if !excess.is_empty() && upstream.write_all(&excess).await.is_err() {
+                    return;
+                }
+                let _ = tokio::io::copy_bidirectional(&mut client_socket, &mut upstream).await;
+            }
+            _ => {
+                let _ = client_socket
+                    .write_all(b"HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")
+                    .await;
+            }
+        }
+        return;
+    }
+
+    let sni_candidates: Vec<&str> = if is_github {
+        vec![host.as_str()]
+    } else {
+        let mut list = vec![host.as_str()];
+        list.extend_from_slice(WHITE_SNI_LIST);
+        list
+    };
+
+    for sni in sni_candidates {
+        let tcp = match tokio::time::timeout(
+            Duration::from_secs(8),
+            TcpStream::connect((host.as_str(), port)),
+        )
+        .await
+        {
+            Ok(Ok(s)) => s,
+            _ => continue,
+        };
+        let _ = tcp.set_nodelay(true);
+        let server_name = match ServerName::try_from(sni.to_string()) {
+            Ok(sn) => sn,
+            Err(_) => continue,
+        };
+        if let Ok(Ok(mut tls)) = tokio::time::timeout(
+            Duration::from_secs(8),
+            tls_connector.connect(server_name, tcp),
+        )
+        .await
+        {
+            if tls.write_all(rebuilt.as_bytes()).await.is_err() {
+                return;
+            }
+            if !excess.is_empty() && tls.write_all(&excess).await.is_err() {
+                return;
+            }
+            let _ = tokio::io::copy_bidirectional(&mut client_socket, &mut tls).await;
+            return;
+        }
+    }
+
+    let _ = client_socket
+        .write_all(b"HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")
+        .await;
+}
+
 async fn handle_client(
     mut client_socket: TcpStream,
     peer: SocketAddr,
+    listen_port: u16,
     secret: Arc<Vec<u8>>,
     cf_domains: Arc<Vec<String>>,
     tls_connector: Arc<TlsConnector>,
     logger: Logger,
 ) {
+    let mut peek_buf = [0u8; 64];
+    let peek_n = match client_socket.peek(&mut peek_buf).await {
+        Ok(0) => return,
+        Ok(n) => n,
+        Err(_) => return,
+    };
+    if peek_n < 8 && b"CONNECT ".starts_with(&peek_buf[..peek_n]) {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        if let Ok(n) = client_socket.peek(&mut peek_buf).await {
+            if is_http_method_prefix(&peek_buf[..n]) {
+                handle_http_proxy(client_socket, peer, listen_port, tls_connector, logger).await;
+                return;
+            }
+        }
+    } else if is_http_method_prefix(&peek_buf[..peek_n]) {
+        handle_http_proxy(client_socket, peer, listen_port, tls_connector, logger).await;
+        return;
+    }
+
     let mut handshake = [0u8; 64];
     if let Err(_) = client_socket.read_exact(&mut handshake).await {
         return;
@@ -581,46 +1011,68 @@ async fn handle_client(
     let candidate_hosts: Vec<String> = match actual_dc {
         1 => if is_media {
             vec![
+                "pluto-1.web.telegram.org".to_string(),
                 "kws1-1.web.telegram.org".to_string(),
                 "kws1.web.telegram.org".to_string(),
             ]
         } else {
-            vec!["kws1.web.telegram.org".to_string()]
+            vec![
+                "kws1.web.telegram.org".to_string(),
+                "pluto-1.web.telegram.org".to_string(),
+                "kws1-1.web.telegram.org".to_string(),
+            ]
         },
         2 => if is_media {
             vec![
+                "venus-1.web.telegram.org".to_string(),
                 "kws2-1.web.telegram.org".to_string(),
                 "kws2.web.telegram.org".to_string(),
             ]
         } else {
-            vec!["kws2.web.telegram.org".to_string()]
+            vec![
+                "kws2.web.telegram.org".to_string(),
+                "venus-1.web.telegram.org".to_string(),
+                "kws2-1.web.telegram.org".to_string(),
+            ]
         },
         3 => if is_media {
             vec![
+                "aurora-1.web.telegram.org".to_string(),
                 "kws3-1.web.telegram.org".to_string(),
                 "kws3.web.telegram.org".to_string(),
             ]
         } else {
-            vec!["kws3.web.telegram.org".to_string()]
+            vec![
+                "kws3.web.telegram.org".to_string(),
+                "aurora-1.web.telegram.org".to_string(),
+                "kws3-1.web.telegram.org".to_string(),
+            ]
         },
         4 => if is_media {
             vec![
                 "vesta-1.web.telegram.org".to_string(),
+                "kws4-1.web.telegram.org".to_string(),
                 "kws4.web.telegram.org".to_string(),
             ]
         } else {
             vec![
                 "kws4.web.telegram.org".to_string(),
                 "vesta-1.web.telegram.org".to_string(),
+                "kws4-1.web.telegram.org".to_string(),
             ]
         },
         5 => if is_media {
             vec![
+                "flora-1.web.telegram.org".to_string(),
                 "kws5-1.web.telegram.org".to_string(),
                 "kws5.web.telegram.org".to_string(),
             ]
         } else {
-            vec!["kws5.web.telegram.org".to_string()]
+            vec![
+                "kws5.web.telegram.org".to_string(),
+                "flora-1.web.telegram.org".to_string(),
+                "kws5-1.web.telegram.org".to_string(),
+            ]
         },
         _ => vec![format!("kws{}.web.telegram.org", actual_dc)],
     };
@@ -730,15 +1182,9 @@ async fn handle_client(
                     tg_enc.apply_keystream(&mut cipher_chunk);
 
                     let parts = splitter.split(&cipher_chunk, &plain);
-                    if parts.is_empty() {
-                        if let Err(_) = ws_sink.send(Message::Binary(cipher_chunk.into())).await {
-                            break;
-                        }
-                    } else {
-                        for part in parts {
-                            if let Err(_) = ws_sink.send(Message::Binary(part.into())).await {
-                                return;
-                            }
+                    for part in parts {
+                        if let Err(_) = ws_sink.send(Message::Binary(part.into())).await {
+                            return;
                         }
                     }
                 }
@@ -752,15 +1198,19 @@ async fn handle_client(
                         Err(_) => break,
                     };
 
-                    if let Message::Binary(data) = msg {
-                        bytes_down_clone.fetch_add(data.len() as u64, Ordering::Relaxed);
-                        let mut data_vec = data.to_vec();
-                        tg_dec.apply_keystream(&mut data_vec);
-                        clt_enc.apply_keystream(&mut data_vec);
+                    match msg {
+                        Message::Binary(data) => {
+                            bytes_down_clone.fetch_add(data.len() as u64, Ordering::Relaxed);
+                            let mut data_vec = data.to_vec();
+                            tg_dec.apply_keystream(&mut data_vec);
+                            clt_enc.apply_keystream(&mut data_vec);
 
-                        if let Err(_) = client_writer.write_all(&data_vec).await {
-                            break;
+                            if let Err(_) = client_writer.write_all(&data_vec).await {
+                                break;
+                            }
                         }
+                        Message::Close(_) => break,
+                        _ => {}
                     }
                 }
             };
@@ -855,7 +1305,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let tls_clone = Arc::clone(&tls_connector);
                 let logger_clone = logger.clone();
                 tokio::spawn(async move {
-                    handle_client(socket, peer, secret_clone, cf_clone, tls_clone, logger_clone).await;
+                    handle_client(socket, peer, port, secret_clone, cf_clone, tls_clone, logger_clone).await;
                 });
             }
             Err(e) => {

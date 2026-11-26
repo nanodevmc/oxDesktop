@@ -1,5 +1,6 @@
 #include "extera/extera_ip_info.h"
 
+#include "extera/extera_ws_proxy.h"
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/labels.h"
 #include "ui/text/text_utilities.h"
@@ -55,6 +56,7 @@ void Inspect(
 	}
 
 	static auto *manager = new QNetworkAccessManager(qApp);
+	Extera::WsProxy::ApplyHttpProxy(manager);
 
 	const auto showFailBox = [=] {
 		controller->show(Box([=](not_null<Ui::GenericBox*> box) {

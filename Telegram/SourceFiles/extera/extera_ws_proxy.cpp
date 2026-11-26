@@ -3,14 +3,18 @@
 #include "extera/extera_config.h"
 #include "core/application.h"
 #include "core/core_settings.h"
+#include "mtproto/facade.h"
 #include "mtproto/mtproto_proxy_data.h"
 #include "base/timer.h"
 
+#include <atomic>
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
 #include <QtCore/QProcess>
 #include <QtCore/QRandomGenerator>
-#include <QtCore/QStandardPaths>
+#include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkProxy>
+#include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QTcpServer>
 
 namespace Extera::WsProxy {
@@ -19,14 +23,22 @@ namespace {
 constexpr auto kDefaultPort = 1443;
 constexpr auto kPortAttempts = 20;
 constexpr auto kRestartDelay = crl::time(3000);
+constexpr auto kAutoEnableDelay = 10 * crl::time(1000);
+constexpr auto kRestartCooldown = crl::time(2000);
 constexpr auto kMaxRestarts = 5;
+
+std::atomic<bool> gProxyActive{ false };
+std::atomic<int> gProxyPort{ kDefaultPort };
 
 struct State {
 	QProcess *process = nullptr;
 	MTP::ProxyData proxy;
 	std::unique_ptr<base::Timer> restartTimer;
+	std::unique_ptr<base::Timer> autoTimer;
+	crl::time lastRestartAt = 0;
 	int restarts = 0;
 	bool stopping = false;
+	bool isConnected = false;
 
 	~State() {
 		if (process) {
@@ -66,87 +78,6 @@ State &Instance() {
 		}
 	}
 	return QString();
-}
-
-[[nodiscard]] QString PythonDir() {
-	for (const auto &cand : {
-		cExeDir() + u"python/"_q,
-		cWorkingDir() + u"python/"_q,
-		cWorkingDir() + u"Telegram/SourceFiles/extera/python/"_q,
-		cExeDir() + u"Telegram/SourceFiles/extera/python/"_q,
-	}) {
-		if (QDir(cand).exists()) {
-			return cand;
-		}
-	}
-	return cExeDir() + u"python/"_q;
-}
-
-[[nodiscard]] QString Interpreter() {
-#ifdef Q_OS_WIN
-	const auto localW = PythonDir() + u"pythonw.exe"_q;
-	if (QFile::exists(localW)) {
-		return localW;
-	}
-	const auto local = PythonDir() + u"python.exe"_q;
-	if (QFile::exists(local)) {
-		return local;
-	}
-	const auto foundW = QStandardPaths::findExecutable(u"pythonw"_q);
-	if (!foundW.isEmpty() && QFile::exists(foundW)) {
-		return foundW;
-	}
-	const auto found = QStandardPaths::findExecutable(u"python"_q);
-	if (!found.isEmpty() && QFile::exists(found)) {
-		return found;
-	}
-	return localW;
-#else
-	const auto local3 = PythonDir() + u"bin/python3"_q;
-	if (QFile::exists(local3)) {
-		return local3;
-	}
-	const auto local = PythonDir() + u"bin/python"_q;
-	if (QFile::exists(local)) {
-		return local;
-	}
-	const auto found3 = QStandardPaths::findExecutable(u"python3"_q);
-	if (!found3.isEmpty() && QFile::exists(found3)) {
-		return found3;
-	}
-	const auto found = QStandardPaths::findExecutable(u"python"_q);
-	if (!found.isEmpty() && QFile::exists(found)) {
-		return found;
-	}
-	return local3;
-#endif
-}
-
-[[nodiscard]] QString Script() {
-	const auto candidates = {
-		PythonDir() + u"tgws/ox_tgws.py"_q,
-		PythonDir() + u"tgws/exd_tgws.py"_q,
-		PythonDir() + u"extera/tgws/ox_tgws.py"_q,
-		PythonDir() + u"extera/tgws/exd_tgws.py"_q,
-		cExeDir() + u"python/tgws/ox_tgws.py"_q,
-		cExeDir() + u"python/tgws/exd_tgws.py"_q,
-		cExeDir() + u"python/extera/tgws/ox_tgws.py"_q,
-		cExeDir() + u"python/extera/tgws/exd_tgws.py"_q,
-		cWorkingDir() + u"python/tgws/ox_tgws.py"_q,
-		cWorkingDir() + u"python/tgws/exd_tgws.py"_q,
-		cWorkingDir() + u"python/extera/tgws/ox_tgws.py"_q,
-		cWorkingDir() + u"python/extera/tgws/exd_tgws.py"_q,
-		cExeDir() + u"Telegram/SourceFiles/extera/python/tgws/ox_tgws.py"_q,
-		cExeDir() + u"Telegram/SourceFiles/extera/python/tgws/exd_tgws.py"_q,
-		cWorkingDir() + u"Telegram/SourceFiles/extera/python/tgws/ox_tgws.py"_q,
-		cWorkingDir() + u"Telegram/SourceFiles/extera/python/tgws/exd_tgws.py"_q,
-	};
-	for (const auto &candidate : candidates) {
-		if (QFile::exists(candidate)) {
-			return candidate;
-		}
-	}
-	return PythonDir() + u"tgws/exd_tgws.py"_q;
 }
 
 [[nodiscard]] QString Secret() {
@@ -204,12 +135,18 @@ void ScheduleRestart() {
 
 void Launch() {
 	auto &state = Instance();
-	if (state.process || !Available()) {
+	if (state.process) {
+		return;
+	}
+	const auto nativeBin = NativeBinary();
+	if (nativeBin.isEmpty()) {
 		return;
 	}
 	state.stopping = false;
 	CleanOurProxies();
 	const auto port = ChoosePort();
+	gProxyPort.store(port, std::memory_order_relaxed);
+	gProxyActive.store(true, std::memory_order_release);
 	const auto secret = Secret();
 	state.proxy = MTP::ProxyData();
 	state.proxy.type = MTP::ProxyData::Type::Mtproto;
@@ -228,44 +165,22 @@ void Launch() {
 
 	const auto process = new QProcess(qApp);
 	state.process = process;
-	const auto nativeBin = NativeBinary();
 	const auto logDir = cWorkingDir();
 	QDir().mkpath(logDir);
 	const auto logFile = logDir + u"ox_ws_proxy.log"_q;
 
-	if (!nativeBin.isEmpty()) {
-		process->setWorkingDirectory(QFileInfo(nativeBin).absolutePath());
-		process->setProgram(nativeBin);
-		process->setArguments({
-			u"--parent-pid"_q,
-			QString::number(QCoreApplication::applicationPid()),
-			u"--port"_q,
-			QString::number(port),
-			u"--secret"_q,
-			secret,
-			u"--log-file"_q,
-			logFile,
-		});
-	} else {
-		const auto scriptFile = Script();
-		const auto pyDir = QDir(PythonDir()).exists()
-			? PythonDir()
-			: QFileInfo(scriptFile).absolutePath();
-		process->setWorkingDirectory(pyDir);
-		process->setProgram(Interpreter());
-		process->setArguments({
-			u"-u"_q,
-			scriptFile,
-			u"--parent-pid"_q,
-			QString::number(QCoreApplication::applicationPid()),
-			u"--port"_q,
-			QString::number(port),
-			u"--secret"_q,
-			secret,
-			u"--log-file"_q,
-			logFile,
-		});
-	}
+	process->setWorkingDirectory(QFileInfo(nativeBin).absolutePath());
+	process->setProgram(nativeBin);
+	process->setArguments({
+		u"--parent-pid"_q,
+		QString::number(QCoreApplication::applicationPid()),
+		u"--port"_q,
+		QString::number(port),
+		u"--secret"_q,
+		secret,
+		u"--log-file"_q,
+		logFile,
+	});
 	process->setStandardOutputFile(QProcess::nullDevice());
 	process->setStandardErrorFile(QProcess::nullDevice());
 	QObject::connect(process, &QProcess::started, [=] {
@@ -308,15 +223,7 @@ void Launch() {
 } // namespace
 
 bool Available() {
-	if (!NativeBinary().isEmpty()) {
-		return true;
-	}
-	const auto interp = Interpreter();
-	const auto script = Script();
-	return !interp.isEmpty()
-		&& !script.isEmpty()
-		&& QFile::exists(interp)
-		&& QFile::exists(script);
+	return !NativeBinary().isEmpty();
 }
 
 bool Enabled() {
@@ -328,7 +235,12 @@ QString Version() {
 }
 
 int Port() {
-	return ChoosePort();
+	const auto &state = Instance();
+	if (state.process && state.proxy.port > 0) {
+		return int(state.proxy.port);
+	}
+	const auto saved = Extera::Int(u"ws_proxy_port"_q);
+	return saved ? saved : kDefaultPort;
 }
 
 QString CurrentEndpoint() {
@@ -380,6 +292,10 @@ void Start() {
 void Stop() {
 	auto &state = Instance();
 	state.stopping = true;
+	gProxyActive.store(false, std::memory_order_release);
+	if (state.autoTimer) {
+		state.autoTimer->cancel();
+	}
 	if (state.restartTimer) {
 		state.restartTimer->cancel();
 	}
@@ -398,10 +314,115 @@ void Stop() {
 	Core::App().saveSettings();
 }
 
+void Restart() {
+	auto &state = Instance();
+	if (!Available()) {
+		return;
+	}
+	const auto now = crl::now();
+	if (state.process
+		&& state.process->state() != QProcess::NotRunning
+		&& state.lastRestartAt > 0
+		&& (now - state.lastRestartAt) < kRestartCooldown) {
+		return;
+	}
+	state.lastRestartAt = now;
+	state.stopping = false;
+	state.restarts = 0;
+	if (state.restartTimer) {
+		state.restartTimer->cancel();
+	}
+	if (const auto process = base::take(state.process)) {
+		if (process->state() != QProcess::NotRunning) {
+			process->terminate();
+			if (!process->waitForFinished(500)) {
+				process->kill();
+				process->waitForFinished(500);
+			}
+		}
+		process->deleteLater();
+	}
+	Launch();
+}
+
+void StartAutoTimer() {
+	auto &state = Instance();
+	if (state.isConnected
+		|| Enabled()
+		|| !Available()
+		|| !Extera::Bool(u"ws_proxy_auto"_q)) {
+		return;
+	}
+	if (!state.autoTimer) {
+		state.autoTimer = std::make_unique<base::Timer>([] {
+			auto &state = Instance();
+			if (!state.isConnected && !Enabled() && Available()) {
+				SetEnabled(true);
+			}
+		});
+	}
+	if (!state.autoTimer->isActive()) {
+		state.autoTimer->callOnce(kAutoEnableDelay);
+	}
+}
+
+void HandleConnectionState(int32 connectionState) {
+	auto &state = Instance();
+	if (connectionState == MTP::ConnectedState) {
+		state.isConnected = true;
+		if (state.autoTimer) {
+			state.autoTimer->cancel();
+		}
+		return;
+	}
+	state.isConnected = false;
+	if (!Enabled() && Extera::Bool(u"ws_proxy_auto"_q)) {
+		StartAutoTimer();
+	}
+}
+
+void ApplyHttpProxy(QNetworkAccessManager *manager) {
+	if (!manager) {
+		return;
+	}
+	if (gProxyActive.load(std::memory_order_acquire)) {
+		manager->setProxy(QNetworkProxy(
+			QNetworkProxy::HttpProxy,
+			u"127.0.0.1"_q,
+			quint16(gProxyPort.load(std::memory_order_relaxed))));
+	} else {
+		manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
+	}
+}
+
+void PrepareFrontedRequest(QNetworkRequest &request) {
+	if (!gProxyActive.load(std::memory_order_acquire)) {
+		return;
+	}
+	auto url = request.url();
+	const auto host = url.host().toLower();
+	if (host.isEmpty()
+		|| host == u"127.0.0.1"_q
+		|| host == u"localhost"_q
+		|| host.contains(u"github.com"_q)
+		|| host.contains(u"githubusercontent.com"_q)) {
+		return;
+	}
+	if (url.scheme() == u"https"_q) {
+		url.setScheme(u"http"_q);
+		request.setUrl(url);
+		request.setRawHeader("X-Ox-Tls", "1");
+	}
+}
+
 void SetEnabled(bool enabled) {
 	Extera::Config::Instance().setBool(u"ws_proxy"_q, enabled);
 	if (enabled) {
-		Instance().restarts = 0;
+		auto &state = Instance();
+		if (state.autoTimer) {
+			state.autoTimer->cancel();
+		}
+		state.restarts = 0;
 		Launch();
 	} else {
 		Stop();

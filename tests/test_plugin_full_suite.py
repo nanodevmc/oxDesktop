@@ -35,7 +35,7 @@ mock_extera.get_selected_account = lambda: 0
 mock_extera.self_id = lambda: 99999
 mock_extera.peer_info = lambda pid: '{"type":"user","name":"Test Client","bare_id":123456789}'
 _v_txt = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "version.txt"))
-_cur_ver = "7.4.4.1"
+_cur_ver = "7.4.6"
 if os.path.exists(_v_txt):
     try:
         with open(_v_txt, "r", encoding="utf-8") as _vf:

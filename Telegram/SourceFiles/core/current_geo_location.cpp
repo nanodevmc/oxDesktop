@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "core/current_geo_location.h"
 
+#include "extera/extera_ws_proxy.h"
 #include "base/platform/base_platform_info.h"
 #include "base/invoke_queued.h"
 #include "base/timer.h"
@@ -117,6 +118,8 @@ void ResolveLocationAddressGeneric(
 
 	auto request = QNetworkRequest(partialUrl.arg(token));
 	request.setRawHeader("Referer", "http://desktop-app-resource/");
+	Extera::WsProxy::ApplyHttpProxy(&state->manager);
+	Extera::WsProxy::PrepareFrontedRequest(request);
 
 	const auto reply = state->manager.get(request);
 	QObject::connect(reply, &QNetworkReply::finished, [=] {

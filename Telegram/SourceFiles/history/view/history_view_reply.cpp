@@ -42,10 +42,92 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_dialogs.h"
 #include "styles/style_polls.h"
 
+#include <QtGui/QPainterPath>
+
 namespace HistoryView {
 namespace {
 
 constexpr auto kNonExpandedLinesLimit = 5;
+
+[[nodiscard]] QPainterPath PaintMd3ReplyCard(
+		QPainter &p,
+		const QRect &rect,
+		const Ui::Text::QuotePaintCache &cache,
+		const style::QuoteStyle &quoteSt,
+		bool inBubble,
+		const QColor &serviceBg,
+		const QColor &serviceFg,
+		const QColor &bubbleBg,
+		const style::icon *quoteIcon) {
+	auto hq = PainterHighQualityEnabler(p);
+	const auto radius = std::min(
+		float64(style::ConvertScale(12)),
+		rect.height() / 2.0);
+	const auto r = QRectF(rect);
+	const auto accent = cache.outlines[0].alpha()
+		? cache.outlines[0]
+		: (inBubble ? cache.icon : serviceFg);
+	auto fill = inBubble ? cache.bg : serviceBg;
+	if (inBubble) {
+		const auto tint = (bubbleBg.lightness() < 128)
+			? QColor(255, 255, 255, 20)
+			: QColor(0, 0, 0, 12);
+		fill = anim::color(fill, tint, 0.22);
+		fill.setAlpha(std::max(cache.bg.alpha(), 44));
+	} else {
+		fill.setAlpha(std::clamp(std::max(serviceBg.alpha(), 172), 172, 224));
+	}
+	auto border = inBubble ? accent : serviceFg;
+	border.setAlpha(inBubble ? 72 : 56);
+
+	auto cardPath = QPainterPath();
+	cardPath.addRoundedRect(r, radius, radius);
+	p.setPen(Qt::NoPen);
+	p.setBrush(fill);
+	p.drawPath(cardPath);
+
+	const auto outlineWidth = std::max(
+		float64(quoteSt.outline),
+		float64(style::ConvertScale(3)));
+	if (outlineWidth > 0.) {
+		p.save();
+		p.setClipPath(cardPath);
+		const auto barRect = QRectF(r.x(), r.y(), outlineWidth, r.height());
+		if (!cache.outline.isNull()) {
+			const auto ratio = std::max(cache.outline.devicePixelRatio(), 1.);
+			const auto tileH = cache.outline.height() / ratio;
+			for (auto ty = r.y(); ty < r.bottom(); ty += tileH) {
+				p.drawImage(
+					QRectF(r.x(), ty, outlineWidth, tileH),
+					cache.outline);
+			}
+		} else {
+			auto barColor = accent;
+			barColor.setAlpha(255);
+			p.fillRect(barRect, barColor);
+		}
+		p.restore();
+	}
+
+	p.setPen(QPen(border, 1.0));
+	p.setBrush(Qt::NoBrush);
+	p.drawRoundedRect(r.adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
+
+	if (quoteIcon && !quoteIcon->empty()) {
+		const auto left = rect.x()
+			+ rect.width()
+			- quoteIcon->width()
+			- quoteSt.iconPosition.x();
+		const auto top = rect.y() + quoteSt.iconPosition.y();
+		quoteIcon->paint(
+			p,
+			left,
+			top,
+			rect.x() * 2 + rect.width(),
+			cache.icon);
+	}
+	return cardPath;
+}
 
 [[nodiscard]] QImage MakeTaskImage() {
 	const auto diameter = st::normalFont->ascent;
@@ -882,7 +964,22 @@ void Reply::paint(
 		cache->bg = QColor(0, 0, 0, 0);
 	}
 	Ui::Text::ValidateQuotePaintCache(*cache, quoteSt);
-	Ui::Text::FillQuotePaint(p, rect, *cache, quoteSt);
+	const auto md = Extera::Bool(u"material_design"_q);
+	const auto mdCardPath = md
+		? PaintMd3ReplyCard(
+			p,
+			rect,
+			*cache,
+			quoteSt,
+			inBubble,
+			st->msgServiceBg()->c,
+			st->msgServiceFg()->c,
+			stm->msgBg->c,
+			quoteSt.icon.empty() ? nullptr : &quoteSt.icon)
+		: QPainterPath();
+	if (!md) {
+		Ui::Text::FillQuotePaint(p, rect, *cache, quoteSt);
+	}
 	if (backgroundEmojiData) {
 		ValidateBackgroundEmoji(
 			backgroundEmojiId,
@@ -892,12 +989,19 @@ void Reply::paint(
 			cache,
 			view);
 		if (!backgroundEmojiCache->frames[0].isNull()) {
+			if (md) {
+				p.save();
+				p.setClipPath(mdCardPath);
+			}
 			FillBackgroundEmoji(
 				p,
 				rect,
 				_hasQuoteIcon,
 				*backgroundEmojiCache,
 				backgroundEmojiData->firstGiftFrame);
+			if (md) {
+				p.restore();
+			}
 		}
 	}
 	if (!inBubble) {
@@ -1082,11 +1186,12 @@ void Reply::paint(
 void Reply::createRippleAnimation(
 		not_null<const Element*> view,
 		QSize size) {
+	const auto radius = Extera::Bool(u"material_design"_q)
+		? std::min(style::ConvertScale(12), size.height() / 2)
+		: st::messageQuoteStyle.radius;
 	_ripple.animation = std::make_unique<Ui::RippleAnimation>(
 		st::defaultRippleAnimation,
-		Ui::RippleAnimation::RoundRectMask(
-			size,
-			st::messageQuoteStyle.radius),
+		Ui::RippleAnimation::RoundRectMask(size, radius),
 		[=] {
 			view->repaint(_ripple.lastPaintedPoint.isNull()
 				? QRect()

@@ -54,6 +54,31 @@ bool gAutoExit = false;
 	return u"oxDesktop v"_q + QString::fromUtf8(AppVersionStr);
 }
 
+void AddDemoRow(
+		not_null<Ui::VerticalLayout*> container,
+		const QString &title,
+		const QString &value) {
+	Settings::AddButtonWithLabel(
+		container,
+		rpl::single(title),
+		rpl::single(value),
+		st::settingsButtonNoIcon);
+}
+
+void AddDemoVaultRow(not_null<Ui::VerticalLayout*> container) {
+	const auto title = u"Нейро-контекст (Neural Vault)"_q;
+	const auto vaultBtn = Settings::AddButtonWithLabel(
+		container,
+		rpl::single(title),
+		rpl::single(u"Whisper Q4"_q),
+		st::settingsButtonNoIcon);
+	Ui::NewBadge::AddTagBadgeAfterButtonText(
+		vaultBtn,
+		Ui::NewBadge::Tag::Beta,
+		rpl::single(title),
+		st::settingsButtonNoIcon);
+}
+
 void ShowDemoSettings(not_null<Window::Controller*> window) {
 	window->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setStyle(st::exteraPlayerBox);
@@ -95,40 +120,11 @@ void ShowDemoSettings(not_null<Window::Controller*> window) {
 		auto container = box->verticalLayout();
 		Ui::AddDivider(container);
 
-		const auto vaultBtn = Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Нейро-контекст (Neural Vault)"_q),
-			rpl::single(u"Whisper Q4"_q),
-			st::settingsButtonNoIcon);
-		Ui::NewBadge::AddTagBadgeAfterButtonText(
-			vaultBtn,
-			Ui::NewBadge::Tag::Beta,
-			rpl::single(u"Нейро-контекст (Neural Vault)"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Встроенный обход блокировок (TgWsProxy)"_q),
-			rpl::single(u"Активен (v1.11.4)"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Режим стримера (защита приватности)"_q),
-			rpl::single(u"Отключен"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Синхронизация текстов песен (Lyrics)"_q),
-			rpl::single(u"Включена (Genius / Spotify)"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Проверка обновлений oxDesktop"_q),
-			rpl::single(u"Версия актуальна"_q),
-			st::settingsButtonNoIcon);
+		AddDemoVaultRow(container);
+		AddDemoRow(container, u"Встроенный обход блокировок (TgWsProxy)"_q, u"Активен (v1.11.4)"_q);
+		AddDemoRow(container, u"Режим стримера (защита приватности)"_q, u"Отключен"_q);
+		AddDemoRow(container, u"Синхронизация текстов песен (Lyrics)"_q, u"Включена (Genius / Spotify)"_q);
+		AddDemoRow(container, u"Проверка обновлений oxDesktop"_q, u"Версия актуальна"_q);
 
 		Ui::AddSkip(container, 8);
 	}));
@@ -191,29 +187,10 @@ void ShowDemoAppearance(not_null<Window::Controller*> window) {
 		auto container = box->verticalLayout();
 		Ui::AddDivider(container);
 
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Иконка приложения"_q),
-			rpl::single(u"Aero Delta (Стелс)"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Стиль интерфейса"_q),
-			rpl::single(u"Liquid Glass + Material 3"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Анимации и эффекты перехода"_q),
-			rpl::single(u"Включены (Плавные 60 FPS)"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Размытие фона и прозрачность"_q),
-			rpl::single(u"Акрил (Liquid Glass)"_q),
-			st::settingsButtonNoIcon);
+		AddDemoRow(container, u"Иконка приложения"_q, u"Aero Delta (Стелс)"_q);
+		AddDemoRow(container, u"Стиль интерфейса"_q, u"Liquid Glass + Material 3"_q);
+		AddDemoRow(container, u"Анимации и эффекты перехода"_q, u"Включены (Плавные 60 FPS)"_q);
+		AddDemoRow(container, u"Размытие фона и прозрачность"_q, u"Акрил (Liquid Glass)"_q);
 
 		Ui::AddSkip(container, 8);
 	}));
@@ -230,34 +207,10 @@ void ShowDemoPlugins(not_null<Window::Controller*> window) {
 		auto container = box->verticalLayout();
 		Ui::AddDivider(container);
 
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Каталог расширений"_q),
-			rpl::single(u"Доступно в репозитории"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Песочница скриптов"_q),
-			rpl::single(u"Изоляция активна"_q),
-			st::settingsButtonNoIcon);
-
-		const auto vaultBtn = Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Нейро-контекст (Neural Vault)"_q),
-			rpl::single(u"Whisper Q4"_q),
-			st::settingsButtonNoIcon);
-		Ui::NewBadge::AddTagBadgeAfterButtonText(
-			vaultBtn,
-			Ui::NewBadge::Tag::Beta,
-			rpl::single(u"Нейро-контекст (Neural Vault)"_q),
-			st::settingsButtonNoIcon);
-
-		Settings::AddButtonWithLabel(
-			container,
-			rpl::single(u"Синхронизация текстов песен"_q),
-			rpl::single(u"Включена (Genius / Spotify)"_q),
-			st::settingsButtonNoIcon);
+		AddDemoRow(container, u"Каталог расширений"_q, u"Доступно в репозитории"_q);
+		AddDemoRow(container, u"Песочница скриптов"_q, u"Изоляция активна"_q);
+		AddDemoVaultRow(container);
+		AddDemoRow(container, u"Синхронизация текстов песен"_q, u"Включена (Genius / Spotify)"_q);
 
 		Ui::AddDividerText(
 			container,

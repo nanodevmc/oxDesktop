@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/view/media_view_overlay_widget.h"
 
 #include "extera/extera_config.h"
+#include "extera/extera_ocr.h"
 
 #include "apiwrap.h"
 #include "api/api_attached_stickers.h"
@@ -87,6 +88,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_chat.h"
 #include "data/data_user.h"
 #include "data/data_media_rotation.h"
+#include "data/data_peer_values.h"
 #include "data/data_photo_media.h"
 #include "data/data_document_media.h"
 #include "data/data_document_resolver.h"
@@ -1793,8 +1795,9 @@ void OverlayWidget::updateControls() {
 			&& _message->media()
 			&& _message->media()->ttlSeconds())
 		&& (_photo || (_document && _document->isImage()));
-	_recognizeVisible = _recognitionResult.success
-		&& !_recognitionResult.items.empty();
+	_recognizeVisible = (_recognitionResult.success
+		&& !_recognitionResult.items.empty())
+		|| canExtractOcrText();
 	const auto navRect = [&](int i) {
 		return QRect(
 			width() - st::mediaviewIconSize.width() * i,
@@ -2326,6 +2329,10 @@ void OverlayWidget::fillContextMenuActions(
 					? tr::lng_mediaview_copy_frame(tr::now)
 					: tr::lng_mediaview_copy(tr::now)),
 				[=] { copyMedia(); },
+				&st::mediaMenuIconCopy);
+			addAction(
+				tr::lng_oxd_ocr_extract(tr::now),
+				[=] { openOcrBox(); },
 				&st::mediaMenuIconCopy);
 		}
 	}
@@ -3720,7 +3727,61 @@ void OverlayWidget::showMediaOverview() {
 	}
 }
 
+bool OverlayWidget::canExtractOcrText() const {
+	const auto story = _stories ? _stories->story() : nullptr;
+	return !_themePreviewShown
+		&& !story
+		&& !hasCopyMediaRestriction()
+		&& ((_photo && _photoMedia && _photoMedia->loaded())
+			|| (_document && _document->isImage() && documentContentShown()));
+}
+
+QImage OverlayWidget::currentOcrImage() const {
+	auto image = QImage();
+	if (_document) {
+		image = transformedShownContent();
+	} else if (_photo && _photoMedia && _photoMedia->loaded()) {
+		image = transformedShownContent();
+		if (image.isNull()) {
+			if (const auto img = _photoMedia->image(Data::PhotoSize::Large)) {
+				image = img->original();
+			}
+		}
+	}
+	return image;
+}
+
+void OverlayWidget::openOcrBox() {
+	const auto image = currentOcrImage();
+	if (image.isNull()) {
+		return;
+	}
+	const auto window = findWindow();
+	if (!window) {
+		return;
+	}
+	if (_dropdown && !_dropdown->isHidden()) {
+		_dropdown->hideAnimated(Ui::DropdownMenu::HideOption::IgnoreShow);
+	}
+	if (!_windowed) {
+		close();
+	}
+	Extera::Ocr::ExtractAndShowBox(window, image);
+}
+
 void OverlayWidget::recognize() {
+#ifndef Q_OS_MAC
+	if (canExtractOcrText()) {
+		openOcrBox();
+		return;
+	}
+#else // !Q_OS_MAC
+	if ((!_recognitionResult.success || _recognitionResult.items.empty())
+		&& canExtractOcrText()) {
+		openOcrBox();
+		return;
+	}
+#endif // !Q_OS_MAC
 	_showRecognitionResults = !_showRecognitionResults;
 	if (!_showRecognitionResults) {
 		clearRecognitionSelection();
@@ -7774,6 +7835,7 @@ void OverlayWidget::setContext(
 		ItemContext,
 		not_null<PeerData*>,
 		StoriesContext> context) {
+	_screenshotProtectionLifetime.destroy();
 	if (const auto item = std::get_if<ItemContext>(&context)) {
 		if (_message != item->item) {
 			checkSingleViewMediaBurn();
@@ -7827,7 +7889,23 @@ void OverlayWidget::setContext(
 		}
 	}
 	_user = _peer ? _peer->asUser() : nullptr;
-	refreshScreenshotProtection();
+	if (_history) {
+		Data::AllowsForwardingValue(
+			_history->peer
+		) | rpl::on_next([=] {
+			refreshScreenshotProtection();
+		}, _screenshotProtectionLifetime);
+	} else {
+		refreshScreenshotProtection();
+	}
+	if (_message) {
+		_message->history()->owner().itemDataChanges(
+		) | rpl::filter(
+			rpl::mappers::_1 == _message
+		) | rpl::on_next([=] {
+			refreshScreenshotProtection();
+		}, _screenshotProtectionLifetime);
+	}
 }
 
 void OverlayWidget::setStoriesPeer(PeerData *peer) {
@@ -8865,6 +8943,7 @@ Window::SessionController *OverlayWidget::findWindow(bool switchTo) const {
 
 // #TODO unite and check
 void OverlayWidget::clearBeforeHide() {
+	_screenshotProtectionLifetime.destroy();
 	checkSingleViewMediaBurn();
 	_message = nullptr;
 	_sharedMedia = nullptr;

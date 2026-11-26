@@ -80,6 +80,22 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace HistoryView {
 namespace {
 
+[[nodiscard]] QString ActiveDeletedMark(not_null<const HistoryItem*> item) {
+	const auto customMark = Extera::String(u"deleted_mark_text"_q);
+	const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
+	return (item->isDeleted() || item->originalText().text.endsWith(mark))
+		? mark
+		: QString();
+}
+
+[[nodiscard]] int DeletedMarkBadgeWidth(not_null<const HistoryItem*> item) {
+	const auto mark = ActiveDeletedMark(item);
+	if (mark.isEmpty()) {
+		return 0;
+	}
+	return st::msgDateFont->width(mark) + 12;
+}
+
 base::options::toggle UnlimitedMessageWidth({
 	.id = kOptionUnlimitedMessageWidth,
 	.name = "Unlimited message width",
@@ -3179,29 +3195,6 @@ void Message::paintText(
 	if (appearingClip) {
 		p.restore();
 	}
-
-	const auto customMark = Extera::String(u"deleted_mark_text"_q);
-	const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
-	if (data()->originalText().text.endsWith(mark)) {
-		p.save();
-		p.setRenderHint(QPainter::Antialiasing);
-		const auto font = st::defaultTextStyle.font;
-		const auto textW = font->width(mark);
-		const auto badgeH = font->height + 4;
-		const auto badgeW = textW + 12;
-		const auto badgeX = trect.x();
-		const auto badgeY = trect.y() + trect.height() - badgeH;
-		const auto badgeRect = QRectF(badgeX, badgeY, badgeW, badgeH);
-
-		p.setBrush(QColor(230, 70, 70, 36));
-		p.setPen(Qt::NoPen);
-		p.drawRoundedRect(badgeRect, 6.0, 6.0);
-
-		p.setFont(font);
-		p.setPen(QColor(235, 75, 75));
-		p.drawText(badgeRect, Qt::AlignCenter, mark);
-		p.restore();
-	}
 }
 
 void Message::paintRichText(
@@ -5515,6 +5508,26 @@ void Message::drawInfo(
 	const auto size = _bottomInfo.currentSize();
 	const auto dateX = infoRight - size.width();
 	const auto dateY = infoBottom - size.height();
+	if (const auto deletedMark = ActiveDeletedMark(data()); !deletedMark.isEmpty()) {
+		const auto badgeW = DeletedMarkBadgeWidth(data());
+		const auto badgeH = st::msgDateFont->height + 2;
+		const auto badgeX = dateX - 6 - badgeW;
+		const auto badgeY = dateY + (size.height() - badgeH) / 2.;
+		const auto badgeRect = QRectF(badgeX, badgeY, badgeW, badgeH);
+		const auto onMedia = (type == InfoDisplayType::Image)
+			|| (type == InfoDisplayType::Background);
+		p.save();
+		p.setRenderHint(QPainter::Antialiasing);
+		p.setBrush(onMedia
+			? QColor(180, 42, 48, 200)
+			: QColor(230, 70, 70, 40));
+		p.setPen(QPen(QColor(235, 75, 75, 95), 0.75));
+		p.drawRoundedRect(badgeRect, badgeH / 2., badgeH / 2.);
+		p.setFont(st::msgDateFont);
+		p.setPen(onMedia ? QColor(255, 255, 255) : QColor(235, 75, 75));
+		p.drawText(badgeRect, Qt::AlignCenter, deletedMark);
+		p.restore();
+	}
 	if (type == InfoDisplayType::Image) {
 		const auto dateW = size.width() + 2 * st::msgDateImgPadding.x();
 		const auto dateH = size.height() + 2 * st::msgDateImgPadding.y();
@@ -5566,11 +5579,19 @@ TextState Message::bottomInfoTextState(
 }
 
 int Message::infoWidth() const {
-	return hidesBottomInfo() ? 0 : _bottomInfo.maxWidth();
+	if (hidesBottomInfo()) {
+		return 0;
+	}
+	const auto badgeW = DeletedMarkBadgeWidth(data());
+	return _bottomInfo.maxWidth() + (badgeW ? (badgeW + 6) : 0);
 }
 
 int Message::bottomInfoFirstLineWidth() const {
-	return hidesBottomInfo() ? 0 : _bottomInfo.firstLineWidth();
+	if (hidesBottomInfo()) {
+		return 0;
+	}
+	const auto badgeW = DeletedMarkBadgeWidth(data());
+	return _bottomInfo.firstLineWidth() + (badgeW ? (badgeW + 6) : 0);
 }
 
 bool Message::bottomInfoIsWide() const {

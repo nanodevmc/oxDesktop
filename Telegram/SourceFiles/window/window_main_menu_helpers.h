@@ -7,6 +7,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+namespace style {
+struct SettingsButton;
+} // namespace style
+
 namespace Ui {
 class FlatLabel;
 class RpWidget;
@@ -28,6 +32,8 @@ class SessionController;
 
 void SetupMenuBots(
 	not_null<Ui::VerticalLayout*> container,
-	not_null<SessionController*> controller);
+	not_null<SessionController*> controller,
+	const style::SettingsButton *buttonStyle = nullptr,
+	Fn<void(not_null<Ui::SettingsButton*>)> onButtonAdded = nullptr);
 
 } // namespace Window

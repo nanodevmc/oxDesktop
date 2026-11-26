@@ -1938,6 +1938,10 @@ PRIVATE
     extera/extera_round_video.h
     extera/extera_ws_proxy.cpp
     extera/extera_ws_proxy.h
+    extera/extera_arrow_3d.cpp
+    extera/extera_arrow_3d.h
+    extera/extera_ocr.cpp
+    extera/extera_ocr.h
     extera/extera_badges.cpp
     extera/extera_badges.h
     extera/extera_ai_chat.cpp

@@ -135,7 +135,8 @@ private:
 		Painter &p,
 		const QRect &fill,
 		const QColor &color,
-		float64 opacity) const;
+		float64 opacity,
+		const QColor &border = QColor()) const;
 
 	void validateTagBg(const QColor &color) const;
 

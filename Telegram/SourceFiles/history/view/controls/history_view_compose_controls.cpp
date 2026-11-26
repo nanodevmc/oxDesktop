@@ -804,12 +804,7 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 				Ui::DefaultImageSpoiler().frame(
 					_shownPreviewSpoiler->index(crl::now(), p.inactive())));
 		}
-		if (overEdit > 0.) {
-			p.setOpacity(overEdit);
-			p.fillRect(to, st::historyEditMediaBg);
-			st::historyEditMedia.paintInCenter(p, to);
-			p.setOpacity(1.);
-		}
+		MediaEditManager::PaintPreviewHover(p, to, overEdit);
 		_mediaEditManager.paintCoverUpload(p, to);
 	}
 
@@ -5860,7 +5855,9 @@ void ComposeControls::editMessage(
 		return;
 	}
 	if (!item->richPage()) {
-		SelectTextInFieldWithMargins(_field, selection);
+		SelectTextInFieldWithMargins(
+			_field,
+			EditFieldSelection(PrepareEditText(item), selection));
 	}
 	saveDraftWithTextNow();
 	focus();
@@ -5894,9 +5891,11 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 		saveFieldToHistoryLocalDraft();
 	}
 	const auto editData = PrepareEditText(item);
+	const auto length = uint16(editData.text.size());
+	const auto position = EditFieldSelection(editData, { length, length }).from;
 	const auto cursor = MessageCursor{
-		int(editData.text.size()),
-		int(editData.text.size()),
+		position,
+		position,
 		Ui::kQFixedMax
 	};
 	const auto key = draftKey(DraftType::Edit);

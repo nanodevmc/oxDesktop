@@ -9649,6 +9649,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_oxd_support_step3_text" = "After the payment is checked, the badge appears next to your name for all oxDesktop users.";
 "lng_oxd_support_preview" = "This is how the badge looks.";
 "lng_oxd_badge_title" = "oxDesktop Badge";
+"lng_oxd_ocr_extract" = "Extract Text (OCR)";
 "lng_oxd_badge_get" = "Get a Badge";
 "lng_oxd_badge_text" = "The oxDesktop badge is shown next to your name in chats, the chat list and your profile for all oxDesktop users. To get a badge, contact the developer.";
 "lng_oxd_badge_contact" = "Contact Developer";

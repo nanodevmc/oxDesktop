@@ -594,6 +594,7 @@ private:
 	void assignPalette(not_null<const style::palette*> palette);
 	void clearColorIndexCaches();
 	void updateDarkValue();
+	void syncMaterialDesign() const;
 
 	[[nodiscard]] not_null<Text::QuotePaintCache*> coloredCache(
 		ColoredQuotePaintCaches &caches,
@@ -776,6 +777,7 @@ private:
 	ColorIndicesCompressed _colorIndices;
 
 	bool _dark = false;
+	mutable bool _materialDesign = false;
 	int _paletteVersion = 0;
 
 	rpl::event_stream<> _paletteChanged;

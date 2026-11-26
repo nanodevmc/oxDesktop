@@ -86,8 +86,13 @@ private:
 		not_null<QEvent*> e);
 
 	void drawName(Painter &p);
+	void updateMaterialMenuStyle();
+	[[nodiscard]] const style::SettingsButton &menuButtonStyle() const;
+
+	struct MdStyles;
 
 	const not_null<SessionController*> _controller;
+	std::unique_ptr<MdStyles> _mdStyles;
 	object_ptr<Ui::UserpicButton> _userpicButton;
 	Ui::Text::String _name;
 	int _nameVersion = 0;

@@ -58,6 +58,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/chat_theme.h"
 #include "ui/controls/swipe_handler.h"
 #include "ui/controls/userpic_button.h"
+#include "ui/effects/animations.h"
 #include "ui/effects/snowflakes.h"
 #include "ui/effects/toggle_arrow.h"
 #include "ui/new_badges.h"
@@ -129,7 +130,153 @@ constexpr auto kPlayStatusLimit = 2;
 	}) | rpl::flatten_latest();
 }
 
+void DecorateMd3Divider(not_null<QWidget*> divider) {
+	if (divider->property("md3_divider_decorated").toBool()) {
+		return;
+	}
+	divider->setProperty("md3_divider_decorated", true);
+	base::install_event_filter(divider, [=](not_null<QEvent*> e) {
+		if (e->type() != QEvent::Paint
+			|| !Extera::Bool(u"material_design"_q)) {
+			return base::EventFilterResult::Continue;
+		}
+		auto p = QPainter(divider);
+		p.fillRect(divider->rect(), st::mainMenuBg);
+		const auto h = std::max(1., double(divider->height()));
+		const auto inset = std::min(16., divider->width() * 0.25);
+		const auto w = std::max(0., double(divider->width()) - 2. * inset);
+		if (w <= 0.) {
+			return base::EventFilterResult::Cancel;
+		}
+		auto hq = PainterHighQualityEnabler(p);
+		auto color = st::shadowFg->c;
+		color.setAlphaF(std::max(color.alphaF(), 0.16));
+		p.setPen(Qt::NoPen);
+		p.setBrush(color);
+		p.drawRoundedRect(QRectF(inset, 0., w, h), h * 0.5, h * 0.5);
+		return base::EventFilterResult::Cancel;
+	});
+}
+
+void DecorateMd3Button(
+		not_null<Ui::AbstractButton*> button,
+		Fn<bool()> isActiveFn = nullptr,
+		bool paintHoverFill = false) {
+	if (button->property("md3_item_decorated").toBool()) {
+		return;
+	}
+	button->setProperty("md3_item_decorated", true);
+	const auto overlay = Ui::CreateChild<Ui::RpWidget>(button.get());
+	overlay->setProperty("md3_overlay", true);
+	overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
+	overlay->setGeometry(QRect(QPoint(), button->size()));
+	overlay->show();
+	button->sizeValue(
+	) | rpl::on_next([=](QSize size) {
+		overlay->setGeometry(QRect(QPoint(), size));
+	}, overlay->lifetime());
+	base::install_event_filter(button, [=](not_null<QEvent*> e) {
+		switch (e->type()) {
+		case QEvent::Enter:
+		case QEvent::Leave:
+		case QEvent::HoverEnter:
+		case QEvent::HoverLeave:
+		case QEvent::MouseButtonPress:
+		case QEvent::MouseButtonRelease:
+			overlay->update();
+			break;
+		default:
+			break;
+		}
+		return base::EventFilterResult::Continue;
+	});
+	overlay->paintRequest(
+	) | rpl::on_next([=] {
+		if (!Extera::Bool(u"material_design"_q)) {
+			return;
+		}
+		const auto w = overlay->width();
+		const auto h = overlay->height();
+		if (w <= 24 || h <= 16) {
+			return;
+		}
+		const auto over = (button->isOver() || button->isDown())
+			&& !button->isDisabled();
+		const auto active = isActiveFn && isActiveFn();
+		if (!over && !active) {
+			return;
+		}
+		const auto pill = QRectF(overlay->rect()).adjusted(8., 2., -8., -2.);
+		const auto radius = std::min(12., pill.height() * 0.5);
+		auto p = QPainter(overlay);
+		auto hq = PainterHighQualityEnabler(p);
+		if (active || (over && paintHoverFill)) {
+			p.setPen(Qt::NoPen);
+			p.setBrush(anim::with_alpha(
+				st::windowBgActive->c,
+				active ? (over ? 0.09 : 0.05) : 0.08));
+			p.drawRoundedRect(pill, radius, radius);
+		}
+		p.setBrush(Qt::NoBrush);
+		p.setPen(QPen(
+			anim::with_alpha(
+				active
+					? st::windowBgActive->c
+					: st::windowSubTextFg->c,
+				over ? 0.34 : 0.20),
+			1.));
+		p.drawRoundedRect(
+			pill.adjusted(0.5, 0.5, -0.5, -0.5),
+			radius,
+			radius);
+	}, overlay->lifetime());
+}
+
+void DecorateMd3MenuItem(
+		not_null<Ui::SettingsButton*> button,
+		bool isProfile = false) {
+	DecorateMd3Button(
+		button,
+		[=] { return isProfile || button->toggled(); },
+		false);
+}
+
+void DecorateMd3Hierarchy(not_null<QWidget*> root, int depth = 0) {
+	if (depth > 2) {
+		return;
+	}
+	for (const auto child : root->children()) {
+		if (!child->isWidgetType()) {
+			continue;
+		}
+		const auto widget = static_cast<QWidget*>(child);
+		if (widget->property("md3_overlay").toBool()) {
+			continue;
+		} else if (const auto settingsBtn = dynamic_cast<Ui::SettingsButton*>(widget)) {
+			const auto isProfile =
+				settingsBtn->property("extera_menu_id").toString() == u"profile"_q;
+			DecorateMd3MenuItem(settingsBtn, isProfile);
+		} else if (const auto button = dynamic_cast<Ui::AbstractButton*>(widget)) {
+			DecorateMd3Button(button, nullptr, true);
+		} else if (const auto shadow = dynamic_cast<Ui::PlainShadow*>(widget)) {
+			DecorateMd3Divider(shadow);
+		} else {
+			DecorateMd3Hierarchy(widget, depth + 1);
+		}
+	}
+}
+
 } // namespace
+
+struct MainMenu::MdStyles {
+	MdStyles()
+	: hoverBg(QColor(0, 0, 0, 0))
+	, button(st::mainMenuButton) {
+	}
+
+	style::OwnedColor hoverBg;
+	style::SettingsButton button;
+};
 
 class MainMenu::ToggleAccountsButton final : public Ui::AbstractButton {
 public:
@@ -144,6 +291,12 @@ public:
 
 private:
 	void paintEvent(QPaintEvent *e) override;
+	void onStateChanged(State was, StateChangeSource source) override {
+		AbstractButton::onStateChanged(was, source);
+		if (const auto parent = parentWidget()) {
+			parent->update(0, 0, parent->width(), st::mainMenuCoverHeight);
+		}
+	}
 	void paintUnreadBadge(Painter &p);
 
 	void validateUnreadBadge();
@@ -320,6 +473,7 @@ MainMenu::MainMenu(
 	not_null<SessionController*> controller)
 : LayerWidget(parent)
 , _controller(controller)
+, _mdStyles(std::make_unique<MdStyles>())
 , _userpicButton(
 	this,
 	_controller->session().user(),
@@ -370,6 +524,8 @@ MainMenu::MainMenu(
 , _version(AddVersionLabel(_footer)) {
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
+	updateMaterialMenuStyle();
+	DecorateMd3Divider(_shadow->entity());
 	setupUserpicButton();
 	setupAccountsToggle();
 	setupSetEmojiStatus();
@@ -383,6 +539,30 @@ MainMenu::MainMenu(
 		const auto line = st::lineWidth;
 		shadow->setGeometry(0, st::mainMenuCoverHeight - line, width, line);
 	}, shadow->lifetime());
+	Extera::Config::Instance().boolChanges(
+		u"material_design"_q
+	) | rpl::on_next([=](bool enabled) {
+		shadow->setVisible(!enabled);
+	}, shadow->lifetime());
+
+	Core::App().settings().mainMenuAccountsShownValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		update(0, 0, width(), st::mainMenuCoverHeight);
+	}, lifetime());
+
+	rpl::merge(
+		style::PaletteChanged(),
+		Extera::Config::Instance().boolChanges(
+			u"material_design"_q
+		) | rpl::skip(1) | rpl::to_empty
+	) | rpl::on_next([=] {
+		updateMaterialMenuStyle();
+		for (const auto widget : _inner->findChildren<QWidget*>()) {
+			widget->update();
+		}
+		_inner->update();
+		update();
+	}, lifetime());
 
 	_nightThemeSwitch.setCallback([this] {
 		Expects(_nightThemeToggle != nullptr);
@@ -566,11 +746,13 @@ void MainMenu::setupArchive() {
 	const auto button = AddButtonWithIcon(
 		inner,
 		tr::lng_archived_name(),
-		st::mainMenuButton,
+		menuButtonStyle(),
 		{ &st::menuIconArchiveOpen });
-	inner->add(
+	DecorateMd3MenuItem(button);
+	const auto archiveShadow = inner->add(
 		object_ptr<Ui::PlainShadow>(inner),
 		{ 0, st::mainMenuSkip, 0, st::mainMenuSkip });
+	DecorateMd3Divider(archiveShadow);
 	button->setAcceptBoth(true);
 	button->clicks(
 	) | rpl::on_next([=](Qt::MouseButton which) {
@@ -650,6 +832,18 @@ void MainMenu::setupAccounts() {
 	inner->add(object_ptr<Ui::FixedHeightWidget>(inner, st::mainMenuSkip));
 	auto events = Settings::SetupAccounts(inner, _controller);
 	inner->add(object_ptr<Ui::FixedHeightWidget>(inner, st::mainMenuSkip));
+	DecorateMd3Hierarchy(inner);
+	const auto weakInner = base::make_weak(inner);
+	base::install_event_filter(inner, [=](not_null<QEvent*> e) {
+		if (e->type() == QEvent::ChildAdded) {
+			Ui::PostponeCall(inner, [=] {
+				if (weakInner) {
+					DecorateMd3Hierarchy(weakInner.get());
+				}
+			});
+		}
+		return base::EventFilterResult::Continue;
+	});
 
 	std::move(
 		events.closeRequests
@@ -705,7 +899,7 @@ void MainMenu::setupMenu() {
 		return AddButtonWithIcon(
 			_menu,
 			std::move(text),
-			st::mainMenuButton,
+			menuButtonStyle(),
 			std::move(descriptor));
 	};
 	const auto tag = [&](const char *id) {
@@ -720,7 +914,7 @@ void MainMenu::setupMenu() {
 			CreateButtonWithIcon(
 				_menu,
 				tr::lng_menu_my_profile(),
-				st::mainMenuButton,
+				menuButtonStyle(),
 				{ &st::menuIconProfile })
 		)->setClickedCallback([=] {
 			controller->showSection(
@@ -728,7 +922,13 @@ void MainMenu::setupMenu() {
 		});
 		tag("profile");
 
-		SetupMenuBots(_menu, controller);
+		SetupMenuBots(
+			_menu,
+			controller,
+			&menuButtonStyle(),
+			[=](not_null<Ui::SettingsButton*> button) {
+				DecorateMd3MenuItem(button);
+			});
 
 		_menu->add(
 			object_ptr<Ui::PlainShadow>(_menu),
@@ -829,12 +1029,12 @@ void MainMenu::setupMenu() {
 				CreateButtonWithIcon(
 					_menu,
 					tr::lng_wallet_menu(),
-					st::mainMenuButton,
+					menuButtonStyle(),
 					{ &st::walletMenuIcon })));
 		Ui::NewBadge::AddAfterButtonText(
 			wallet->entity(),
 			tr::lng_wallet_menu(),
-			st::mainMenuButton);
+			menuButtonStyle());
 		wallet->toggleOn(session->appConfig().value(
 		) | rpl::map([=] {
 			return session->appConfig().walletAvailable();
@@ -945,6 +1145,7 @@ void MainMenu::setupMenu() {
 	const auto holder = Ui::CreateChild<Ui::RpWidget>(this);
 	holder->hide();
 	Extera::Navigation::ApplyMenuLayout(_menu, holder);
+	DecorateMd3Hierarchy(_menu);
 }
 
 void MainMenu::resizeEvent(QResizeEvent *e) {
@@ -1031,6 +1232,27 @@ void MainMenu::hideEvent(QHideEvent *e) {
 	_emojiStatusPanel->hideFast();
 }
 
+void MainMenu::updateMaterialMenuStyle() {
+	if (!_mdStyles) {
+		return;
+	}
+	_mdStyles->button = st::mainMenuButton;
+	if (Extera::Bool(u"material_design"_q)) {
+		auto hoverColor = anim::color(
+			st::mainMenuBg->c,
+			st::windowBgActive->c,
+			0.12);
+		hoverColor.setAlpha(255);
+		_mdStyles->hoverBg.update(hoverColor);
+		_mdStyles->button.textBg = st::mainMenuBg;
+		_mdStyles->button.textBgOver = _mdStyles->hoverBg.color();
+	}
+}
+
+const style::SettingsButton &MainMenu::menuButtonStyle() const {
+	return _mdStyles ? _mdStyles->button : st::mainMenuButton;
+}
+
 void MainMenu::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
 	const auto clip = e->rect();
@@ -1038,6 +1260,64 @@ void MainMenu::paintEvent(QPaintEvent *e) {
 
 	p.fillRect(clip, st::mainMenuBg);
 	if (cover.intersects(clip)) {
+		if (Extera::Bool(u"material_design"_q)) {
+			auto hq = PainterHighQualityEnabler(p);
+			const auto cardRect = QRectF(
+				8.,
+				8.,
+				std::max(0, width() - 16),
+				std::max(0, st::mainMenuCoverHeight - 16));
+			auto cardFill = anim::color(
+				st::mainMenuBg->c,
+				st::windowBgActive->c,
+				0.07);
+			cardFill.setAlpha(255);
+			p.setPen(
+				QPen(anim::with_alpha(st::windowSubTextFg->c, 0.14), 1.));
+			p.setBrush(cardFill);
+			p.drawRoundedRect(cardRect, 16., 16.);
+
+			const auto userpicRect = QRectF(
+				_userpicButton->geometry()).adjusted(-2., -2., 2., 2.);
+			if (userpicRect.width() > 4.) {
+				p.setPen(
+					QPen(anim::with_alpha(st::windowBgActive->c, 0.30), 1.));
+				p.setBrush(Qt::NoBrush);
+				p.drawEllipse(userpicRect);
+			}
+
+			const auto toggleHot = _toggleAccounts->isOver()
+				|| _toggleAccounts->isDown();
+			const auto accountsShown =
+				Core::App().settings().mainMenuAccountsShown();
+			if (toggleHot || accountsShown) {
+				const auto pillTop = std::max(
+					cardRect.top() + 4.,
+					double(st::mainMenuCoverNameTop) - 4.);
+				const auto pillRect = QRectF(
+					cardRect.left() + 6.,
+					pillTop,
+					std::max(0., cardRect.width() - 12.),
+					std::max(0., cardRect.bottom() - pillTop - 4.));
+				if (pillRect.width() > 24. && pillRect.height() > 16.) {
+					const auto pillRadius = std::min(
+						12.,
+						pillRect.height() * 0.5);
+					auto pillFill = anim::color(
+						cardFill,
+						st::windowBgActive->c,
+						toggleHot ? 0.16 : 0.10);
+					pillFill.setAlpha(255);
+					p.setPen(QPen(
+						anim::with_alpha(
+							st::windowBgActive->c,
+							toggleHot ? 0.34 : 0.22),
+						1.));
+					p.setBrush(pillFill);
+					p.drawRoundedRect(pillRect, pillRadius, pillRadius);
+				}
+			}
+		}
 		drawName(p);
 	}
 }

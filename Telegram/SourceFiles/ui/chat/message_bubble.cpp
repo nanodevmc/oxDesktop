@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/message_bubble.h"
 
+#include "extera/extera_config.h"
 #include "ui/cached_round_corners.h"
 #include "ui/image/image_prepare.h"
 #include "ui/chat/chat_style.h"
@@ -14,10 +15,50 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat.h"
 #include "styles/style_chat_style.h"
 
+#include <QtGui/QPainterPath>
+
 namespace Ui {
 namespace {
 
 using Corner = BubbleCornerRounding;
+
+[[nodiscard]] QPainterPath BuildBubblePath(
+		const QRectF &rect,
+		float64 tl,
+		float64 tr,
+		float64 bl,
+		float64 br) {
+	const auto x = rect.x();
+	const auto y = rect.y();
+	const auto w = rect.width();
+	const auto h = rect.height();
+	auto path = QPainterPath();
+	path.moveTo(x + tl, y);
+	path.lineTo(x + w - tr, y);
+	if (tr > 0.) {
+		path.arcTo(x + w - 2. * tr, y, 2. * tr, 2. * tr, 90., -90.);
+	}
+	path.lineTo(x + w, y + h - br);
+	if (br > 0.) {
+		path.arcTo(
+			x + w - 2. * br,
+			y + h - 2. * br,
+			2. * br,
+			2. * br,
+			0.,
+			-90.);
+	}
+	path.lineTo(x + bl, y + h);
+	if (bl > 0.) {
+		path.arcTo(x, y + h - 2. * bl, 2. * bl, 2. * bl, 270., -90.);
+	}
+	path.lineTo(x, y + tl);
+	if (tl > 0.) {
+		path.arcTo(x, y, 2. * tl, 2. * tl, 180., -90.);
+	}
+	path.closeSubpath();
+	return path;
+}
 
 [[nodiscard]] bool UsePatternBubble(const SimpleBubble &args) {
 	return !args.selected
@@ -77,7 +118,9 @@ void PaintBubbleGeneric(
 		FillBg &&fillBg,
 		FillSh &&fillSh,
 		FillCorner &&fillCorner,
-		PaintTail &&paintTail) {
+		PaintTail &&paintTail,
+		int small = BubbleRadiusSmall(),
+		int large = BubbleRadiusLarge()) {
 	using namespace Images;
 
 	const auto topLeft = args.rounding.topLeft;
@@ -98,8 +141,6 @@ void PaintBubbleGeneric(
 		? Corner::None
 		: bottomWithTailRight;
 	const auto rect = args.geometry;
-	const auto small = BubbleRadiusSmall();
-	const auto large = BubbleRadiusLarge();
 	const auto cornerSize = [&](Corner corner) {
 		return (corner == Corner::Large)
 			? large
@@ -264,7 +305,17 @@ void PaintPatternBubble(QPainter &p, const SimpleBubble &args) {
 	};
 
 	p.setOpacity(opacity);
-	PaintBubbleGeneric(args, fillBg, fillSh, fillCorner, paintTail);
+	const auto dpr = std::max(int(pattern->cornersSmall[0].devicePixelRatio()), 1);
+	const auto small = pattern->cornersSmall[0].width() / dpr;
+	const auto large = pattern->cornersLarge[0].width() / dpr;
+	PaintBubbleGeneric(
+		args,
+		fillBg,
+		fillSh,
+		fillCorner,
+		paintTail,
+		small,
+		large);
 	p.setOpacity(wasOpacity);
 }
 
@@ -281,6 +332,65 @@ void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 		? QPoint(0, tail.height())
 		: QPoint(tail.width(), tail.height());
 
+	const auto rect = args.geometry;
+	const auto small = BubbleRadiusSmall();
+	const auto large = BubbleRadiusLarge();
+	const auto cornerRadius = [&](Corner corner) {
+		return (corner == Corner::Large)
+			? large
+			: (corner == Corner::Small)
+			? small
+			: 0;
+	};
+	const auto rTL = cornerRadius(args.rounding.topLeft);
+	const auto rTR = cornerRadius(args.rounding.topRight);
+	const auto rBL = cornerRadius(args.rounding.bottomLeft);
+	const auto rBR = cornerRadius(args.rounding.bottomRight);
+	const auto collides = (rTL + rTR > rect.width())
+		|| (rBL + rBR > rect.width())
+		|| (rTL + rBL > rect.height())
+		|| (rTR + rBR > rect.height());
+	if (collides && rect.width() > 0 && rect.height() > 0) {
+		const auto scaleFor = [](int a, int b, int limit) {
+			return (a + b > limit && (a + b) > 0)
+				? (float64(limit) / (a + b))
+				: 1.0;
+		};
+		const auto scale = std::min({
+			scaleFor(rTL, rTR, rect.width()),
+			scaleFor(rBL, rBR, rect.width()),
+			scaleFor(rTL, rBL, rect.height()),
+			scaleFor(rTR, rBR, rect.height()),
+		});
+		const auto path = BuildBubblePath(
+			QRectF(rect),
+			rTL * scale,
+			rTR * scale,
+			rBL * scale,
+			rBR * scale);
+		auto hq = PainterHighQualityEnabler(p);
+		if (args.shadowed && sh) {
+			p.save();
+			p.translate(0, st::msgShadow);
+			p.fillPath(path, *sh);
+			p.restore();
+		}
+		p.fillPath(path, bg);
+		if (args.rounding.bottomLeft == Corner::Tail) {
+			tail.paint(
+				p,
+				QPoint(rect.x(), rect.y() + rect.height()) - tailShift,
+				args.outerWidth);
+		} else if (args.rounding.bottomRight == Corner::Tail) {
+			tail.paint(
+				p,
+				QPoint(rect.x() + rect.width(), rect.y() + rect.height())
+					- tailShift,
+				args.outerWidth);
+		}
+		return;
+	}
+
 	PaintBubbleGeneric(args, [&](const QRect &rect) {
 		p.fillRect(rect, bg);
 	}, [&](const QRect &rect) {
@@ -293,7 +403,7 @@ void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 	}, [&](const QPoint &bottomPosition) {
 		tail.paint(p, bottomPosition - tailShift, args.outerWidth);
 		return tail.width();
-	});
+	}, small, large);
 }
 
 } // namespace

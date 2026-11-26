@@ -206,6 +206,7 @@ Application::Application()
 	Ui::Integration::Set(&_private->uiIntegration);
 	Extera::Config::Instance().setWorkingDir(cWorkingDir());
 	Ui::SetMaterialSwitches(Extera::Bool(u"md3_switches"_q));
+	Ui::SetMaterialDesign(Extera::Bool(u"material_design"_q));
 	Extera::Config::Instance().changes(
 	) | rpl::filter([](const QString &key) {
 		return key == u"local_premium_emoji"_q;
@@ -227,6 +228,11 @@ Application::Application()
 		u"md3_switches"_q
 	) | rpl::on_next([=](bool enabled) {
 		Ui::SetMaterialSwitches(enabled);
+	}, _lifetime);
+	Extera::Config::Instance().boolChanges(
+		u"material_design"_q
+	) | rpl::on_next([=](bool enabled) {
+		Ui::SetMaterialDesign(enabled);
 	}, _lifetime);
 	rpl::combine(
 		Extera::Config::Instance().intChanges(u"avatar_corners"_q),
@@ -535,6 +541,7 @@ void Application::run() {
 	DEBUG_LOG(("Application Info: window created..."));
 
 	Extera::WsProxy::Start();
+	Extera::WsProxy::StartAutoTimer();
 	startDomain();
 	startTray();
 
@@ -1034,6 +1041,7 @@ void Application::proxyRotationSettingsChanged() {
 void Application::checkProxyRotation(
 		not_null<Main::Account*> account,
 		int32 state) {
+	Extera::WsProxy::HandleConnectionState(state);
 	_private->proxyRotation->handleConnectionStateChanged(account, state);
 }
 
@@ -1042,6 +1050,12 @@ auto Application::proxyChanges() const -> rpl::producer<ProxyChange> {
 }
 
 void Application::badMtprotoConfigurationError() {
+	if (Extera::WsProxy::Enabled()
+		|| (settings().proxy().isEnabled()
+			&& Extera::WsProxy::IsOurs(settings().proxy().selected()))) {
+		Extera::WsProxy::Restart();
+		return;
+	}
 	if (settings().proxy().isEnabled() && !_badProxyDisableBox) {
 		const auto disableCallback = [=] {
 			setCurrentProxy(

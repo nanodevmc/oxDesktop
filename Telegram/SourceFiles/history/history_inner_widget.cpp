@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_inner_widget.h"
 #include "extera/extera_menu.h"
+#include "extera/extera_ocr.h"
 #include "extera/extera_shot.h"
 
 #include "extera/extera_config.h"
@@ -748,6 +749,8 @@ void HistoryInner::setupSwipeReplyAndBack() {
 			if ((data.cursorPosition.y() < itemtop)
 				|| (data.cursorPosition.y() > itembottom)
 				|| (!view->data()->isRegular()
+					&& !view->data()->hasFailed()
+					&& !view->data()->isSending()
 					&& (!view->data()->isEphemeral()
 						|| view->data()->out()))
 				|| view->data()->showSimilarChannels()
@@ -3121,6 +3124,16 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			_menu->addAction(tr::lng_context_copy_image(tr::now), [=] {
 				copyContextImage(photo, itemId);
 			}, &st::menuIconCopy);
+			_menu->addAction(tr::lng_oxd_ocr_extract(tr::now), [=] {
+				if (const auto mediaView = photo->activeMediaView()) {
+					if (const auto image = mediaView->image(Data::PhotoSize::Large)) {
+						const auto raw = image->original();
+						if (!raw.isNull()) {
+							Extera::Ocr::ExtractAndShowBox(controller, raw);
+						}
+					}
+				}
+			}, &st::menuIconTranslate);
 		}
 		if (photo->hasAttachedStickers()) {
 			_menu->addAction(tr::lng_context_attached_stickers(tr::now), [=] {
@@ -3332,7 +3345,10 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 
 	const auto addReplyAction = [&](HistoryItem *item) {
 		if (!item
-			|| (!item->isRegular() && !CanReplyToEphemeral(item))
+			|| (!item->isRegular()
+				&& !item->hasFailed()
+				&& !item->isSending()
+				&& !CanReplyToEphemeral(item))
 			|| IsAnchoredEphemeral(item)) {
 			return;
 		}

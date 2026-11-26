@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/reactions/history_view_reactions.h"
 
+#include "extera/extera_config.h"
 #include "history/history_item.h"
 #include "history/history.h"
 #include "history/view/history_view_message.h"
@@ -494,13 +495,16 @@ void InlineList::paint(
 		if (bubbleProgress > 0.) {
 			auto hq = PainterHighQualityEnabler(p);
 			p.setPen(Qt::NoPen);
+			const auto md = Extera::Bool(u"material_design"_q);
 			auto opacity = 1.;
 			auto color = QColor();
 			if (inbubble) {
 				if (!chosen) {
-					opacity = bubbleProgress * (context.outbg
-						? kOutNonChosenOpacity
-						: kInNonChosenOpacity);
+					opacity = bubbleProgress * (md
+						? (context.outbg ? 0.24 : 0.18)
+						: (context.outbg
+							? kOutNonChosenOpacity
+							: kInNonChosenOpacity));
 				} else if (!bubbleReady) {
 					opacity = bubbleProgress;
 				}
@@ -516,6 +520,12 @@ void InlineList::paint(
 					: button.paid
 					? st->creditsBg2()
 					: st->msgServiceFg())->c;
+				if (md && !chosen) {
+					color.setAlpha(std::clamp(
+						std::max(color.alpha(), 170),
+						170,
+						220));
+				}
 			}
 
 			const auto fill = geometry.marginsAdded({
@@ -524,7 +534,20 @@ void InlineList::paint(
 				flipped ? 0 : bubbleSkip,
 				0,
 			});
-			paintSingleBg(p, fill, color, opacity);
+			auto border = QColor();
+			if (md && !tags) {
+				border = chosen
+					? (inbubble
+						? QColor(255, 255, 255, 72)
+						: anim::with_alpha(st->msgServiceBg()->c, 0.45))
+					: (inbubble
+						? anim::with_alpha(stm->msgFileBg->c, 0.34)
+						: anim::with_alpha(st->msgServiceFg()->c, 0.22));
+				if (bubbleProgress < 1.) {
+					border.setAlphaF(border.alphaF() * bubbleProgress);
+				}
+			}
+			paintSingleBg(p, fill, color, opacity, border);
 			if (inbubble && !chosen) {
 				p.setOpacity(bubbleProgress);
 			}
@@ -702,12 +725,24 @@ void InlineList::paintSingleBg(
 		Painter &p,
 		const QRect &fill,
 		const QColor &color,
-		float64 opacity) const {
+		float64 opacity,
+		const QColor &border) const {
 	p.setOpacity(opacity);
 	if (!areTags()) {
 		const auto radius = fill.height() / 2.;
 		p.setBrush(color);
 		p.drawRoundedRect(fill, radius, radius);
+		if (border.alpha() > 0) {
+			p.setOpacity(1.);
+			p.setPen(QPen(border, 1.0));
+			p.setBrush(Qt::NoBrush);
+			p.drawRoundedRect(
+				QRectF(fill).adjusted(0.5, 0.5, -0.5, -0.5),
+				radius,
+				radius);
+			p.setPen(Qt::NoPen);
+			p.setOpacity(opacity);
+		}
 		return;
 	}
 	validateTagBg(color);

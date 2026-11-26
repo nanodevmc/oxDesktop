@@ -3346,6 +3346,28 @@ void Session::checkFormattedDateUpdates() {
 	scheduleNextFormattedDateUpdate();
 }
 
+[[nodiscard]] bool HandleAntiDelete(
+		Session &owner,
+		not_null<HistoryItem*> item) {
+	if (!Extera::Bool(u"anti_delete"_q)
+		|| !item->isRegular()
+		|| item->out()) {
+		return false;
+	}
+	if (!item->isDeleted()) {
+		item->markDeleted();
+		if (const auto group = owner.groups().find(item)) {
+			owner.requestItemResize(group->items.front());
+		} else {
+			owner.requestItemResize(item);
+		}
+		owner.session().changes().messageUpdated(
+			item,
+			Data::MessageUpdate::Flag::Edited);
+	}
+	return true;
+}
+
 void Session::processMessagesDeleted(
 		PeerId peerId,
 		const QVector<MTPint> &data) {
@@ -3362,18 +3384,7 @@ void Session::processMessagesDeleted(
 		if (list && i != list->end()) {
 			const auto item = i->second;
 			const auto history = item->history();
-			const auto antiDelete = Extera::Bool(u"anti_delete"_q);
-			if (antiDelete && item->isRegular() && !item->out()) {
-				auto original = item->originalText();
-				const auto customMark = Extera::String(u"deleted_mark_text"_q);
-				const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
-				const auto tag = u"\n "_q + mark;
-				if (!original.text.endsWith(mark)) {
-					item->setText({ original.text + tag, original.entities });
-					session().changes().messageUpdated(
-						item,
-						Data::MessageUpdate::Flag::Edited);
-				}
+			if (HandleAntiDelete(*this, item)) {
 				continue;
 			}
 			toDestroy.push_back(item);
@@ -3401,18 +3412,7 @@ void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 	for (const auto &messageId : data) {
 		if (const auto item = nonChannelMessage(messageId.v)) {
 			const auto history = item->history();
-			const auto antiDelete = Extera::Bool(u"anti_delete"_q);
-			if (antiDelete && item->isRegular() && !item->out()) {
-				auto original = item->originalText();
-				const auto customMark = Extera::String(u"deleted_mark_text"_q);
-				const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
-				const auto tag = u"\n "_q + mark;
-				if (!original.text.endsWith(mark)) {
-					item->setText({ original.text + tag, original.entities });
-					session().changes().messageUpdated(
-						item,
-						Data::MessageUpdate::Flag::Edited);
-				}
+			if (HandleAntiDelete(*this, item)) {
 				continue;
 			}
 			toDestroy.push_back(item);

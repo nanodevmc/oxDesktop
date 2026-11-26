@@ -35,6 +35,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/effects/animations.h"
+#include "ui/painter.h"
 #include "ui/power_saving.h"
 #include "ui/screen_reader_mode.h"
 #include "ui/ui_utility.h"
@@ -96,11 +98,26 @@ public:
 
 } // namespace
 
+struct FiltersMenu::MdStyles {
+	MdStyles()
+	: activeBg(QColor(0, 0, 0, 0))
+	, textOnly(st::windowFiltersButtonTextOnly)
+	, textAndIcons(st::windowFiltersButton)
+	, iconsOnly(st::windowFiltersButtonIconsOnly) {
+	}
+
+	style::OwnedColor activeBg;
+	style::SideBarButton textOnly;
+	style::SideBarButton textAndIcons;
+	style::SideBarButton iconsOnly;
+};
+
 FiltersMenu::FiltersMenu(
 	not_null<Ui::RpWidget*> parent,
 	not_null<SessionController*> session)
 : _session(session)
 , _parent(parent)
+, _mdStyles(std::make_unique<MdStyles>())
 , _outer(_parent)
 , _menu(&_outer, TextWithEntities(), st::windowFiltersMainMenu)
 , _scroll(&_outer)
@@ -119,10 +136,12 @@ FiltersMenu::FiltersMenu(
 FiltersMenu::~FiltersMenu() = default;
 
 void FiltersMenu::setup() {
+	updateMaterialStyles();
 	setupDragAndDrop();
 	setupMainMenuIcon();
 	_menu.setIsMenuButton(true);
 	_menu.setAccessibleName(tr::lng_main_menu(tr::now));
+	decorateMd3Button(&_menu, -2);
 
 	_outer.setAttribute(Qt::WA_OpaquePaintEvent);
 	_outer.show();
@@ -181,11 +200,13 @@ void FiltersMenu::setup() {
 		const auto i = _filters.find(_activeFilterId);
 		if (i != end(_filters)) {
 			i->second->setActive(false);
+			i->second->update();
 		}
 		_activeFilterId = id;
 		const auto j = _filters.find(_activeFilterId);
 		if (j != end(_filters)) {
 			j->second->setActive(true);
+			j->second->update();
 			scrollToButton(j->second);
 		}
 		_reorder->finishReordering();
@@ -195,9 +216,11 @@ void FiltersMenu::setup() {
 		_session->widget()->showMainMenu();
 	});
 
-	Core::App().settings().chatFiltersTabsModeValue(
-	) | rpl::skip(1) | rpl::on_next([=] {
+	const auto rebuildButtons = [=] {
+		updateMaterialStyles();
+		_menu.update();
 		if (!_list) {
+			_outer.update();
 			return;
 		}
 		_setup = prepareButton(
@@ -210,6 +233,27 @@ void FiltersMenu::setup() {
 			updateFavorite();
 		}
 		refresh();
+		_outer.update();
+	};
+
+	Core::App().settings().chatFiltersTabsModeValue(
+	) | rpl::skip(1) | rpl::on_next(rebuildButtons, _outer.lifetime());
+
+	Extera::Config::Instance().boolChanges(
+		u"material_design"_q
+	) | rpl::skip(1) | rpl::on_next(rebuildButtons, _outer.lifetime());
+
+	style::PaletteChanged(
+	) | rpl::on_next([=] {
+		updateMaterialStyles();
+		_menu.update();
+		for (const auto &[id, button] : _filters) {
+			button->update();
+		}
+		if (_setup) {
+			_setup->update();
+		}
+		_outer.update();
 	}, _outer.lifetime());
 }
 
@@ -553,7 +597,119 @@ Ui::ChatsFiltersTabsMode FiltersMenu::tabsMode() const {
 		Core::App().settings().chatFiltersTabsMode());
 }
 
+void FiltersMenu::updateMaterialStyles() {
+	if (!_mdStyles) {
+		return;
+	}
+	_mdStyles->textOnly = st::windowFiltersButtonTextOnly;
+	_mdStyles->textAndIcons = st::windowFiltersButton;
+	_mdStyles->iconsOnly = st::windowFiltersButtonIconsOnly;
+	if (Extera::Bool(u"material_design"_q)) {
+		auto pillColor = anim::color(
+			st::windowFiltersButton.textBg->c,
+			st::windowFiltersButton.textFgActive->c,
+			0.20);
+		pillColor.setAlpha(255);
+		_mdStyles->activeBg.update(pillColor);
+		_mdStyles->textOnly.textBgActive = _mdStyles->activeBg.color();
+		_mdStyles->textAndIcons.textBgActive = _mdStyles->activeBg.color();
+		_mdStyles->iconsOnly.textBgActive = _mdStyles->activeBg.color();
+	}
+}
+
+void FiltersMenu::decorateMd3Button(
+		not_null<Ui::SideBarButton*> button,
+		FilterId id) {
+	if (button->property("md3_filter_decorated").toBool()) {
+		return;
+	}
+	button->setProperty("md3_filter_decorated", true);
+	const auto overlay = Ui::CreateChild<Ui::RpWidget>(button.get());
+	overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
+	overlay->setGeometry(QRect(QPoint(), button->size()));
+	overlay->show();
+	button->sizeValue(
+	) | rpl::on_next([=](QSize size) {
+		overlay->setGeometry(QRect(QPoint(), size));
+	}, overlay->lifetime());
+	base::install_event_filter(button, [=](not_null<QEvent*> e) {
+		switch (e->type()) {
+		case QEvent::Enter:
+		case QEvent::Leave:
+		case QEvent::HoverEnter:
+		case QEvent::HoverLeave:
+		case QEvent::MouseButtonPress:
+		case QEvent::MouseButtonRelease:
+			overlay->update();
+			break;
+		default:
+			break;
+		}
+		return base::EventFilterResult::Continue;
+	});
+	if (id >= 0) {
+		_session->activeChatsFilter(
+		) | rpl::on_next([=](FilterId) {
+			overlay->update();
+		}, overlay->lifetime());
+	}
+	overlay->paintRequest(
+	) | rpl::on_next([=] {
+		if (!Extera::Bool(u"material_design"_q)) {
+			return;
+		}
+		const auto w = overlay->width();
+		const auto h = overlay->height();
+		if (w <= 24 || h <= 24) {
+			return;
+		}
+		const auto active = (id >= 0) && (id == _activeFilterId);
+		const auto over = !active && (button->isOver() || button->isDown());
+		if (!active && !over) {
+			return;
+		}
+		const auto pill = QRectF(overlay->rect()).adjusted(6.5, 3.5, -6.5, -3.5);
+		auto p = QPainter(overlay);
+		auto hq = PainterHighQualityEnabler(p);
+		if (active) {
+			p.setBrush(Qt::NoBrush);
+			p.setPen(QPen(
+				anim::with_alpha(st::windowFiltersButton.textFgActive->c, 0.34),
+				1.));
+			p.drawRoundedRect(pill, 14., 14.);
+
+			const auto indicatorH = std::min(
+				22.,
+				std::max(12., pill.height() - 16.));
+			const auto indicator = QRectF(
+				1.5,
+				pill.center().y() - indicatorH * 0.5,
+				3.,
+				indicatorH);
+			p.setPen(Qt::NoPen);
+			p.setBrush(st::windowFiltersButton.textFgActive);
+			p.drawRoundedRect(indicator, 1.5, 1.5);
+		} else if (over) {
+			p.setBrush(
+				anim::with_alpha(st::windowFiltersButton.textFg->c, 0.08));
+			p.setPen(QPen(
+				anim::with_alpha(st::windowFiltersButton.textFg->c, 0.14),
+				1.));
+			p.drawRoundedRect(pill, 14., 14.);
+		}
+	}, overlay->lifetime());
+}
+
 const style::SideBarButton &FiltersMenu::buttonStyle() const {
+	if (Extera::Bool(u"material_design"_q) && _mdStyles) {
+		using Mode = Ui::ChatsFiltersTabsMode;
+		switch (tabsMode()) {
+		case Mode::TextOnly: return _mdStyles->textOnly;
+		case Mode::TextAndIcons: return _mdStyles->textAndIcons;
+		case Mode::IconsOnly: return _mdStyles->iconsOnly;
+		}
+		return _mdStyles->textAndIcons;
+	}
 	using Mode = Ui::ChatsFiltersTabsMode;
 	switch (tabsMode()) {
 	case Mode::TextOnly: return st::windowFiltersButtonTextOnly;
@@ -741,6 +897,7 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 			}
 		}, raw->lifetime());
 	}
+	decorateMd3Button(raw, id);
 	return button;
 }
 

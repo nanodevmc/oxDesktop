@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_row.h"
 
+#include "extera/extera_config.h"
 #include "ui/chat/chat_theme.h" // CountAverageColor.
 #include "ui/color_contrast.h"
 #include "ui/effects/credits_graphics.h"
@@ -339,10 +340,27 @@ void BasicRow::addRipple(
 		QSize size,
 		Fn<void()> updateCallback) {
 	if (!_ripple) {
-		addRippleWithMask(
-			origin,
-			Ui::RippleAnimation::RectMask(size),
-			std::move(updateCallback));
+		const auto mask = (Extera::Bool(u"material_design"_q)
+				&& size.width() > 32
+				&& size.height() > 16)
+			? Ui::RippleAnimation::MaskByDrawer(size, false, [&](QPainter &p) {
+				const auto narrow = (size.width() < style::ConvertScale(130));
+				const auto marginX = style::ConvertScale(narrow ? 4 : 7);
+				const auto marginY = style::ConvertScale(2);
+				const auto radius = std::min(
+					style::ConvertScale(narrow ? 12 : 15),
+					(size.height() - 2 * marginY) / 2);
+				p.drawRoundedRect(
+					QRect(
+						marginX,
+						marginY,
+						size.width() - 2 * marginX,
+						size.height() - 2 * marginY),
+					radius,
+					radius);
+			})
+			: Ui::RippleAnimation::RectMask(size);
+		addRippleWithMask(origin, mask, std::move(updateCallback));
 	} else {
 		_ripple->add(origin);
 	}

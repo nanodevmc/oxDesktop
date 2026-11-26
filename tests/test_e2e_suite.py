@@ -172,7 +172,7 @@ class TestVersionConsistency(unittest.TestCase):
     """
     Validates version consistency across all project touchpoints:
     version.txt, CMakeLists.txt, Telegram/build/version, Telegram.rc, changelog.txt.
-    Target version: 7.4.4.1
+    Target version: 7.4.6
     """
 
     def test_version_txt_content(self):
@@ -181,8 +181,7 @@ class TestVersionConsistency(unittest.TestCase):
         self.assertTrue(os.path.exists(v_path), "version.txt must exist")
         with open(v_path, "r", encoding="utf-8") as f:
             ver = f.read().strip()
-        # Accept current or updated 7.4.4.1
-        self.assertTrue(re.match(r"^7\.4\.4(?:\.1)?$", ver),
+        self.assertTrue(re.match(r"^7\.4\.(?:4(?:\.1)?|6(?:\.\d+)?)$", ver),
                         f"version.txt contains unexpected version: '{ver}'")
 
     def test_cmakelists_version_parsing_regex(self):
@@ -213,7 +212,7 @@ class TestVersionConsistency(unittest.TestCase):
                 content = f.read()
             self.assertIn("AppVersion", content)
             self.assertIn("AppVersionStr", content)
-            self.assertTrue(re.search(r"AppVersionStr\s+7\.4\.4(?:\.1)?", content))
+            self.assertTrue(re.search(r"AppVersionStr\s+7\.4\.(?:4(?:\.1)?|6(?:\.\d+)?)", content))
 
     def test_changelog_structure_and_links(self):
         """Tier 1: Check changelog.txt has recent release header and descriptive links."""
@@ -222,7 +221,7 @@ class TestVersionConsistency(unittest.TestCase):
         with open(changelog_path, "r", encoding="utf-8") as f:
             content = f.read()
         # Must have top version header
-        self.assertTrue(re.search(r"7\.4\.4(?:\.1)?\s*\(\d{2}\.\d{2}\.\d{4}\)", content),
+        self.assertTrue(re.search(r"7\.4\.(?:4(?:\.1)?|6(?:\.\d+)?)\s*\(\d{2}\.\d{2}\.\d{4}\)", content),
                         "changelog.txt must contain a valid release header")
         self.assertIn("Ru:", content, "changelog.txt must contain Russian section")
         self.assertIn("En:", content, "changelog.txt must contain English section")

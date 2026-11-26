@@ -160,6 +160,167 @@ int PaintRightButtonImpl(QPainter &p, const PaintContext &context) {
 	return 0;
 }
 
+void PaintMd3RowBackground(
+		Painter &p,
+		QRect geometry,
+		const style::color &bg,
+		const PaintContext &context) {
+	if (!::Extera::Bool(u"material_design"_q) || geometry.height() <= 16) {
+		p.fillRect(geometry, bg);
+		return;
+	}
+	p.fillRect(geometry, context.currentBg);
+	if (context.active || context.selected) {
+		auto hq = PainterHighQualityEnabler(p);
+		const auto marginX = float64(
+			style::ConvertScale(context.narrow ? 4 : 7));
+		const auto marginY = float64(style::ConvertScale(2));
+		const auto pillRect = QRectF(geometry).adjusted(
+			marginX,
+			marginY,
+			-marginX,
+			-marginY);
+		const auto radius = std::min(
+			float64(style::ConvertScale(context.narrow ? 12 : 15)),
+			pillRect.height() / 2.0);
+		p.setBrush(bg);
+		if (context.active) {
+			p.setPen(QPen(
+				anim::with_alpha(st::dialogsNameFgActive->c, 0.16),
+				1.0));
+		} else {
+			p.setPen(QPen(
+				anim::with_alpha(st::dialogsNameFgOver->c, 0.08),
+				1.0));
+		}
+		p.drawRoundedRect(
+			pillRect.adjusted(0.5, 0.5, -0.5, -0.5),
+			radius,
+			radius);
+	}
+}
+
+[[nodiscard]] QRect PaintMd3UnreadBadge(
+		QPainter &p,
+		const QString &text,
+		int x,
+		int y,
+		const UnreadBadgeStyle &st,
+		const PaintContext &context) {
+	const auto height = st.size;
+	const auto textWidth = text.isEmpty() ? 0 : st.font->width(text);
+	const auto width = std::max(textWidth + 2 * st.padding, height);
+	const auto left = ((st.align & Qt::AlignHorizontal_Mask) & style::al_center)
+		? (x - width) / 2
+		: ((st.align & Qt::AlignHorizontal_Mask) & style::al_right)
+		? (x - width)
+		: x;
+	const auto badge = QRect(left, y, width, height);
+	const auto &bg = (st.sizeId == UnreadBadgeSize::ReactionInDialogs)
+		? (st.muted
+			? (st.active
+				? st::dialogsUnreadBgMutedActive
+				: st.selected
+				? st::dialogsUnreadBgMutedOver
+				: st::dialogsUnreadBgMuted)
+			: (st.active
+				? st::dialogsDraftFgActive
+				: st.selected
+				? st::dialogsDraftFgOver
+				: st::dialogsDraftFg))
+		: (st.sizeId == UnreadBadgeSize::PollInDialogs)
+		? (st.muted
+			? (st.active
+				? st::dialogsUnreadBgMutedActive
+				: st.selected
+				? st::dialogsUnreadBgMutedOver
+				: st::dialogsUnreadBgMuted)
+			: st::dialogsPollIconFg)
+		: (st.muted
+			? (st.active
+				? st::dialogsUnreadBgMutedActive
+				: st.selected
+				? st::dialogsUnreadBgMutedOver
+				: st::dialogsUnreadBgMuted)
+			: (st.active
+				? st::dialogsUnreadBgActive
+				: st.selected
+				? st::dialogsUnreadBgOver
+				: st::dialogsUnreadBg));
+	const auto &fg = st.active
+		? st::dialogsUnreadFgActive
+		: st.selected
+		? st::dialogsUnreadFgOver
+		: st::dialogsUnreadFg;
+
+	auto hq = PainterHighQualityEnabler(p);
+	const auto radius = height / 2.0;
+	const auto cutoutColor = context.active
+		? st::dialogsBgActive->c
+		: context.selected
+		? st::dialogsBgOver->c
+		: context.currentBg->c;
+	const auto border = context.narrow
+		? cutoutColor
+		: anim::with_alpha(fg->c, 0.16);
+	p.setPen(QPen(border, context.narrow ? 1.5 : 1.0));
+	p.setBrush(bg);
+	p.drawRoundedRect(
+		QRectF(badge).adjusted(0.5, 0.5, -0.5, -0.5),
+		radius,
+		radius);
+
+	if (!text.isEmpty()) {
+		const auto textTop = st.textTop
+			? st.textTop
+			: (height - st.font->height) / 2;
+		p.setFont(st.font);
+		p.setPen(fg);
+		p.drawText(
+			left + (width - textWidth) / 2,
+			y + textTop + st.font->ascent,
+			text);
+	}
+	return badge;
+}
+
+int PaintPinnedBadge(
+		QPainter &p,
+		const PaintContext &context,
+		int right,
+		int top) {
+	const auto &icon = ThreeStateIcon(
+		st::dialogsPinnedIcon,
+		context.active,
+		context.selected);
+	if (!::Extera::Bool(u"material_design"_q)) {
+		icon.paint(p, right - icon.width(), top, context.width);
+		return icon.width() + st::dialogsUnreadPadding;
+	}
+	const auto height = st::dialogsUnreadHeight;
+	const auto width = std::max(height, icon.width() + style::ConvertScale(6));
+	const auto badgeTop = top - (height - icon.height()) / 2;
+	const auto badge = QRect(right - width, badgeTop, width, height);
+	const auto radius = height / 2.0;
+	auto hq = PainterHighQualityEnabler(p);
+	auto bg = context.active
+		? st::dialogsNameFgActive->c
+		: context.selected
+		? st::dialogsUnreadBgMutedOver->c
+		: st::dialogsUnreadBgMuted->c;
+	bg.setAlpha(context.active ? 44 : 38);
+	auto border = bg;
+	border.setAlpha(context.active ? 72 : 54);
+	p.setPen(QPen(border, 1.0));
+	p.setBrush(bg);
+	p.drawRoundedRect(
+		QRectF(badge).adjusted(0.5, 0.5, -0.5, -0.5),
+		radius,
+		radius);
+	icon.paintInCenter(p, badge);
+	return width + st::dialogsUnreadPadding;
+}
+
 int PaintBadges(
 		QPainter &p,
 		const PaintContext &context,
@@ -169,6 +330,7 @@ int PaintBadges(
 		bool displayPinnedIcon,
 		int pinnedIconTop,
 		bool narrow) {
+	const auto md = ::Extera::Bool(u"material_design"_q);
 	const auto paintIconBadge = [&](
 			const style::ThreeStateIcon &icons,
 			bool muted,
@@ -181,7 +343,9 @@ int PaintBadges(
 			st.muted = muted;
 			st.padding = 0;
 			st.textTop = 0;
-			const auto badge = PaintUnreadBadge(p, QString(), right, top, st);
+			const auto badge = md
+				? PaintMd3UnreadBadge(p, QString(), right, top, st, context)
+				: PaintUnreadBadge(p, QString(), right, top, st);
 			ThreeStateIcon(icons, st.active, st.selected).paintInCenter(
 				p,
 				badge);
@@ -208,7 +372,14 @@ int PaintBadges(
 			top + (st.size - d) / 2,
 			d,
 			d);
-		p.setPen(Qt::NoPen);
+		const auto &markFg = context.active
+			? st::dialogsUnreadFgActive
+			: context.selected
+			? st::dialogsUnreadFgOver
+			: st::dialogsUnreadFg;
+		p.setPen(md
+			? QPen(anim::with_alpha(markFg->c, 0.18), 1.0)
+			: Qt::NoPen);
 		p.setBrush(badgesState.unreadMuted
 			? (context.active
 				? st::dialogsUnreadBgMutedActive
@@ -232,18 +403,15 @@ int PaintBadges(
 			badgesState.unreadCounter,
 			badgesState.mention || badgesState.reaction || badgesState.poll,
 			narrow);
-		const auto badge = PaintUnreadBadge(p, counter, right, top, st);
+		const auto badge = md
+			? PaintMd3UnreadBadge(p, counter, right, top, st, context)
+			: PaintUnreadBadge(p, counter, right, top, st);
 		right -= badge.width() + st.padding;
 		++painted;
 	} else if (const auto used = PaintRightButton(p, context)) {
 		return used - st::dialogsUnreadPadding;
 	} else if (displayPinnedIcon) {
-		const auto &icon = ThreeStateIcon(
-			st::dialogsPinnedIcon,
-			context.active,
-			context.selected);
-		icon.paint(p, right - icon.width(), pinnedIconTop, context.width);
-		right -= icon.width() + st::dialogsUnreadPadding;
+		right -= PaintPinnedBadge(p, context, right, pinnedIconTop);
 	}
 	if ((!narrow || (painted < 2))
 		&& (badgesState.mention || badgesState.reaction)) {
@@ -488,13 +656,12 @@ void PaintStreamerRow(
 		Painter &p,
 		int height,
 		const PaintContext &context) {
-	p.fillRect(
-		QRect(0, 0, context.width, height),
-		context.active
-			? st::dialogsBgActive
-			: context.selected
-			? st::dialogsBgOver
-			: context.currentBg);
+	const auto bg = context.active
+		? st::dialogsBgActive
+		: context.selected
+		? st::dialogsBgOver
+		: context.currentBg;
+	PaintMd3RowBackground(p, QRect(0, 0, context.width, height), bg, context);
 	auto hq = PainterHighQualityEnabler(p);
 	p.setPen(Qt::NoPen);
 	p.setBrush(anim::with_alpha(st::dialogsTextFgService->c, 0.25));
@@ -576,7 +743,7 @@ void PaintRow(
 	if (swipeTranslation) {
 		p.translate(swipeMirrored ? swipeTranslation : -swipeTranslation, 0);
 	}
-	p.fillRect(geometry, bg);
+	PaintMd3RowBackground(p, geometry, bg, context);
 	if (!(flags & Flag::TopicJumpRipple)) {
 		auto ripple = context.active
 			? st::dialogsRippleBgActive
@@ -766,16 +933,11 @@ void PaintRow(
 			availableWidth -= used;
 		} else if (entry->isPinnedDialog(context.filter)
 			&& (context.filter || !entry->fixedOnTopIndex())) {
-			auto &icon = ThreeStateIcon(
-				st::dialogsPinnedIcon,
-				context.active,
-				context.selected);
-			icon.paint(
+			availableWidth -= PaintPinnedBadge(
 				p,
-				context.width - context.st->padding.right() - icon.width(),
-				texttop,
-				context.width);
-			availableWidth -= icon.width() + st::dialogsUnreadPadding;
+				context,
+				context.width - context.st->padding.right(),
+				texttop);
 		}
 
 		p.setFont(st::dialogsTextFont);
@@ -864,12 +1026,11 @@ void PaintRow(
 			availableWidth -= used;
 		} else if (entry->isPinnedDialog(context.filter)
 			&& (context.filter || !entry->fixedOnTopIndex())) {
-			auto &icon = ThreeStateIcon(
-				st::dialogsPinnedIcon,
-				context.active,
-				context.selected);
-			icon.paint(p, context.width - context.st->padding.right() - icon.width(), texttop, context.width);
-			availableWidth -= icon.width() + st::dialogsUnreadPadding;
+			availableWidth -= PaintPinnedBadge(
+				p,
+				context,
+				context.width - context.st->padding.right(),
+				texttop);
 		}
 
 		auto &color = context.active
@@ -904,15 +1065,11 @@ void PaintRow(
 		paintItemCallback(nameleft, namewidth);
 	} else if (entry->isPinnedDialog(context.filter)
 		&& (context.filter || !entry->fixedOnTopIndex())) {
-		auto &icon = ThreeStateIcon(
-			st::dialogsPinnedIcon,
-			context.active,
-			context.selected);
-		icon.paint(
+		PaintPinnedBadge(
 			p,
-			context.width - context.st->padding.right() - icon.width(),
-			texttop,
-			context.width);
+			context,
+			context.width - context.st->padding.right(),
+			texttop);
 	}
 	const auto sendStateIcon = [&]() -> const style::icon* {
 		if (!thread) {
@@ -1549,9 +1706,11 @@ void PaintCollapsedRow(
 		const QString &text,
 		int unread,
 		const PaintContext &context) {
-	p.fillRect(
+	PaintMd3RowBackground(
+		p,
 		QRect{ 0, 0, context.width, st::dialogsImportantBarHeight },
-		context.selected ? st::dialogsBgOver : context.currentBg);
+		context.selected ? st::dialogsBgOver : context.currentBg,
+		context);
 
 	row.paintRipple(p, 0, 0, context.width);
 
@@ -1579,12 +1738,22 @@ void PaintCollapsedRow(
 		const auto unreadRight = context.width - context.st->padding.right();
 		UnreadBadgeStyle st;
 		st.muted = true;
-		PaintUnreadBadge(
-			p,
-			QString::number(unread),
-			unreadRight,
-			unreadTop,
-			st);
+		if (::Extera::Bool(u"material_design"_q)) {
+			PaintMd3UnreadBadge(
+				p,
+				QString::number(unread),
+				unreadRight,
+				unreadTop,
+				st,
+				context);
+		} else {
+			PaintUnreadBadge(
+				p,
+				QString::number(unread),
+				unreadRight,
+				unreadTop,
+				st);
+		}
 	}
 }
 

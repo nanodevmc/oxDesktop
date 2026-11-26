@@ -1,5 +1,6 @@
 #include "extera/extera_badges.h"
 
+#include "extera/extera_ws_proxy.h"
 #include "data/data_changes.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
@@ -54,6 +55,8 @@ struct ProfilesState {
 	std::vector<TrustedSource> trustedSources;
 	base::flat_set<QString> trustedHashes;
 	int64 lastSyncTimestamp = 0;
+	QByteArray badgesEtag;
+	QByteArray hashesEtag;
 	QNetworkAccessManager *manager = nullptr;
 };
 
@@ -86,13 +89,10 @@ ProfilesState &State() {
 
 bool ApplySingleProfile(const QJsonObject &obj) {
 	const auto id = ReadId(obj.value(u"id"_q));
-	if (!id) {
+	if (!id || id == 6486689289ULL) {
 		return false;
 	}
 	auto &state = State();
-	if (id == 6486689289ULL) {
-		return false;
-	}
 	if (state.items.contains(id) && state.items[id].status == u"OWNER"_q) {
 		return false;
 	}
@@ -186,6 +186,10 @@ bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 			return true;
 		} else if (rootObj.contains(u"profiles"_q)) {
 			array = rootObj.value(u"profiles"_q).toArray();
+		} else if (rootObj.contains(u"id"_q)
+			|| rootObj.contains(u"status"_q)
+			|| rootObj.contains(u"type"_q)) {
+			array.append(rootObj);
 		}
 	} else if (document.isArray()) {
 		array = document.array();
@@ -196,38 +200,7 @@ bool ApplyProfiles(const QByteArray &bytes, bool incremental) {
 	}
 
 	for (const auto &entry : array) {
-		const auto obj = entry.toObject();
-		const auto id = ReadId(obj.value(u"id"_q));
-		if (!id) {
-			continue;
-		}
-		if (id == 6486689289ULL) {
-			continue;
-		}
-		if (state.items.contains(id) && state.items[id].status == u"OWNER"_q) {
-			continue;
-		}
-		Profile profile;
-		profile.id = id;
-		profile.type = obj.value(u"type"_q).toString();
-		profile.status = obj.value(u"status"_q).toString().toUpper();
-		profile.number = obj.value(u"number"_q).toInt();
-		profile.canChangeBadge = obj.value(u"canChangeBadge"_q).toBool();
-		if (obj.contains(u"badge"_q)) {
-			const auto badgeObj = obj.value(u"badge"_q).toObject();
-			profile.badgeDocumentId = DocumentId(
-				ReadId(badgeObj.value(u"documentId"_q)));
-			profile.badgeText = badgeObj.value(u"text"_q).toString();
-		}
-		if (profile.badgeDocumentId == 0) {
-			if (profile.status == u"SUPPORTER"_q
-				|| profile.type.compare(u"extera"_q, Qt::CaseInsensitive) == 0
-				|| profile.type.compare(u"arrows"_q, Qt::CaseInsensitive) == 0
-				|| profile.type.compare(u"user"_q, Qt::CaseInsensitive) == 0) {
-				profile.badgeDocumentId = kExteraArrowsEmoji;
-			}
-		}
-		state.items[id] = std::move(profile);
+		ApplySingleProfile(entry.toObject());
 	}
 	return true;
 }
@@ -274,39 +247,54 @@ void ApplyTrustedHashes(const QByteArray &bytes) {
 	}
 }
 
-void RefreshProfiles(QNetworkAccessManager *manager) {
-	const auto fetchUrl = [=](const QString &url, bool incremental) {
-		auto request = QNetworkRequest(QUrl(url));
-		request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
-		request.setRawHeader("Accept", "application/json");
-		request.setTransferTimeout(10000);
-		const auto reply = manager->get(request);
-		QObject::connect(reply, &QNetworkReply::finished, [=] {
-			reply->deleteLater();
-			if (reply->error() == QNetworkReply::NoError) {
-				const auto bytes = reply->readAll();
-				if (ApplyProfiles(bytes, incremental)) {
-					SaveToCache();
-				}
+template <typename OnData>
+void FetchJsonWithEtag(
+		not_null<QNetworkAccessManager*> manager,
+		const QString &url,
+		QByteArray &etagStorage,
+		OnData &&onData) {
+	auto request = QNetworkRequest(QUrl(url));
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+	request.setRawHeader("Accept", "application/json");
+	if (!etagStorage.isEmpty()) {
+		request.setRawHeader("If-None-Match", etagStorage);
+	}
+	request.setTransferTimeout(10000);
+	const auto reply = manager->get(request);
+	QObject::connect(reply, &QNetworkReply::finished, [=, &etagStorage, onData = std::forward<OnData>(onData)]() mutable {
+		reply->deleteLater();
+		const auto code = reply->attribute(
+			QNetworkRequest::HttpStatusCodeAttribute).toInt();
+		if (code == 304) {
+			return;
+		}
+		if (reply->error() == QNetworkReply::NoError) {
+			const auto etag = reply->rawHeader("ETag");
+			if (!etag.isEmpty()) {
+				etagStorage = etag;
 			}
-		});
-	};
-	fetchUrl(u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/badges.json"_q, false);
+			onData(reply->readAll());
+		}
+	});
+}
 
-	const auto fetchHashes = [=](const QString &url) {
-		auto request = QNetworkRequest(QUrl(url));
-		request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
-		request.setRawHeader("Accept", "application/json");
-		request.setTransferTimeout(10000);
-		const auto reply = manager->get(request);
-		QObject::connect(reply, &QNetworkReply::finished, [=] {
-			reply->deleteLater();
-			if (reply->error() == QNetworkReply::NoError) {
-				ApplyTrustedHashes(reply->readAll());
+void RefreshProfiles(QNetworkAccessManager *manager) {
+	FetchJsonWithEtag(
+		manager,
+		u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/badges.json"_q,
+		State().badgesEtag,
+		[](const QByteArray &bytes) {
+			if (ApplyProfiles(bytes, false)) {
+				SaveToCache();
 			}
 		});
-	};
-	fetchHashes(u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/trusted_hashes.json"_q);
+	FetchJsonWithEtag(
+		manager,
+		u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/trusted_hashes.json"_q,
+		State().hashesEtag,
+		[](const QByteArray &bytes) {
+			ApplyTrustedHashes(bytes);
+		});
 }
 
 void MaybeFetchProfile(not_null<PeerData*> peer) {
@@ -325,26 +313,51 @@ void MaybeFetchProfile(not_null<PeerData*> peer) {
 	if (!state.manager) {
 		state.manager = new QNetworkAccessManager(qApp);
 	}
+	Extera::WsProxy::ApplyHttpProxy(state.manager);
 	const auto url = u"https://api.exteragram.app/api/v1/profiles/"_q + QString::number(bare);
 	auto request = QNetworkRequest(QUrl(url));
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 	request.setRawHeader("Accept", "application/json");
 	request.setTransferTimeout(8000);
+	Extera::WsProxy::PrepareFrontedRequest(request);
 	const auto reply = state.manager->get(request);
 	const auto session = &peer->session();
-	QObject::connect(reply, &QNetworkReply::finished, [reply, peer, session] {
+	QObject::connect(reply, &QNetworkReply::finished, [reply, peer, session, bare] {
 		reply->deleteLater();
+		const auto httpCode = reply->attribute(
+			QNetworkRequest::HttpStatusCodeAttribute).toInt();
+		auto applied = false;
 		if (reply->error() == QNetworkReply::NoError) {
 			const auto bytes = reply->readAll();
-			if (ApplyProfiles(bytes, true)) {
+			if (!bytes.isEmpty() && ApplyProfiles(bytes, true)) {
 				SaveToCache();
-				crl::on_main(session, [peer, session] {
-					session->changes().peerUpdated(
-						peer,
-						Data::PeerUpdate::Flag::EmojiStatus);
-				});
+				applied = true;
+			}
+		} else if (httpCode == 404) {
+			auto &state = State();
+			if (!state.items.contains(bare)) {
+				Profile profile;
+				profile.id = bare;
+				profile.status = u"NONE"_q;
+				state.items[bare] = std::move(profile);
+			}
+			applied = true;
+		}
+		if (!applied) {
+			auto &state = State();
+			if (!state.items.contains(bare)) {
+				Profile profile;
+				profile.id = bare;
+				profile.status = u"API_ERROR"_q;
+				profile.badgeText = u"Ошибка запроса API"_q;
+				state.items[bare] = std::move(profile);
 			}
 		}
+		crl::on_main(session, [peer, session] {
+			session->changes().peerUpdated(
+				peer,
+				Data::PeerUpdate::Flag::EmojiStatus);
+		});
 	});
 }
 
@@ -372,6 +385,7 @@ void StartBadges() {
     { "id": 6296191170, "type": "developer", "number": 2, "text": "Второй в этой компании, друг разработчика oxDesktop." }
   ],
   "channels": [
+    { "id": 1571726392, "type": "extera", "text": "exteraGram — с 5-летием проекта!" },
     { "id": 4364437246, "type": "developer" },
     { "id": 4469639949, "type": "developer" }
   ],
@@ -447,6 +461,16 @@ BadgeKind BadgeKindFor(not_null<PeerData*> peer) {
 	return BadgeKind::None;
 }
 
+bool BadgeApiError(not_null<PeerData*> peer) {
+	const auto bare = BareId(peer);
+	if (!bare) {
+		return false;
+	}
+	const auto &items = State().items;
+	const auto it = items.find(bare);
+	return (it != end(items)) && (it->second.status == u"API_ERROR"_q);
+}
+
 DocumentId BadgeEmoji(not_null<PeerData*> peer) {
 	const auto bare = BareId(peer);
 	if (!bare) {
@@ -495,6 +519,9 @@ QString BadgeCustomText(not_null<PeerData*> peer) {
 			auto text = profile.badgeText;
 			return text.replace(u"**"_q, QString());
 		}
+	}
+	if (bare == 1571726392ULL) {
+		return u"exteraGram — с 5-летием проекта!"_q;
 	}
 	return QString();
 }
@@ -551,6 +578,71 @@ bool IsTrustedHash(const QString &sha256) {
 	}
 	const auto &state = State();
 	return state.trustedHashes.contains(sha256.toLower());
+}
+
+void RequestNowPlaying(
+		not_null<PeerData*> peer,
+		Fn<void(NowPlayingInfo)> done) {
+	if (!done) {
+		return;
+	}
+	const auto bare = peer->isUser() ? BareId(peer) : 0ULL;
+	if (!bare) {
+		done({});
+		return;
+	}
+	auto &state = State();
+	if (!state.manager) {
+		state.manager = new QNetworkAccessManager(qApp);
+	}
+	Extera::WsProxy::ApplyHttpProxy(state.manager);
+	auto request = QNetworkRequest(QUrl(
+		u"https://api.exteragram.app/api/v1/profiles/"_q
+		+ QString::number(bare)
+		+ u"/now-playing"_q));
+	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
+	request.setRawHeader("Accept", "application/json");
+	request.setTransferTimeout(6000);
+	Extera::WsProxy::PrepareFrontedRequest(request);
+	const auto reply = state.manager->get(request);
+	QObject::connect(reply, &QNetworkReply::finished, [reply, done = std::move(done)] {
+		reply->deleteLater();
+		if (reply->error() != QNetworkReply::NoError) {
+			done({});
+			return;
+		}
+		const auto doc = QJsonDocument::fromJson(reply->readAll());
+		const auto obj = doc.object();
+		const auto playing = obj.value(u"is_playing"_q).toBool(
+			obj.value(u"playing"_q).toBool(true));
+		const auto track = obj.contains(u"track"_q)
+			? obj.value(u"track"_q).toObject()
+			: obj;
+		const auto title = track.value(u"name"_q).toString(
+			track.value(u"title"_q).toString());
+		auto artist = track.value(u"artist"_q).toString();
+		if (artist.isEmpty() && track.value(u"artists"_q).isArray()) {
+			QStringList list;
+			for (const auto &v : track.value(u"artists"_q).toArray()) {
+				const auto name = v.isObject()
+					? v.toObject().value(u"name"_q).toString()
+					: v.toString();
+				if (!name.isEmpty()) {
+					list.push_back(name);
+				}
+			}
+			artist = list.join(u", "_q);
+		}
+		if (!playing || title.isEmpty()) {
+			done({});
+			return;
+		}
+		done(NowPlayingInfo{
+			.playing = true,
+			.title = title,
+			.artist = artist,
+		});
+	});
 }
 
 } // namespace Extera

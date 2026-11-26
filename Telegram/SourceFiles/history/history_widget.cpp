@@ -10814,6 +10814,8 @@ void HistoryWidget::processReply() {
 		return processCancel();
 #endif
 	} else if (!_processingReplyItem->isRegular()
+		&& !_processingReplyItem->hasFailed()
+		&& !_processingReplyItem->isSending()
 		&& !CanReplyToEphemeral(_processingReplyItem)) {
 		return processCancel();
 	} else if (const auto forum = _peer->forum()
@@ -10932,9 +10934,11 @@ void HistoryWidget::editMessage(
 	}
 
 	const auto editData = PrepareEditText(item);
+	const auto length = uint16(editData.text.size());
+	const auto position = EditFieldSelection(editData, { length, length }).from;
 	const auto cursor = MessageCursor {
-		int(editData.text.size()),
-		int(editData.text.size()),
+		position,
+		position,
 		Ui::kQFixedMax
 	};
 	const auto previewDraft = Data::WebPageDraft::FromItem(item);
@@ -10956,7 +10960,7 @@ void HistoryWidget::editMessage(
 	updateReplyToName();
 	updateControlsGeometry();
 	updateField();
-	SelectTextInFieldWithMargins(_field, selection);
+	SelectTextInFieldWithMargins(_field, EditFieldSelection(editData, selection));
 
 	saveDraftWithTextNow();
 	setInnerFocus();
@@ -11764,12 +11768,10 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 							Ui::DefaultImageSpoiler().frame(
 								_replySpoiler->index(now, pausedSpoiler)));
 					}
-					if (overEdit > 0.) {
-						p.setOpacity(overEdit);
-						p.fillRect(to, st::historyEditMediaBg);
-						st::historyEditMedia.paintInCenter(p, to);
-						p.setOpacity(1.);
-					}
+					HistoryView::MediaEditManager::PaintPreviewHover(
+						p,
+						to,
+						overEdit);
 					_mediaEditManager.paintCoverUpload(p, to);
 				}
 				replyLeft += st::historyReplyPreview + st::msgReplyBarSkip;

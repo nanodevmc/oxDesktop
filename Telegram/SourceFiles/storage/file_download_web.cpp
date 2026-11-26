@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "storage/file_download_web.h"
 
+#include "extera/extera_ws_proxy.h"
 #include "storage/cache/storage_cache_types.h"
 #include "base/timer.h"
 #include "base/weak_ptr.h"
@@ -296,7 +297,10 @@ void WebLoadManager::removeSent(int id) {
 }
 
 not_null<QNetworkReply*> WebLoadManager::send(int id, const QString &url) {
-	const auto result = _network->get(QNetworkRequest(url));
+	Extera::WsProxy::ApplyHttpProxy(_network.get());
+	auto request = QNetworkRequest(url);
+	Extera::WsProxy::PrepareFrontedRequest(request);
+	const auto result = _network->get(request);
 	const auto handleProgress = [=](qint64 ready, qint64 total) {
 		progress(id, result, ready, total);
 	};

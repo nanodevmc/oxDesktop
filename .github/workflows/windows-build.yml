@@ -53,11 +53,24 @@ jobs:
           cd /d "%GITHUB_WORKSPACE%\tdesktop"
           git submodule update --init --recursive --depth 1 --jobs 8
           python tools/patch_qt_schannel.py
+          python tools/patch_lib_ui.py
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+
+      - name: Restore offline OCR cache
+        id: cache-ocr
+        uses: actions/cache@v4
+        with:
+          path: ocr_runtime
+          key: oxdesktop-ocr-v1-win64-${{ hashFiles('tdesktop/tools/prepare_ocr.py') }}
+
+      - name: Prepare offline OCR runtime and models
+        if: steps.cache-ocr.outputs.cache-hit != 'true'
+        shell: cmd
+        run: python tdesktop\tools\prepare_ocr.py --platform win64 --out "%GITHUB_WORKSPACE%\ocr_runtime"
 
       - name: Check for C++ core changes
         id: diff_check
@@ -530,6 +543,11 @@ jobs:
           }
           Copy-Item (Join-Path $release 'python') $portable -Recurse -Force
           Copy-Item (Join-Path $release 'modules') $portable -Recurse -Force
+          $ocrSrc = Join-Path $env:GITHUB_WORKSPACE 'ocr_runtime'
+          if (Test-Path $ocrSrc) {
+            Copy-Item $ocrSrc (Join-Path $release 'ocr') -Recurse -Force
+            Copy-Item $ocrSrc (Join-Path $portable 'ocr') -Recurse -Force
+          }
           if (Test-Path (Join-Path $release 'Updater.exe')) { Copy-Item (Join-Path $release 'Updater.exe') $portable -Force }
           $cl = Join-Path $env:GITHUB_WORKSPACE 'tdesktop\changelog.txt'
           if (Test-Path $cl) {

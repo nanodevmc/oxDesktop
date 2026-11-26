@@ -281,7 +281,10 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 
 void SetupMenuBots(
 		not_null<Ui::VerticalLayout*> container,
-		not_null<Window::SessionController*> controller) {
+		not_null<Window::SessionController*> controller,
+		const style::SettingsButton *buttonStyle,
+		Fn<void(not_null<Ui::SettingsButton*>)> onButtonAdded) {
+	const auto &resolvedStyle = buttonStyle ? *buttonStyle : st::mainMenuButton;
 	const auto wrap = container->add(
 		object_ptr<Ui::VerticalLayout>(container));
 	const auto bots = &controller->session().attachWebView();
@@ -293,7 +296,7 @@ void SetupMenuBots(
 		rpl::empty
 	) | rpl::then(
 		bots->attachBotsUpdates()
-	) | rpl::on_next([=] {
+	) | rpl::on_next([=, &resolvedStyle] {
 		const auto width = container->widthNoMargins();
 		wrap->clear();
 		for (const auto &bot : bots->attachBots()) {
@@ -316,7 +319,10 @@ void SetupMenuBots(
 			const auto button = wrap->add(object_ptr<Ui::SettingsButton>(
 				wrap,
 				rpl::single(bot.name),
-				st::mainMenuButton));
+				resolvedStyle));
+			if (onButtonAdded) {
+				onButtonAdded(button);
+			}
 			const auto menu = button->lifetime().make_state<
 				base::unique_qptr<Ui::PopupMenu>
 			>();
@@ -324,9 +330,9 @@ void SetupMenuBots(
 				button,
 				bot.media);
 			button->heightValue(
-			) | rpl::on_next([=](int height) {
+			) | rpl::on_next([=, iconLeft = resolvedStyle.iconLeft](int height) {
 				icon->move(
-					st::mainMenuButton.iconLeft,
+					iconLeft,
 					(height - icon->height()) / 2);
 			}, button->lifetime());
 			const auto weak = base::make_weak(container);

@@ -597,6 +597,12 @@ void Panel::initControls() {
 	createMessageButton();
 	refreshLeftButton();
 	refreshVideoButtons();
+	if (!Platform::IsWayland()) {
+		createPinOnTop();
+	}
+	if (_call->rtmp()) {
+		setupFullScreenBehavior();
+	}
 
 	rpl::combine(
 		_mode.value(),
@@ -1622,12 +1628,6 @@ void Panel::setupFullScreenBehavior() {
 }
 
 void Panel::refreshTopButton() {
-	if (!_pinOnTop) {
-		createPinOnTop();
-		if (_call->rtmp()) {
-			setupFullScreenBehavior();
-		}
-	}
 	if (_mode.current() == PanelMode::Wide) {
 		_menuToggle.destroy();
 		if (!_call->rtmp()) {

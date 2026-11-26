@@ -71,9 +71,14 @@ private:
 	[[nodiscard]] bool listFocused() const;
 	void openFiltersSettings();
 	void setupDragAndDrop();
+	void updateMaterialStyles();
+	void decorateMd3Button(not_null<Ui::SideBarButton*> button, FilterId id);
+
+	struct MdStyles;
 
 	const not_null<SessionController*> _session;
 	const not_null<Ui::RpWidget*> _parent;
+	std::unique_ptr<MdStyles> _mdStyles;
 	Ui::RpWidget _outer;
 	Ui::SideBarButton _menu;
 	Ui::ScrollArea _scroll;

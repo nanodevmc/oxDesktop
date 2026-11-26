@@ -379,6 +379,12 @@ public:
 	[[nodiscard]] bool isPostHidingAuthor() const;
 	[[nodiscard]] bool isPostShowingAuthor() const;
 	[[nodiscard]] bool isRegular() const;
+	[[nodiscard]] bool isDeleted() const {
+		return _isDeleted;
+	}
+	void markDeleted() {
+		_isDeleted = true;
+	}
 	[[nodiscard]] bool isUploading() const;
 	void sendFailed();
 	[[nodiscard]] int viewsCount() const;
@@ -839,6 +845,7 @@ private:
 	MessageGroupId _groupId = MessageGroupId();
 	EffectId _effectId = 0;
 	HistoryView::Element *_mainView = nullptr;
+	bool _isDeleted = false;
 
 	friend class HistoryView::Element;
 	friend class HistoryView::Message;

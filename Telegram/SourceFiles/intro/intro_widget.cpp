@@ -125,14 +125,6 @@ Widget::Widget(
 	setupStep();
 	fixOrder();
 
-	if (!Window::Theme::IsNightMode()
-		|| st::windowBg->c == QColor(255, 255, 255)
-		|| st::windowBg->c == QColor(0x17, 0x21, 0x2b)
-		|| st::windowBg->c == QColor(0x24, 0x2c, 0x34)) {
-		Window::Theme::ApplyDefaultWithPath(Window::Theme::NightThemePath());
-		Window::Theme::KeepApplied();
-	}
-
 	if (_account->mtp().isTestMode()) {
 		_testModeLabel.create(
 			this,

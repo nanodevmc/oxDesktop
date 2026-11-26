@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/chat_style_radius.h"
+#include "extera/extera_config.h"
 #include "ui/chat/chat_style.h"
 #include "base/options.h"
 
@@ -29,18 +30,20 @@ base::options::toggle UseSmallMsgBubbleRadius({
 const char kOptionUseSmallMsgBubbleRadius[] = "use-small-msg-bubble-radius";
 
 int BubbleRadiusSmall() {
+	if (Extera::Bool(u"material_design"_q) && !UseSmallMsgBubbleRadius.value()) {
+		return std::max(st::bubbleRadiusSmall, style::ConvertScale(6));
+	}
 	return st::bubbleRadiusSmall;
 }
 
 int BubbleRadiusLarge() {
-	static const auto result = [] {
-		if (UseSmallMsgBubbleRadius.value()) {
-			return st::bubbleRadiusSmall;
-		} else {
-			return st::bubbleRadiusLarge;
-		}
-	}();
-	return result;
+	if (UseSmallMsgBubbleRadius.value()) {
+		return st::bubbleRadiusSmall;
+	}
+	if (Extera::Bool(u"material_design"_q)) {
+		return std::max(st::bubbleRadiusLarge, style::ConvertScale(18));
+	}
+	return st::bubbleRadiusLarge;
 }
 
 int BubbleCornerRadius(BubbleCornerRounding corner) {
@@ -58,14 +61,13 @@ int MsgFileThumbRadiusSmall() {
 }
 
 int MsgFileThumbRadiusLarge() {
-	static const auto result = [] {
-		if (UseSmallMsgBubbleRadius.value()) {
-			return st::msgFileThumbRadiusSmall;
-		} else {
-			return st::msgFileThumbRadiusLarge;
-		}
-	}();
-	return result;
+	if (UseSmallMsgBubbleRadius.value()) {
+		return st::msgFileThumbRadiusSmall;
+	}
+	if (Extera::Bool(u"material_design"_q)) {
+		return std::max(st::msgFileThumbRadiusLarge, style::ConvertScale(14));
+	}
+	return st::msgFileThumbRadiusLarge;
 }
 
 }

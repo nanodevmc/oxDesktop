@@ -267,17 +267,7 @@ State &Instance() {
 	return result;
 }
 
-void EnsureCurrentVersionChangelog() {
-	auto &state = Instance();
-	const auto currentVer = QString::fromUtf8(AppVersionStr).trimmed();
-	const auto hasCurrent = ranges::any_of(state.releases, [&](const StructuredRelease &rel) {
-		return rel.version.trimmed().startsWith(currentVer)
-			|| currentVer.startsWith(rel.version.trimmed());
-	});
-	if (hasCurrent) {
-		return;
-	}
-
+[[nodiscard]] QString ReadLocalChangelogText() {
 	for (const auto &loc : {
 		u":/gui/changelog.txt"_q,
 		cWorkingDir() + u"changelog.txt"_q,
@@ -290,44 +280,47 @@ void EnsureCurrentVersionChangelog() {
 			const auto content = QString::fromUtf8(file.readAll());
 			file.close();
 			if (!content.isEmpty()) {
-				auto localReleases = ParseReleasesFromText(content);
-				for (auto &rel : localReleases) {
-					if (rel.version.trimmed().startsWith(currentVer)
-						|| currentVer.startsWith(rel.version.trimmed())) {
-						state.releases.insert(state.releases.begin(), std::move(rel));
-						return;
-					}
-				}
-				if (!localReleases.empty() && state.releases.empty()) {
-					state.releases = std::move(localReleases);
-					return;
-				}
+				return content;
 			}
 		}
+	}
+	return QString();
+}
+
+void EnsureCurrentVersionChangelog() {
+	auto &state = Instance();
+	const auto currentVer = QString::fromUtf8(AppVersionStr).trimmed();
+	const auto hasCurrent = ranges::any_of(state.releases, [&](const StructuredRelease &rel) {
+		return rel.version.trimmed().startsWith(currentVer)
+			|| currentVer.startsWith(rel.version.trimmed());
+	});
+	if (hasCurrent) {
+		return;
+	}
+
+	const auto content = ReadLocalChangelogText();
+	if (content.isEmpty()) {
+		return;
+	}
+	auto localReleases = ParseReleasesFromText(content);
+	for (auto &rel : localReleases) {
+		if (rel.version.trimmed().startsWith(currentVer)
+			|| currentVer.startsWith(rel.version.trimmed())) {
+			state.releases.insert(state.releases.begin(), std::move(rel));
+			return;
+		}
+	}
+	if (!localReleases.empty() && state.releases.empty()) {
+		state.releases = std::move(localReleases);
 	}
 }
 
 void ApplyFallback() {
 	auto &state = Instance();
 	if (state.releases.empty()) {
-		for (const auto &loc : {
-			u":/gui/changelog.txt"_q,
-			cWorkingDir() + u"changelog.txt"_q,
-			QDir::currentPath() + u"/changelog.txt"_q,
-			QCoreApplication::applicationDirPath() + u"/changelog.txt"_q,
-			u"changelog.txt"_q,
-		}) {
-			auto file = QFile(loc);
-			if (file.open(QIODevice::ReadOnly)) {
-				const auto content = QString::fromUtf8(file.readAll());
-				file.close();
-				if (!content.isEmpty()) {
-					state.releases = ParseReleasesFromText(content);
-					if (!state.releases.empty()) {
-						break;
-					}
-				}
-			}
+		const auto content = ReadLocalChangelogText();
+		if (!content.isEmpty()) {
+			state.releases = ParseReleasesFromText(content);
 		}
 	}
 	EnsureCurrentVersionChangelog();

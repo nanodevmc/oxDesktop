@@ -1521,6 +1521,12 @@ void ListWidget::visibleTopBottomUpdated(
 }
 
 void ListWidget::applyUpdatedScrollState() {
+	if (_context == Context::History
+		&& _itemsKnownTillEnd
+		&& atNewestEdge()
+		&& isVisible()) {
+		checkActivation();
+	}
 	checkMoveToOtherViewer();
 }
 

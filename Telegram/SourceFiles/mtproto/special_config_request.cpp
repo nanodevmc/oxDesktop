@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mtproto/special_config_request.h"
 
+#include "extera/extera_ws_proxy.h"
 #include "mtproto/details/mtproto_rsa_public_key.h"
 #include "mtproto/mtproto_dc_options.h"
 #include "mtproto/mtproto_auth_key.h"
@@ -336,6 +337,8 @@ void SpecialConfigRequest::performRequest(const Attempt &attempt) {
 	}
 	request.setUrl(url);
 	request.setRawHeader("User-Agent", DnsUserAgent());
+	Extera::WsProxy::ApplyHttpProxy(&_manager);
+	Extera::WsProxy::PrepareFrontedRequest(request);
 	const auto reply = _requests.emplace_back(payload.isEmpty()
 		? _manager.get(request)
 		: _manager.post(request, payload)

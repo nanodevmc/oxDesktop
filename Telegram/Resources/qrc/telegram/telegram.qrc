@@ -106,4 +106,13 @@
     <file alias="default_shortcuts-custom.json">../../default_shortcuts-custom.json</file>
     <file alias="org.telegram.desktop.desktop">../../../../lib/xdg/org.telegram.desktop.desktop</file>
   </qresource>
+  <qresource prefix="/extera">
+    <file alias="models/extera_arrow.binobj">../../extera/models/extera_arrow.binobj</file>
+    <file alias="models/flecks.png">../../extera/models/flecks.png</file>
+    <file alias="shaders/vertex2.glsl">../../extera/shaders/vertex2.glsl</file>
+    <file alias="shaders/fragment_extera_arrow.glsl">../../extera/shaders/fragment_extera_arrow.glsl</file>
+    <file alias="registration_dates.bin">../../extera/registration_dates.bin</file>
+    <file alias="currencies.json">../../extera/currencies.json</file>
+    <file alias="plane_logo_plain.json">../../extera/plane_logo_plain.json</file>
+  </qresource>
 </RCC>

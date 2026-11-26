@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "lang/translate_url_provider.h"
 
+#include "extera/extera_ws_proxy.h"
 #include "spellcheck/platform/platform_language.h"
 #include "ui/text/text_html_tags.h"
 
@@ -392,7 +393,9 @@ private:
 			done(std::nullopt);
 			return;
 		}
+		Extera::WsProxy::ApplyHttpProxy(&_network);
 		auto networkRequest = QNetworkRequest(requestUrl);
+		Extera::WsProxy::PrepareFrontedRequest(networkRequest);
 		const auto reply = _network.get(networkRequest);
 		QObject::connect(reply, &QNetworkReply::finished, [=] {
 			if (reply->error() != QNetworkReply::NoError) {

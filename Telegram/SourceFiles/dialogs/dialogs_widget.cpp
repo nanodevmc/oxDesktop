@@ -69,7 +69,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "chat_helpers/message_field.h"
 #include "core/application.h"
+#include "core/click_handler_types.h"
 #include "core/ui_integration.h"
+#include "ui/controls/button_context_menu.h"
 #include "core/update_checker.h"
 #include "core/shortcuts.h"
 #include "window/window_controller.h"
@@ -740,6 +742,16 @@ Widget::Widget(
 			&st::dialogsUnlockIconOver);
 		Core::App().maybeLockByPasscode();
 		lockUnlock->setIconOverride(nullptr);
+	});
+	Ui::SetupButtonContextMenu(lockUnlock, &st::popupMenuWithIcons, [=](
+			not_null<Ui::PopupMenu*> menu) {
+		menu->addAction(tr::lng_settings_passcode_title(tr::now), [=] {
+			Core::App().openLocalUrl(
+				u"tg://settings/privacy?highlight=security/passcode"_q,
+				QVariant::fromValue(ClickHandlerContext{
+					.sessionWindow = base::make_weak(controller),
+				}));
+		}, &st::menuIconLock);
 	});
 
 	setupMainMenuToggle();
@@ -1990,8 +2002,14 @@ void Widget::fullSearchRefreshOn(rpl::producer<> events) {
 
 void Widget::updateControlsVisibility(bool fast) {
 	updateLoadMoreChatsVisibility();
+	if (_suggestions) {
+		_suggestions->setVisible(!_showAnimation);
+	}
+	for (const auto &suggestions : _hidingSuggestions) {
+		suggestions->setVisible(!_showAnimation);
+	}
 	_scroll->setVisible(!_suggestions && _hidingSuggestions.empty());
-	updateStoriesVisibility();
+	updateStoriesVisibility(fast ? anim::type::instant : anim::type::normal);
 	if ((_openedFolder || _openedForum || _openedCommunity)
 		&& _searchHasFocus) {
 		setInnerFocus();
@@ -2167,7 +2185,9 @@ void Widget::updateSuggestions(anim::type animated) {
 	const auto suggest = (searchActive() || _searchSuggestionsLocked)
 		&& !_searchState.inChat
 		&& (_inner->state() == WidgetState::Default);
-	if (anim::Disabled() || !session().data().chatsListLoaded()) {
+	if (_showAnimation
+		|| anim::Disabled()
+		|| !session().data().chatsListLoaded()) {
 		animated = anim::type::instant;
 	}
 	if (!suggest && _suggestions) {
@@ -2279,6 +2299,9 @@ void Widget::updateSuggestions(anim::type animated) {
 		_suggestions->show(animated, [=] {
 			stopWidthAnimation();
 		});
+		if (_showAnimation) {
+			_suggestions->setVisible(false);
+		}
 		_scroll->hide();
 	} else {
 		updateStoriesVisibility();
@@ -3007,6 +3030,12 @@ void Widget::startSlideAnimation(
 		QPixmap oldContentCache,
 		QPixmap newContentCache,
 		Window::SlideDirection direction) {
+	if (_suggestions) {
+		_suggestions->setVisible(false);
+	}
+	for (const auto &suggestions : _hidingSuggestions) {
+		suggestions->setVisible(false);
+	}
 	_scroll->hide();
 	if (_stories) {
 		_stories->setToggledHidden(true, false);

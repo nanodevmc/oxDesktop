@@ -330,6 +330,19 @@ base::options::toggle ShowChannelJoinedBelowAbout({
 				}
 			}
 		}
+		if (const auto channel = peer->asChannel()
+				; channel && peerToChannel(peer->id).bare == 1571726392ULL) {
+			if (!value.empty()) {
+				value.append("\n\n");
+			}
+			const auto lang = Lang::Id().trimmed().toLower();
+			const auto isRu = lang.startsWith(u"ru"_q)
+				|| lang.startsWith(u"uk"_q)
+				|| lang.startsWith(u"be"_q);
+			value.append(Ui::Text::Italic(isRu
+				? u"5 лет проекту exteraGram — поздравляем команду и сообщество!"_q
+				: u"exteraGram 5th Anniversary — congrats to the team and community!"_q));
+		}
 		return std::move(value);
 	});
 }

@@ -41,7 +41,7 @@
 namespace Extera::Update {
 namespace {
 
-constexpr auto kExteraBuild = 7;
+constexpr auto kExteraBuild = 0;
 constexpr auto kCheckInterval = 6 * 60 * 60 * crl::time(1000);
 constexpr auto kFirstCheckDelay = 10 * crl::time(1000);
 
@@ -97,10 +97,7 @@ State &Instance() {
 }
 
 [[nodiscard]] std::vector<int> Current() {
-	auto result = Parse(QString::fromLatin1(AppVersionStr));
-	result.resize(3);
-	result.push_back(kExteraBuild);
-	return result;
+	return Parse(QString::fromLatin1(AppVersionStr));
 }
 
 [[nodiscard]] bool Installed() {
@@ -173,6 +170,21 @@ void Download(bool install) {
 	});
 }
 
+[[nodiscard]] QString LocalProxyPath() {
+	return QCoreApplication::applicationDirPath()
+		+ u"/oxWsProxy"_q
+#if defined Q_OS_WIN
+		+ u".exe"_q
+#endif
+		;
+}
+
+void CleanupProxyBackups() {
+	const auto dir = QCoreApplication::applicationDirPath();
+	QFile::remove(dir + u"/oxWsProxy.exe.bak"_q);
+	QFile::remove(dir + u"/oxWsProxy.bak"_q);
+}
+
 void UpdateProxyEngine(const QString &proxyUrl, const QString &proxyName) {
 	if (proxyUrl.isEmpty()) {
 		return;
@@ -182,13 +194,7 @@ void UpdateProxyEngine(const QString &proxyUrl, const QString &proxyName) {
 		state.manager = new QNetworkAccessManager(qApp);
 		state.manager->setProxy(QNetworkProxy(QNetworkProxy::NoProxy));
 	}
-	const auto localBinaryName =
-#if defined Q_OS_WIN
-		u"oxWsProxy.exe"_q;
-#else
-		u"oxWsProxy"_q;
-#endif
-	const auto localPath = QCoreApplication::applicationDirPath() + '/' + localBinaryName;
+	const auto localPath = LocalProxyPath();
 	auto localHash = QByteArray();
 	auto localFile = QFile(localPath);
 	if (localFile.open(QIODevice::ReadOnly)) {
@@ -223,14 +229,18 @@ void UpdateProxyEngine(const QString &proxyUrl, const QString &proxyName) {
 #if !defined Q_OS_WIN
 			newFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner | QFile::ReadGroup | QFile::ExeGroup | QFile::ReadOther | QFile::ExeOther);
 #endif
-			QFile::remove(localPath + u".bak"_q);
-			QFile::rename(localPath, localPath + u".bak"_q);
-			QFile::rename(newPath, localPath);
+			const auto bakPath = localPath + u".bak"_q;
+			QFile::remove(bakPath);
+			QFile::rename(localPath, bakPath);
+			if (QFile::rename(newPath, localPath)) {
+				QFile::remove(bakPath);
+			}
 		}
 	});
 }
 
 void Check(Fn<void(CheckResult)> done = nullptr) {
+	CleanupProxyBackups();
 	auto &state = Instance();
 	if (!state.manager) {
 		state.manager = new QNetworkAccessManager(qApp);
@@ -302,11 +312,14 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 			}
 #endif
 		}
-		if (!proxyAssetUrl.isEmpty()) {
-			UpdateProxyEngine(proxyAssetUrl, proxyAssetName);
-		}
 		const auto remoteVer = Parse(tag);
 		const auto currentVer = Current();
+		const auto appVer = Parse(QString::fromLatin1(APP_VERSION));
+		if (!proxyAssetUrl.isEmpty()
+			&& ((remoteVer > currentVer && remoteVer > appVer)
+				|| !QFile::exists(LocalProxyPath()))) {
+			UpdateProxyEngine(proxyAssetUrl, proxyAssetName);
+		}
 		state.available = (remoteVer > currentVer);
 		if (state.available.current()) {
 			const auto mode = Extera::Int(u"auto_update"_q);
@@ -329,6 +342,7 @@ void Check(Fn<void(CheckResult)> done = nullptr) {
 } // namespace
 
 void Start() {
+	CleanupProxyBackups();
 	auto &state = Instance();
 	if (state.timer) {
 		return;
@@ -345,7 +359,8 @@ void CheckNow(Fn<void(CheckResult)> done) {
 }
 
 int Build() {
-	return kExteraBuild;
+	const auto cur = Current();
+	return (cur.size() > 3) ? cur[3] : kExteraBuild;
 }
 
 QString VersionText() {

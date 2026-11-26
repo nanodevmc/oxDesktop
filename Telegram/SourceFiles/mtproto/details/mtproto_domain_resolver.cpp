@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mtproto/details/mtproto_domain_resolver.h"
 
+#include "extera/extera_ws_proxy.h"
 #include "base/random.h"
 #include "base/invoke_queued.h"
 #include "base/call_delayed.h"
@@ -303,6 +304,8 @@ void DomainResolver::performRequest(
 	}
 	request.setUrl(url);
 	request.setRawHeader("User-Agent", DnsUserAgent());
+	Extera::WsProxy::ApplyHttpProxy(&_manager);
+	Extera::WsProxy::PrepareFrontedRequest(request);
 	const auto i = _requests.emplace(
 		key,
 		std::vector<ServiceWebRequest>()).first;

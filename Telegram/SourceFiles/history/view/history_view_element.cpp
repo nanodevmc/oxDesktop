@@ -81,8 +81,48 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_dialogs.h"
 #include "styles/style_iv.h"
 
+#include <QtGui/QPainterPath>
+
 namespace HistoryView {
 namespace {
+
+[[nodiscard]] QPainterPath Md3ButtonRoundedPath(
+		const QRectF &rect,
+		float64 tl,
+		float64 tr,
+		float64 bl,
+		float64 br) {
+	const auto x = rect.x();
+	const auto y = rect.y();
+	const auto w = rect.width();
+	const auto h = rect.height();
+	auto path = QPainterPath();
+	path.moveTo(x + tl, y);
+	path.lineTo(x + w - tr, y);
+	if (tr > 0.) {
+		path.arcTo(x + w - 2. * tr, y, 2. * tr, 2. * tr, 90., -90.);
+	}
+	path.lineTo(x + w, y + h - br);
+	if (br > 0.) {
+		path.arcTo(
+			x + w - 2. * br,
+			y + h - 2. * br,
+			2. * br,
+			2. * br,
+			0.,
+			-90.);
+	}
+	path.lineTo(x + bl, y + h);
+	if (bl > 0.) {
+		path.arcTo(x, y + h - 2. * bl, 2. * bl, 2. * bl, 270., -90.);
+	}
+	path.lineTo(x, y + tl);
+	if (tl > 0.) {
+		path.arcTo(x, y, 2. * tl, 2. * tl, 180., -90.);
+	}
+	path.closeSubpath();
+	return path;
+}
 
 [[nodiscard]] auto FlatSelectionEndpointFromState(const TextState &state)
 -> MessageSelectionFlatEndpoint {
@@ -160,6 +200,9 @@ private:
 	struct CacheKey {
 		BubbleRoundingKey rounding;
 		HistoryMessageMarkupButton::Color color;
+		bool materialDesign = false;
+		int width = 0;
+		int height = 0;
 
 		friend inline constexpr auto operator<=>(
 			CacheKey,
@@ -167,6 +210,8 @@ private:
 	};
 	mutable base::flat_map<CacheKey, CachedBg> _cachedBg;
 	mutable base::flat_map<CacheKey, QPainterPath> _cachedOutline;
+	mutable std::array<QImage, 4> _mdMasksSmall;
+	mutable std::array<QImage, 4> _mdMasksLarge;
 	mutable std::unique_ptr<Ui::GlareEffect> _glare;
 	Fn<void()> _repaint;
 
@@ -204,6 +249,25 @@ Images::CornersMaskRef KeyboardStyle::buttonRounding(
 	using namespace Ui;
 	using Radius = CachedCornerRadius;
 	using Corner = BubbleCornerRounding;
+	if (Extera::Bool(u"material_design"_q)) {
+		if (_mdMasksSmall[0].isNull()) {
+			_mdMasksSmall = CornersMask(style::ConvertScale(12));
+		}
+		if (_mdMasksLarge[0].isNull()) {
+			_mdMasksLarge = CornersMask(style::ConvertScale(16));
+		}
+		auto result = CornersMaskRef(_mdMasksSmall);
+		if (sides & RectPart::Bottom) {
+			auto round = [&](RectPart side, int index) {
+				if ((sides & side) && (outer[index] == Corner::Large)) {
+					result.p[index] = &_mdMasksLarge[index];
+				}
+			};
+			round(RectPart::Left, kBottomLeft);
+			round(RectPart::Right, kBottomRight);
+		}
+		return result;
+	}
 	auto result = CornersMaskRef(CachedCornersMasks(Radius::BubbleSmall));
 	if (sides & RectPart::Bottom) {
 		const auto &large = CachedCornersMasks(Radius::BubbleLarge);
@@ -228,13 +292,20 @@ void KeyboardStyle::paintButtonBg(
 	Expects(st != nullptr);
 
 	using Corner = Ui::BubbleCornerRounding;
-	const auto key = CacheKey{ rounding.key(), color };
+	const auto md = Extera::Bool(u"material_design"_q);
+	const auto key = CacheKey{
+		rounding.key(),
+		color,
+		md,
+		rect.width(),
+		rect.height(),
+	};
 	auto &cachedBg = _cachedBg[key];
 
 	const auto sti = &st->imageStyle(false);
 	const auto ratio = style::DevicePixelRatio();
 	if (cachedBg.image.isNull()
-		|| cachedBg.image.width() != (rect.width() * ratio)
+		|| cachedBg.image.size() != (rect.size() * ratio)
 		|| cachedBg.color != sti->msgServiceBg->c) {
 		cachedBg.color = sti->msgServiceBg->c;
 		cachedBg.image = QImage(
@@ -252,56 +323,126 @@ void KeyboardStyle::paintButtonBg(
 				: (color == Color::Danger)
 				? st::botKbInlineDangerBg->c
 				: st::botKbInlineSuccessBg->c);
-			const auto smallColored = normal
-				? Ui::CornersPixmaps()
-				: Ui::PrepareCornerPixmaps(
-					Ui::BubbleRadiusSmall(),
-					colored.color());
-			const auto largeColored = normal
-				? Ui::CornersPixmaps()
-				: Ui::PrepareCornerPixmaps(
-					Ui::BubbleRadiusLarge(),
-					colored.color());
-			const auto small = normal
-				? &sti->msgServiceBgCornersSmall
-				: &smallColored;
-			const auto large = normal
-				? &sti->msgServiceBgCornersLarge
-				: &largeColored;
-			auto corners = Ui::CornersPixmaps();
-			int radiuses[4];
-			for (auto i = 0; i != 4; ++i) {
-				const auto isLarge = (rounding[i] == Corner::Large);
-				corners.p[i] = (isLarge ? large : small)->p[i];
-				radiuses[i] = Ui::CachedCornerRadiusValue(isLarge
-					? Ui::CachedCornerRadius::BubbleLarge
-					: Ui::CachedCornerRadius::BubbleSmall);
-			}
 			const auto r = Rect(rect.size());
-			_cachedOutline[key] = Ui::ComplexRoundedRectPath(
-				r - Margins(st::lineWidth),
-				radiuses[0],
-				radiuses[1],
-				radiuses[2],
-				radiuses[3]);
-			Ui::FillRoundRect(
-				painter,
-				r,
-				normal ? sti->msgServiceBg : colored.color(),
-				corners);
+			if (md) {
+				const auto smallR = std::min(
+					style::ConvertScale(12),
+					r.height() / 2);
+				const auto largeR = std::min(
+					style::ConvertScale(16),
+					r.height() / 2);
+				int radiuses[4];
+				for (auto i = 0; i != 4; ++i) {
+					radiuses[i] = (rounding[i] == Corner::Large)
+						? largeR
+						: smallR;
+				}
+				_cachedOutline[key] = Ui::ComplexRoundedRectPath(
+					r - Margins(st::lineWidth),
+					radiuses[0],
+					radiuses[1],
+					radiuses[2],
+					radiuses[3]);
+				auto hq = PainterHighQualityEnabler(painter);
+				auto surface = normal
+					? anim::color(
+						sti->msgServiceBg->c,
+						st->windowBg()->c,
+						0.24)
+					: colored.color();
+				if (normal) {
+					surface.setAlpha(std::clamp(
+						std::max(sti->msgServiceBg->c.alpha(), 176),
+						176,
+						224));
+				}
+				const auto border = normal
+					? anim::with_alpha(st->msgServiceFg()->c, 0.18)
+					: QColor(255, 255, 255, 42);
+				const auto path = Md3ButtonRoundedPath(
+					QRectF(r).adjusted(0.5, 0.5, -0.5, -0.5),
+					radiuses[0],
+					radiuses[1],
+					radiuses[2],
+					radiuses[3]);
+				painter.setPen(QPen(border, 1.0));
+				painter.setBrush(surface);
+				painter.drawPath(path);
+			} else {
+				const auto smallColored = normal
+					? Ui::CornersPixmaps()
+					: Ui::PrepareCornerPixmaps(
+						Ui::BubbleRadiusSmall(),
+						colored.color());
+				const auto largeColored = normal
+					? Ui::CornersPixmaps()
+					: Ui::PrepareCornerPixmaps(
+						Ui::BubbleRadiusLarge(),
+						colored.color());
+				const auto small = normal
+					? &sti->msgServiceBgCornersSmall
+					: &smallColored;
+				const auto large = normal
+					? &sti->msgServiceBgCornersLarge
+					: &largeColored;
+				auto corners = Ui::CornersPixmaps();
+				int radiuses[4];
+				for (auto i = 0; i != 4; ++i) {
+					const auto isLarge = (rounding[i] == Corner::Large);
+					corners.p[i] = (isLarge ? large : small)->p[i];
+					radiuses[i] = Ui::CachedCornerRadiusValue(isLarge
+						? Ui::CachedCornerRadius::BubbleLarge
+						: Ui::CachedCornerRadius::BubbleSmall);
+				}
+				_cachedOutline[key] = Ui::ComplexRoundedRectPath(
+					r - Margins(st::lineWidth),
+					radiuses[0],
+					radiuses[1],
+					radiuses[2],
+					radiuses[3]);
+				Ui::FillRoundRect(
+					painter,
+					r,
+					normal ? sti->msgServiceBg : colored.color(),
+					corners);
+			}
 		}
 	}
 	p.drawImage(rect.topLeft(), cachedBg.image);
 	if (howMuchOver > 0) {
 		auto o = p.opacity();
 		p.setOpacity(o * howMuchOver);
-		const auto &small = st->msgBotKbOverBgAddCornersSmall();
-		const auto &large = st->msgBotKbOverBgAddCornersLarge();
-		auto over = Ui::CornersPixmaps();
-		for (auto i = 0; i != 4; ++i) {
-			over.p[i] = (rounding[i] == Corner::Large ? large : small).p[i];
+		if (md) {
+			const auto smallR = std::min(
+				style::ConvertScale(12),
+				rect.height() / 2);
+			const auto largeR = std::min(
+				style::ConvertScale(16),
+				rect.height() / 2);
+			int radiuses[4];
+			for (auto i = 0; i != 4; ++i) {
+				radiuses[i] = (rounding[i] == Corner::Large)
+					? largeR
+					: smallR;
+			}
+			auto hq = PainterHighQualityEnabler(p);
+			p.fillPath(
+				Md3ButtonRoundedPath(
+					QRectF(rect),
+					radiuses[0],
+					radiuses[1],
+					radiuses[2],
+					radiuses[3]),
+				st->msgBotKbOverBgAdd());
+		} else {
+			const auto &small = st->msgBotKbOverBgAddCornersSmall();
+			const auto &large = st->msgBotKbOverBgAddCornersLarge();
+			auto over = Ui::CornersPixmaps();
+			for (auto i = 0; i != 4; ++i) {
+				over.p[i] = (rounding[i] == Corner::Large ? large : small).p[i];
+			}
+			Ui::FillRoundRect(p, rect, st->msgBotKbOverBgAdd(), over);
 		}
-		Ui::FillRoundRect(p, rect, st->msgBotKbOverBgAdd(), over);
 		p.setOpacity(o);
 	}
 }
@@ -350,7 +491,13 @@ void KeyboardStyle::paintButtonLoading(
 		return;
 	}
 
-	const auto key = CacheKey{ rounding.key(), color };
+	const auto key = CacheKey{
+		rounding.key(),
+		color,
+		Extera::Bool(u"material_design"_q),
+		rect.width(),
+		rect.height(),
+	};
 	auto &cachedBg = _cachedBg[key];
 	if (!cachedBg.image.isNull()) {
 		if (_glare && _glare->glare.birthTime) {

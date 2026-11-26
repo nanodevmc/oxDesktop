@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "ui/chat/message_bubble.h"
 #include "ui/chat/chat_style.h"
+#include "ui/chat/chat_style_radius.h"
 #include "ui/chat/chat_theme_readability.h"
 #include "ui/image/image_prepare.h"
 #include "ui/text/text_custom_emoji.h"
@@ -604,6 +605,22 @@ ChatPaintContext ChatTheme::preparePaintContext(
 			_cacheBubblesArea = size;
 			_lastBubblesAreaChangeTime = now;
 			_cacheBubblesTimer->callOnce(kCacheBackgroundFastTimeout);
+		}
+	}
+	if (_bubblesBackgroundPattern) {
+		const auto dpr = std::max(
+			int(_bubblesBackgroundPattern->cornersLarge[0].devicePixelRatio()),
+			1);
+		const auto current
+			= _bubblesBackgroundPattern->cornersLarge[0].width() / dpr;
+		if (current != BubbleRadiusLarge()) {
+			auto pixmap = std::move(_bubblesBackgroundPattern->pixmap);
+			const auto use = _palette
+				? _palette.get()
+				: style::main_palette::get().get();
+			_bubblesBackgroundPattern = PrepareBubblePattern(use);
+			FinishBubblePatternOnMain(_bubblesBackgroundPattern.get());
+			_bubblesBackgroundPattern->pixmap = std::move(pixmap);
 		}
 	}
 	return {

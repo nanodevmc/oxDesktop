@@ -99,4 +99,5 @@ scratch/*
 
 # Backup files across all directories
 *.bak
+/ocr_runtime/
 *.bak.*

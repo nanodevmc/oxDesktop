@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_service_message.h"
+#include "extera/extera_config.h"
 #include "ui/effects/round_checkbox.h"
 #include "ui/painter.h"
 #include "styles/style_chat.h"
@@ -149,6 +150,28 @@ void PaintBubblePart(
 	p.fillRect(x, y, width, height, st->msgServiceBg());
 }
 
+void PaintMd3ServicePill(
+		Painter &p,
+		const QRect &rect,
+		const QColor &baseBg,
+		const QColor &fg,
+		const QColor &surfaceHint,
+		bool pillShape = true) {
+	auto hq = PainterHighQualityEnabler(p);
+	const auto radius = pillShape
+		? (rect.height() / 2.0)
+		: std::min(float64(style::ConvertScale(18)), rect.height() / 2.0);
+	auto surface = anim::color(baseBg, surfaceHint, 0.24);
+	surface.setAlpha(std::clamp(std::max(baseBg.alpha(), 172), 172, 224));
+	const auto border = anim::with_alpha(fg, 0.20);
+	p.setPen(QPen(border, 1.0));
+	p.setBrush(surface);
+	p.drawRoundedRect(
+		QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5),
+		radius,
+		radius);
+}
+
 void PaintPreparedDate(
 		Painter &p,
 		const style::color &bg,
@@ -158,7 +181,8 @@ void PaintPreparedDate(
 		int dateTextWidth,
 		int y,
 		int w,
-		bool chatWide) {
+		bool chatWide,
+		const Ui::ChatStyle *st = nullptr) {
 	int left = st::msgServiceMargin.left();
 	const auto maxwidth = chatWide
 		? std::min(w, WideChatWidth())
@@ -167,17 +191,19 @@ void PaintPreparedDate(
 
 	left += (w - dateTextWidth - st::msgServicePadding.left() - st::msgServicePadding.right()) / 2;
 	int height = st::msgServicePadding.top() + st::msgServiceFont->height + st::msgServicePadding.bottom();
-	ServiceMessagePainter::PaintBubble(
-		p,
-		bg,
-		corners,
-		QRect(
-			left,
-			y + st::msgServiceMargin.top(),
-			dateTextWidth
-				+ st::msgServicePadding.left()
-				+ st::msgServicePadding.left(),
-			height));
+	const auto rect = QRect(
+		left,
+		y + st::msgServiceMargin.top(),
+		dateTextWidth
+			+ st::msgServicePadding.left()
+			+ st::msgServicePadding.left(),
+		height);
+	if (Extera::Bool(u"material_design"_q)) {
+		const auto surfaceHint = st ? st->windowBg()->c : st::windowBg->c;
+		PaintMd3ServicePill(p, rect, bg->c, fg->c, surfaceHint, true);
+	} else {
+		ServiceMessagePainter::PaintBubble(p, bg, corners, rect);
+	}
 
 	p.setFont(st::msgServiceFont);
 	p.setPen(fg);
@@ -287,7 +313,8 @@ void ServiceMessagePainter::PaintDate(
 		dateTextWidth,
 		y,
 		w,
-		chatWide);
+		chatWide,
+		st);
 }
 
 void ServiceMessagePainter::PaintDate(
@@ -316,6 +343,16 @@ void ServiceMessagePainter::PaintBubble(
 		Painter &p,
 		not_null<const Ui::ChatStyle*> st,
 		QRect rect) {
+	if (Extera::Bool(u"material_design"_q) && rect.height() > 0) {
+		PaintMd3ServicePill(
+			p,
+			rect,
+			st->msgServiceBg()->c,
+			st->msgServiceFg()->c,
+			st->windowBg()->c,
+			rect.height() <= style::ConvertScale(44));
+		return;
+	}
 	PaintBubble(p, st->msgServiceBg(), st->serviceBgCornersNormal(), rect);
 }
 
@@ -324,6 +361,16 @@ void ServiceMessagePainter::PaintBubble(
 		const style::color &bg,
 		const Ui::CornersPixmaps &corners,
 		QRect rect) {
+	if (Extera::Bool(u"material_design"_q) && rect.height() > 0) {
+		PaintMd3ServicePill(
+			p,
+			rect,
+			bg->c,
+			st::msgServiceFg->c,
+			st::windowBg->c,
+			rect.height() <= style::ConvertScale(44));
+		return;
+	}
 	Ui::FillRoundRect(p, rect, bg, corners);
 }
 
