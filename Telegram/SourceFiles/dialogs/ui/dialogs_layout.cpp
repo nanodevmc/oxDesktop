@@ -163,7 +163,7 @@ int PaintRightButtonImpl(QPainter &p, const PaintContext &context) {
 void PaintMd3RowBackground(
 		Painter &p,
 		QRect geometry,
-		const style::color &bg,
+		const QBrush &bg,
 		const PaintContext &context) {
 	if (!::Extera::Bool(u"material_design"_q) || geometry.height() <= 16) {
 		p.fillRect(geometry, bg);
@@ -200,7 +200,7 @@ void PaintMd3RowBackground(
 	}
 }
 
-[[nodiscard]] QRect PaintMd3UnreadBadge(
+QRect PaintMd3UnreadBadge(
 		QPainter &p,
 		const QString &text,
 		int x,
@@ -259,7 +259,7 @@ void PaintMd3RowBackground(
 		? st::dialogsBgActive->c
 		: context.selected
 		? st::dialogsBgOver->c
-		: context.currentBg->c;
+		: context.currentBg->color();
 	const auto border = context.narrow
 		? cutoutColor
 		: anim::with_alpha(fg->c, 0.16);
