@@ -645,4 +645,4 @@
 "lng_oxd_ai_test_button" = "Test Connection";
 "lng_oxd_ai_test_success" = "Success! API is working properly.";
 "lng_oxd_ai_test_error" = "API verification failed! Check your key, URL, and model.";
-"lng_oxd_ocr_extract" = "Распазнаць тэкст (OCR)";
+"lng_oxd_ocr_extract" = "Распазнаць тэкст";

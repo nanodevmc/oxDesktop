@@ -59,6 +59,7 @@ enum class Backend;
 } // namespace Ui::GL
 
 namespace Ui::Menu {
+class Menu;
 struct MenuCallback;
 } // namespace Ui::Menu
 
@@ -429,7 +430,9 @@ private:
 	void markTimedMediaRead();
 	void checkSingleViewMediaBurn();
 
-	void fillContextMenuActions(const Ui::Menu::MenuCallback &addAction);
+	void fillContextMenuActions(
+		const Ui::Menu::MenuCallback &addAction,
+		Ui::Menu::Menu *menu = nullptr);
 
 	void resizeCenteredControls();
 	void resizeContentByScreenSize();

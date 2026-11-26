@@ -6,10 +6,13 @@
 #include "extera/extera_ws_proxy.h"
 #include "lang/lang_keys.h"
 #include "ui/layers/generic_box.h"
+#include "ui/new_badges.h"
 #include "ui/painter.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
+#include "ui/widgets/menu/menu.h"
+#include "ui/widgets/menu/menu_item_base.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
@@ -34,6 +37,7 @@
 #include <QtCore/QTemporaryFile>
 #include <QtCore/QUrl>
 #include <QtCore/QUrlQuery>
+#include <QtGui/QAction>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QPainterPath>
@@ -138,8 +142,8 @@ struct State {
 	const auto lang = TargetLanguageCode();
 	if (lang == u"ru"_q || lang == u"uk"_q || lang == u"be"_q) {
 		return {
-			.title = u"Распознавание текста (OCR)"_q,
-			.recognizingLocal = u"Распознавание локально (PP-OCRv5)..."_q,
+			.title = u"Распознавание текста"_q,
+			.recognizingLocal = u"Распознавание локально..."_q,
 			.recognizing = u"Распознавание текста..."_q,
 			.modeCyrillic = u"Кириллица + EN"_q,
 			.modeLatin = u"Латиница (ES / DE / FR)"_q,
@@ -166,8 +170,8 @@ struct State {
 		};
 	} else if (lang == u"es"_q) {
 		return {
-			.title = u"Reconocimiento de texto (OCR)"_q,
-			.recognizingLocal = u"Reconociendo sin conexión (PP-OCRv5)..."_q,
+			.title = u"Reconocimiento de texto"_q,
+			.recognizingLocal = u"Reconociendo sin conexión..."_q,
 			.recognizing = u"Extrayendo texto..."_q,
 			.modeCyrillic = u"Cirílico + EN"_q,
 			.modeLatin = u"Latino (ES / DE / FR)"_q,
@@ -194,8 +198,8 @@ struct State {
 		};
 	}
 	return {
-		.title = u"Text Recognition (OCR)"_q,
-		.recognizingLocal = u"Recognizing locally (PP-OCRv5)..."_q,
+		.title = u"Text Recognition"_q,
+		.recognizingLocal = u"Recognizing locally..."_q,
 		.recognizing = u"Extracting text..."_q,
 		.modeCyrillic = u"Cyrillic + EN"_q,
 		.modeLatin = u"Latin (ES / DE / FR)"_q,
@@ -723,6 +727,41 @@ void PaintSurfaceCard(not_null<Ui::RpWidget*> widget, float64 radius = kCardRadi
 }
 
 } // namespace
+
+void AttachNewBadge(not_null<Ui::Menu::Menu*> menu, QAction *action) {
+	if (!action) {
+		return;
+	}
+	const auto item = menu->itemForAction(action);
+	if (!item) {
+		return;
+	}
+	const auto &st = menu->st();
+	const auto rightPad = st.itemPadding.right();
+	const auto badge = Ui::NewBadge::CreateNewBadge(
+		item,
+		tr::lng_bot_side_menu_new());
+	const auto badgeWidth = std::max(badge->width(), 36);
+	const auto textWidth = st.itemStyle.font->width(action->text());
+	const auto neededWidth = std::clamp(
+		st.itemPadding.left()
+			+ textWidth
+			+ st.itemRightSkip
+			+ badgeWidth
+			+ rightPad,
+		st.widthMin,
+		st.widthMax);
+	item->setMinWidth(std::max(item->minWidth(), neededWidth));
+	rpl::combine(
+		item->sizeValue(),
+		badge->sizeValue()
+	) | rpl::on_next([=](QSize itemSize, QSize badgeSize) {
+		badge->moveToRight(
+			rightPad,
+			(itemSize.height() - badgeSize.height()) / 2,
+			itemSize.width());
+	}, badge->lifetime());
+}
 
 void ExtractText(
 		const QImage &image,

@@ -625,7 +625,7 @@
 "lng_oxd_toast_shots_copied" = "Messages shot copied to clipboard";
 "lng_oxd_ghost_mode" = "Ghost Mode";
 "lng_oxd_ghost_mode_about" = "Master switch to toggle stealth reading across all chats and channels.";
-"lng_oxd_ocr_extract" = "Extraer texto (OCR)";
+"lng_oxd_ocr_extract" = "Extraer texto";
 
 "lng_oxd_plugin_share" = "Share File";
 "lng_oxd_plugin_port" = "Port with AI";

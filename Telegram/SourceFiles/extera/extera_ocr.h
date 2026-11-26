@@ -5,6 +5,12 @@
 #include <QtCore/QString>
 #include <QtGui/QImage>
 
+class QAction;
+
+namespace Ui::Menu {
+class Menu;
+} // namespace Ui::Menu
+
 namespace Window {
 class SessionController;
 } // namespace Window
@@ -17,5 +23,6 @@ void ExtractAndShowBox(
 void ExtractText(
 	const QImage &image,
 	Fn<void(QString text, QString error)> done);
+void AttachNewBadge(not_null<Ui::Menu::Menu*> menu, QAction *action);
 
 } // namespace Extera::Ocr

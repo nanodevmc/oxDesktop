@@ -3124,7 +3124,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			_menu->addAction(tr::lng_context_copy_image(tr::now), [=] {
 				copyContextImage(photo, itemId);
 			}, &st::menuIconCopy);
-			_menu->addAction(tr::lng_oxd_ocr_extract(tr::now), [=] {
+			const auto ocrAction = _menu->addAction(tr::lng_oxd_ocr_extract(tr::now), [=] {
 				if (const auto mediaView = photo->activeMediaView()) {
 					if (const auto image = mediaView->image(Data::PhotoSize::Large)) {
 						const auto raw = image->original();
@@ -3134,6 +3134,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					}
 				}
 			}, &st::menuIconTranslate);
+			Extera::Ocr::AttachNewBadge(_menu->menu(), ocrAction);
 		}
 		if (photo->hasAttachedStickers()) {
 			_menu->addAction(tr::lng_context_attached_stickers(tr::now), [=] {

@@ -18,7 +18,6 @@
 #include "ui/wrap/vertical_layout.h"
 #include "ui/painter.h"
 #include "ui/vertical_list.h"
-#include "ui/new_badges.h"
 #include "window/main_window.h"
 #include "styles/style_basic.h"
 #include "styles/style_boxes.h"
@@ -65,20 +64,6 @@ void AddDemoRow(
 		st::settingsButtonNoIcon);
 }
 
-void AddDemoVaultRow(not_null<Ui::VerticalLayout*> container) {
-	const auto title = u"Нейро-контекст (Neural Vault)"_q;
-	const auto vaultBtn = Settings::AddButtonWithLabel(
-		container,
-		rpl::single(title),
-		rpl::single(u"Whisper Q4"_q),
-		st::settingsButtonNoIcon);
-	Ui::NewBadge::AddTagBadgeAfterButtonText(
-		vaultBtn,
-		Ui::NewBadge::Tag::Beta,
-		rpl::single(title),
-		st::settingsButtonNoIcon);
-}
-
 void ShowDemoSettings(not_null<Window::Controller*> window) {
 	window->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setStyle(st::exteraPlayerBox);
@@ -120,7 +105,6 @@ void ShowDemoSettings(not_null<Window::Controller*> window) {
 		auto container = box->verticalLayout();
 		Ui::AddDivider(container);
 
-		AddDemoVaultRow(container);
 		AddDemoRow(container, u"Встроенный обход блокировок (TgWsProxy)"_q, u"Активен (v1.11.4)"_q);
 		AddDemoRow(container, u"Режим стримера (защита приватности)"_q, u"Отключен"_q);
 		AddDemoRow(container, u"Синхронизация текстов песен (Lyrics)"_q, u"Включена (Genius / Spotify)"_q);
@@ -209,7 +193,6 @@ void ShowDemoPlugins(not_null<Window::Controller*> window) {
 
 		AddDemoRow(container, u"Каталог расширений"_q, u"Доступно в репозитории"_q);
 		AddDemoRow(container, u"Песочница скриптов"_q, u"Изоляция активна"_q);
-		AddDemoVaultRow(container);
 		AddDemoRow(container, u"Синхронизация текстов песен"_q, u"Включена (Genius / Spotify)"_q);
 
 		Ui::AddDividerText(

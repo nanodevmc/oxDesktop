@@ -2,8 +2,8 @@
 
 Ru:
 - Обновлена база Telegram до 7.4.6 ([Обновления](tg://settings/extera))
-- Полностью локальный OCR с поддержкой языков ([Чаты](tg://settings/chats))
-- Кнопка OCR прямо в просмотре фото ([Чаты](tg://settings/chats))
+- Локальное распознавание текста с фото с поддержкой языков ([Чаты](tg://settings/chats))
+- Кнопка распознавания текста прямо в просмотре фото ([Чаты](tg://settings/chats))
 - Защита прокси и автопереключение без сбоев ([Прокси](tg://settings/proxy))
 - Трафик кроме GitHub через прокси ([Прокси](tg://settings/proxy))
 - Починена кнопка подписки на спонсора ([Настройки oxDesktop](tg://settings/extera))
@@ -15,8 +15,8 @@ Ru:
 
 En:
 - Updated Telegram base to 7.4.6 ([Updates](tg://settings/extera))
-- Offline multilingual OCR with Cyrillic support ([Chats](tg://settings/chats))
-- OCR extract button directly on photos ([Chats](tg://settings/chats))
+- Offline text recognition from photos ([Chats](tg://settings/chats))
+- Text recognition button directly on photos ([Chats](tg://settings/chats))
 - Fixed proxy reconnects and packet handling ([Proxy](tg://settings/proxy))
 - Route non-GitHub traffic through proxy ([Proxy](tg://settings/proxy))
 - Fixed sponsor box crash and subscription ([oxDesktop Settings](tg://settings/extera))

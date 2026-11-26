@@ -55,14 +55,5 @@ void Set(const QString &key, QJsonValue value);
 [[nodiscard]] int Int(const QString &key);
 [[nodiscard]] QString String(const QString &key);
 [[nodiscard]] int RecentStickersLimit(int serverLimit);
-[[nodiscard]] bool NeuralVaultEnabled();
-void SetNeuralVaultEnabled(bool enabled);
-
-[[nodiscard]] inline bool neuralVaultEnabled() {
-	return NeuralVaultEnabled();
-}
-inline void setNeuralVaultEnabled(bool enabled) {
-	SetNeuralVaultEnabled(enabled);
-}
 
 } // namespace Extera

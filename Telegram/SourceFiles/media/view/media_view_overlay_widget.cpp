@@ -2234,7 +2234,8 @@ void OverlayWidget::refreshPollVotersWidgetGeometry() {
 }
 
 void OverlayWidget::fillContextMenuActions(
-		const Ui::Menu::MenuCallback &addAction) {
+		const Ui::Menu::MenuCallback &addAction,
+		Ui::Menu::Menu *menu) {
 	if (_message && _message->isSponsored()) {
 		if (const auto window = findWindow()) {
 			const auto show = window->uiShow();
@@ -2330,10 +2331,13 @@ void OverlayWidget::fillContextMenuActions(
 					: tr::lng_mediaview_copy(tr::now)),
 				[=] { copyMedia(); },
 				&st::mediaMenuIconCopy);
-			addAction(
+			const auto ocrAction = addAction(
 				tr::lng_oxd_ocr_extract(tr::now),
 				[=] { openOcrBox(); },
 				&st::mediaMenuIconCopy);
+			if (menu) {
+				Extera::Ocr::AttachNewBadge(menu, ocrAction);
+			}
 		}
 	}
 	if ((_photo && _photo->hasAttachedStickers())
@@ -8695,7 +8699,9 @@ bool OverlayWidget::handleContextMenu(std::optional<QPoint> position) {
 	_menu = base::make_unique_q<Ui::PopupMenu>(
 		_window,
 		st::mediaviewPopupMenu);
-	fillContextMenuActions(Ui::Menu::CreateAddActionCallback(_menu));
+	fillContextMenuActions(
+		Ui::Menu::CreateAddActionCallback(_menu),
+		_menu->menu());
 
 	if (_menu->empty()) {
 		_menu = nullptr;
@@ -9019,7 +9025,9 @@ void OverlayWidget::receiveMouse() {
 
 void OverlayWidget::showDropdown() {
 	_dropdown->clearActions();
-	fillContextMenuActions(Ui::Menu::CreateAddActionCallback(_dropdown));
+	fillContextMenuActions(
+		Ui::Menu::CreateAddActionCallback(_dropdown),
+		_dropdown->menu());
 	_dropdown->moveToRight(0, height() - _dropdown->height());
 	_dropdown->showAnimated(Ui::PanelAnimation::Origin::BottomRight);
 	_dropdown->setFocus();
