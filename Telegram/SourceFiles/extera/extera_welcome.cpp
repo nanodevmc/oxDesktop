@@ -692,11 +692,8 @@ void ShowExtera5YearsBox(not_null<Window::SessionController*> controller) {
 			style::margins(16, 0, 16, 14));
 
 		const auto weakBox = QPointer<Ui::GenericBox>(box.get());
-		const auto weakController = base::make_weak(controller);
 		box->addLeftButton(rpl::single(channelBtnText), [=] {
-			if (const auto c = weakController.get()) {
-				c->openLocalUrl(u"https://t.me/exteraGram"_q, {});
-			}
+			UrlClickHandler::Open(u"https://t.me/exteraGram"_q);
 			if (weakBox) {
 				weakBox->closeBox();
 			}
