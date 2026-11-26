@@ -137,6 +137,22 @@ State &Chat() {
 	return request;
 }
 
+[[nodiscard]] QNetworkRequest MakeOpenAiRequest(
+		const QString &endpoint,
+		const QString &key) {
+	return MakeJsonPostRequest(
+		endpoint,
+		"Authorization",
+		"Bearer " + key.toUtf8());
+}
+
+[[nodiscard]] QString GeminiModelName(bool hasImage) {
+	if (hasImage) {
+		return u"gemini-1.5-flash"_q;
+	}
+	return ModelName();
+}
+
 [[nodiscard]] QString ParseApiError(
 		const QJsonObject &obj,
 		const QNetworkReply *reply) {

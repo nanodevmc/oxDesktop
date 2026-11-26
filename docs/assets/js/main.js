@@ -99,4 +99,59 @@ document.addEventListener('DOMContentLoaded', () => {
       a.classList.add('active');
     }
   });
+
+  // Dynamic release version in footer (updated via version.json and cached for 2 hours)
+  const initFooterVersion = () => {
+    const el = document.getElementById('footer-version') || document.querySelector('.footer-version');
+    if (!el) return;
+
+    const CACHE_KEY = 'ox_docs_version_cache';
+    const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+    const applyVersion = (data) => {
+      if (!data || !data.version) return;
+      const url = data.html_url || 'https://github.com/nanodevmc/oxDesktop/releases';
+      el.innerHTML = `<a href="${url}" target="_blank" rel="noopener noreferrer">oxDesktop v${data.version}</a>`;
+    };
+
+    // Check localStorage cache first
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Date.now() - parsed.timestamp < CACHE_TTL_MS) {
+          applyVersion(parsed.data);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Fetch version.json from docs site
+    fetch('version.json?_t=' + Date.now())
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .catch(() => {
+        // Fallback to GitHub API if version.json is unreachable
+        return fetch('https://api.github.com/repos/nanodevmc/oxDesktop/releases?per_page=5')
+          .then(r => r.json())
+          .then(releases => {
+            const rel = releases.find(r => r.tag_name && r.tag_name !== 'ci-cache' && !r.draft);
+            if (!rel) return null;
+            return {
+              version: rel.tag_name.replace(/^[vV]/, ''),
+              html_url: rel.html_url
+            };
+          });
+      })
+      .then(data => {
+        if (data) {
+          applyVersion(data);
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
+          } catch (_) {}
+        }
+      })
+      .catch(() => {});
+  };
+
+  initFooterVersion();
 });
