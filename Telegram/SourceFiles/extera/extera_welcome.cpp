@@ -611,13 +611,18 @@ void ShowExtera5YearsBox(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setWidth(st::boxWidth + 24);
 		box->setNoContentMargin(true);
-		box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+		const auto weakBox = Ui::MakeWeak(box);
+		box->addTopButton(st::boxTitleClose, [=] {
+			if (const auto strong = weakBox.data()) {
+				strong->closeBox();
+			}
+		});
 
 		const auto content = box->verticalLayout();
 
 		const auto hero = content->add(
 			object_ptr<Ui::FixedHeightWidget>(content, 108),
-			style::margins(16, 16, 16, 10));
+			style::margins(16, 48, 16, 10));
 		hero->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(hero);
 			auto hq = PainterHighQualityEnabler(p);

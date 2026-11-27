@@ -408,11 +408,6 @@ void PrepareFrontedRequest(QNetworkRequest &request) {
 		|| host.contains(u"githubusercontent.com"_q)) {
 		return;
 	}
-	if (url.scheme() == u"https"_q) {
-		url.setScheme(u"http"_q);
-		request.setUrl(url);
-		request.setRawHeader("X-Ox-Tls", "1");
-	}
 }
 
 void SetEnabled(bool enabled) {

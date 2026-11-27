@@ -49,6 +49,8 @@ extern "system" {
         cb_data: u32,
     ) -> i32;
 
+    fn RegDeleteKeyW(h_key: HKEY, lp_sub_key: *const u16) -> i32;
+
     fn RegCloseKey(h_key: HKEY) -> i32;
 }
 
@@ -104,9 +106,14 @@ pub fn register_uninstall(install_dir: &Path, target_exe: &Path, version: &str) 
             set_str("Publisher", "NanoDev");
             set_str("InstallLocation", &install_dir.to_string_lossy());
             set_str("DisplayIcon", &target_exe.to_string_lossy());
+            let uninstall_exe = install_dir.join("uninstall.exe");
             set_str(
                 "UninstallString",
-                &format!("\"{}\" -uninstall", target_exe.to_string_lossy()),
+                &format!("\"{}\"", uninstall_exe.to_string_lossy()),
+            );
+            set_str(
+                "QuietUninstallString",
+                &format!("\"{}\" --silent", uninstall_exe.to_string_lossy()),
             );
             set_str("URLInfoAbout", "https://github.com/nanodevmc/oxDesktop");
             set_dword("NoModify", 1);
@@ -115,6 +122,43 @@ pub fn register_uninstall(install_dir: &Path, target_exe: &Path, version: &str) 
             RegCloseKey(hkey);
         }
     }
+}
+
+pub fn unregister_uninstall() {
+    unsafe {
+        let subkey = to_wide_null("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\oxDesktop");
+        let _ = RegDeleteKeyW(HKEY_CURRENT_USER, subkey.as_ptr());
+    }
+}
+
+pub fn get_install_location() -> Option<String> {
+    unsafe {
+        let subkey = to_wide_null("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\oxDesktop");
+        let mut hkey: HKEY = std::ptr::null_mut();
+        if RegOpenKeyExW(HKEY_CURRENT_USER, subkey.as_ptr(), 0, KEY_READ, &mut hkey) == 0 {
+            let val_name = to_wide_null("InstallLocation");
+            let mut buf = [0u16; 512];
+            let mut cb_data = (buf.len() * 2) as u32;
+            let mut val_type = 0u32;
+            let res = RegQueryValueExW(
+                hkey,
+                val_name.as_ptr(),
+                std::ptr::null(),
+                &mut val_type,
+                buf.as_mut_ptr() as *mut u8,
+                &mut cb_data,
+            );
+            RegCloseKey(hkey);
+            if res == 0 && (val_type == REG_SZ) {
+                let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+                let loc = String::from_utf16_lossy(&buf[..len]).trim().to_string();
+                if !loc.is_empty() {
+                    return Some(loc);
+                }
+            }
+        }
+    }
+    None
 }
 
 pub fn get_installed_version() -> Option<String> {

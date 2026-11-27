@@ -13,6 +13,8 @@ mod shortcuts;
 #[cfg(windows)]
 mod theme;
 #[cfg(windows)]
+mod uninstaller;
+#[cfg(windows)]
 mod unpacker;
 
 #[cfg(target_os = "linux")]
@@ -236,6 +238,25 @@ fn load_embedded_icon() -> HICON {
 #[cfg(windows)]
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+
+    let current_exe = std::env::current_exe().unwrap_or_default();
+    let exe_name = current_exe
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    let is_uninstall = exe_name.contains("uninstall")
+        || args.iter().any(|a| {
+            let l = a.to_lowercase();
+            l == "--uninstall" || l == "-uninstall" || l == "/uninstall" || l == "/u" || l == "-u"
+        });
+
+    if is_uninstall {
+        uninstaller::run_uninstaller(&args);
+        return;
+    }
+
     let is_silent = args.iter().any(|a| {
         let l = a.to_lowercase();
         l == "/silent" || l == "/verysilent" || l == "--silent" || l == "-s" || l == "/s"

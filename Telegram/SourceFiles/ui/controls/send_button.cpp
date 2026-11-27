@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
+#include "extera/extera_config.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_credits.h"
 #include "lang/lang_keys.h"
@@ -225,6 +226,15 @@ void SendButton::paintEvent(QPaintEvent *e) {
 }
 
 void SendButton::paintRecord(QPainter &p, bool over) {
+	if (Extera::Bool(u"material_design"_q)) {
+		auto hq = PainterHighQualityEnabler(p);
+		const auto btnRect = QRectF(rect()).adjusted(4., 4., -4., -4.);
+		auto bg = st::windowBgOver->c;
+		bg.setAlpha(over ? 220 : 120);
+		p.setPen(Qt::NoPen);
+		p.setBrush(bg);
+		p.drawEllipse(btnRect);
+	}
 	if (!isDisabled() && !_state.forbidden) {
 		paintRipple(
 			p,
@@ -241,6 +251,15 @@ void SendButton::paintRecord(QPainter &p, bool over) {
 }
 
 void SendButton::paintRound(QPainter &p, bool over) {
+	if (Extera::Bool(u"material_design"_q)) {
+		auto hq = PainterHighQualityEnabler(p);
+		const auto btnRect = QRectF(rect()).adjusted(4., 4., -4., -4.);
+		auto bg = st::windowBgOver->c;
+		bg.setAlpha(over ? 220 : 120);
+		p.setPen(Qt::NoPen);
+		p.setBrush(bg);
+		p.drawEllipse(btnRect);
+	}
 	if (!isDisabled() && !_state.forbidden) {
 		paintRipple(
 			p,
@@ -317,6 +336,17 @@ void SendButton::paintSend(QPainter &p, bool over) {
 			paintRipple(p, ellipse.topLeft(), &color);
 		}
 	} else if (!isDisabled()) {
+		if (Extera::Bool(u"material_design"_q)) {
+			auto hq = PainterHighQualityEnabler(p);
+			const auto btnRect = QRectF(rect()).adjusted(4., 4., -4., -4.);
+			auto bg = st::windowBgActive->c;
+			if (over) {
+				bg = bg.lighter(110);
+			}
+			p.setPen(Qt::NoPen);
+			p.setBrush(bg);
+			p.drawEllipse(btnRect);
+		}
 		auto color = _st.sendIconFg->c;
 		color.setAlpha(25);
 		paintRipple(

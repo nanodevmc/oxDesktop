@@ -558,6 +558,29 @@ async fn race_backend_connection(
         }
     }
 
+    // 4. Parallel Direct MTProto TCP probes to DC IPs (ports 443, 80, 5222)
+    for &ip in ips {
+        for &port in &[443u16, 80u16, 5222u16] {
+            let tx = tx.clone();
+            let target_addr: Result<SocketAddr, _> = format!("{}:{}", ip, port).parse();
+            if let Ok(addr) = target_addr {
+                guards.0.push(tokio::spawn(async move {
+                    if let Ok(Ok(stream)) = tokio::time::timeout(
+                        Duration::from_millis(4500),
+                        tokio::net::TcpStream::connect(addr),
+                    )
+                    .await
+                    {
+                        let _ = tx.send(BackendConn {
+                            stream: BackendStream::Tcp(stream),
+                            desc: format!("Direct MTProto TCP ({}:{})", ip, port),
+                        }).await;
+                    }
+                }));
+            }
+        }
+    }
+
     drop(tx);
 
     match tokio::time::timeout(Duration::from_millis(10000), rx.recv()).await {

@@ -597,6 +597,18 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
+		.path = u"chats"_q,
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraChatsId());
+		}},
+	});
+	router.add(u"settings"_q, {
+		.path = u"chat"_q,
+		.action = CodeBlock{ [=](const Context &ctx) {
+			return applyExteraSettings(ctx, ::Settings::ExteraChatsId());
+		}},
+	});
+	router.add(u"settings"_q, {
 		.path = u"extera/plugins"_q,
 		.action = CodeBlock{ [=](const Context &ctx) {
 			return applyExteraSettings(ctx, ::Settings::ExteraPluginsId());

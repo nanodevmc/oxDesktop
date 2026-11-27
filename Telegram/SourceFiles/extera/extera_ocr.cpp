@@ -35,6 +35,7 @@
 #include <QtCore/QRandomGenerator>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryFile>
+#include <QtCore/QTimer>
 #include <QtCore/QUrl>
 #include <QtCore/QUrlQuery>
 #include <QtGui/QAction>
@@ -143,7 +144,7 @@ struct State {
 	if (lang == u"ru"_q || lang == u"uk"_q || lang == u"be"_q) {
 		return {
 			.title = u"Распознавание текста"_q,
-			.recognizingLocal = u"Распознавание локально..."_q,
+			.recognizingLocal = u"Распознавание..."_q,
 			.recognizing = u"Распознавание текста..."_q,
 			.modeCyrillic = u"Кириллица + EN"_q,
 			.modeLatin = u"Латиница (ES / DE / FR)"_q,
@@ -171,7 +172,7 @@ struct State {
 	} else if (lang == u"es"_q) {
 		return {
 			.title = u"Reconocimiento de texto"_q,
-			.recognizingLocal = u"Reconociendo sin conexión..."_q,
+			.recognizingLocal = u"Reconociendo..."_q,
 			.recognizing = u"Extrayendo texto..."_q,
 			.modeCyrillic = u"Cirílico + EN"_q,
 			.modeLatin = u"Latino (ES / DE / FR)"_q,
@@ -199,7 +200,7 @@ struct State {
 	}
 	return {
 		.title = u"Text Recognition"_q,
-		.recognizingLocal = u"Recognizing locally..."_q,
+		.recognizingLocal = u"Recognizing..."_q,
 		.recognizing = u"Extracting text..."_q,
 		.modeCyrillic = u"Cyrillic + EN"_q,
 		.modeLatin = u"Latin (ES / DE / FR)"_q,
@@ -292,15 +293,15 @@ struct State {
 		: image.convertToFormat(QImage::Format_RGB888);
 	const auto minDim = std::min(result.width(), result.height());
 	const auto maxDim = std::max(result.width(), result.height());
-	if (minDim > 0 && minDim < 900 && maxDim < 1800) {
+	if (minDim > 0 && minDim < 280 && maxDim < 500) {
 		result = result.scaled(
 			result.size() * 2,
 			Qt::KeepAspectRatio,
 			Qt::SmoothTransformation);
-	} else if (maxDim > 3200) {
+	} else if (maxDim > 1280) {
 		result = result.scaled(
-			3200,
-			3200,
+			1280,
+			1280,
 			Qt::KeepAspectRatio,
 			Qt::SmoothTransformation);
 	}
@@ -337,13 +338,37 @@ struct State {
 	auto out = QStringList();
 	for (const auto &line : lines) {
 		const auto trimmed = line.trimmed();
-		if (trimmed.isEmpty()) {
+		if (trimmed.isEmpty() || trimmed.startsWith(u"FullDetectTime("_q)) {
 			continue;
 		}
-		if (trimmed.startsWith(u"FullDetectTime("_q)) {
-			continue;
+		if (trimmed.startsWith(u"textLine["_q)) {
+			const auto openParen = trimmed.indexOf(u'(');
+			const auto closeParen = trimmed.lastIndexOf(u')');
+			if (openParen >= 0 && closeParen > openParen) {
+				const auto content = trimmed.mid(openParen + 1, closeParen - openParen - 1).trimmed();
+				if (!content.isEmpty()) {
+					out.push_back(content);
+				}
+				continue;
+			}
 		}
-		out.push_back(line.trimmed());
+		out.push_back(trimmed);
+	}
+	if (out.isEmpty() && idx >= 0) {
+		const auto allLines = stdoutText.split(u'\n');
+		for (const auto &line : allLines) {
+			const auto trimmed = line.trimmed();
+			if (trimmed.startsWith(u"textLine["_q)) {
+				const auto openParen = trimmed.indexOf(u'(');
+				const auto closeParen = trimmed.lastIndexOf(u')');
+				if (openParen >= 0 && closeParen > openParen) {
+					const auto content = trimmed.mid(openParen + 1, closeParen - openParen - 1).trimmed();
+					if (!content.isEmpty()) {
+						out.push_back(content);
+					}
+				}
+			}
+		}
 	}
 	return out.join(u'\n').trimmed();
 }
@@ -519,10 +544,24 @@ void RunProcessOcr(
 		process->setWorkingDirectory(workingDir);
 	}
 	const auto handled = std::make_shared<bool>(false);
+	const auto timer = new QTimer(process);
+	timer->setSingleShot(true);
+	QObject::connect(timer, &QTimer::timeout, [=] {
+		if (*handled) {
+			return;
+		}
+		*handled = true;
+		(void)tempFile;
+		process->kill();
+		process->deleteLater();
+		onFallback();
+	});
+
 	QObject::connect(
 		process,
 		&QProcess::finished,
 		[=](int exitCode, QProcess::ExitStatus exitStatus) {
+			timer->stop();
 			process->deleteLater();
 			if (*handled) {
 				return;
@@ -542,6 +581,7 @@ void RunProcessOcr(
 		process,
 		&QProcess::errorOccurred,
 		[=](QProcess::ProcessError) {
+			timer->stop();
 			if (*handled) {
 				return;
 			}
@@ -550,6 +590,7 @@ void RunProcessOcr(
 			process->deleteLater();
 			onFallback();
 		});
+	timer->start(12000);
 	process->start(program, args);
 }
 

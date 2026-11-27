@@ -54,6 +54,7 @@ pub fn run_install(options: &InstallOptions, cancel_flag: &AtomicBool) -> Result
     let total_files = archive.len();
 
     let mut main_exe_path: Option<PathBuf> = None;
+    let mut manifest_lines: Vec<String> = Vec::new();
 
     for i in 0..total_files {
         if cancel_flag.load(Ordering::Relaxed) {
@@ -72,6 +73,8 @@ pub fn run_install(options: &InstallOptions, cancel_flag: &AtomicBool) -> Result
             }
             let mut outfile = File::create(&out_path).map_err(|_| ())?;
             std::io::copy(&mut file, &mut outfile).map_err(|_| ())?;
+
+            manifest_lines.push(enclosed_name.to_string_lossy().to_string());
 
             if out_path
                 .file_name()
@@ -92,6 +95,18 @@ pub fn run_install(options: &InstallOptions, cancel_flag: &AtomicBool) -> Result
             unsafe {
                 PostMessageW(options.hwnd.0, WM_APP_PROGRESS, pct, 0);
             }
+        }
+    }
+
+    // Write installation manifest
+    let manifest_content = manifest_lines.join("\n");
+    let _ = fs::write(options.target_dir.join("install_manifest.txt"), manifest_content);
+
+    // Deploy standalone uninstaller into install directory
+    if let Ok(current_exe) = std::env::current_exe() {
+        let uninstall_target = options.target_dir.join("uninstall.exe");
+        if current_exe != uninstall_target {
+            let _ = fs::copy(&current_exe, &uninstall_target);
         }
     }
 

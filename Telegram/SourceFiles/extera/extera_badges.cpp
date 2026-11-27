@@ -89,12 +89,27 @@ ProfilesState &State() {
 
 bool ApplySingleProfile(const QJsonObject &obj) {
 	const auto id = ReadId(obj.value(u"id"_q));
-	if (!id || id == 6486689289ULL) {
+	if (!id) {
 		return false;
 	}
 	auto &state = State();
 	if (state.items.contains(id) && state.items[id].status == u"OWNER"_q) {
-		return false;
+		auto &existing = state.items[id];
+		if (obj.contains(u"number"_q)) {
+			existing.number = obj.value(u"number"_q).toInt();
+		}
+		if (obj.contains(u"badge"_q)) {
+			const auto badgeObj = obj.value(u"badge"_q).toObject();
+			const auto docId = DocumentId(ReadId(badgeObj.value(u"documentId"_q)));
+			if (docId != 0) {
+				existing.badgeDocumentId = docId;
+			}
+			const auto text = badgeObj.value(u"text"_q).toString();
+			if (!text.isEmpty()) {
+				existing.badgeText = text;
+			}
+		}
+		return true;
 	}
 
 	Profile profile;
@@ -295,6 +310,15 @@ void RefreshProfiles(QNetworkAccessManager *manager) {
 		[](const QByteArray &bytes) {
 			ApplyTrustedHashes(bytes);
 		});
+	FetchJsonWithEtag(
+		manager,
+		u"https://api.exteragram.app/api/v1/profiles"_q,
+		QString(),
+		[](const QByteArray &bytes) {
+			if (ApplyProfiles(bytes, true)) {
+				SaveToCache();
+			}
+		});
 }
 
 void MaybeFetchProfile(not_null<PeerData*> peer) {
@@ -302,7 +326,7 @@ void MaybeFetchProfile(not_null<PeerData*> peer) {
 		return;
 	}
 	const auto bare = BareId(peer);
-	if (!bare || bare == 6486689289ULL) {
+	if (!bare) {
 		return;
 	}
 	auto &state = State();

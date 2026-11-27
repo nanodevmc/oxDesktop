@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/effects/ripple_animation.h"
 #include "ui/unread_badge_paint.h"
+#include "extera/extera_config.h"
 #include "styles/style_chat_helpers.h"
 
 namespace Ui {
@@ -38,6 +39,18 @@ void JumpDownButton::paintEvent(QPaintEvent *e) {
 
 	const auto over = isOver();
 	const auto down = isDown();
+	const auto md = Extera::Bool(u"material_design"_q);
+	if (md) {
+		auto hq = PainterHighQualityEnabler(p);
+		const auto btnRect = QRectF(rect()).adjusted(3., 3., -3., -3.);
+		auto bg = (over || down) ? st::windowBgOver->c : st::windowBg->c;
+		bg.setAlpha(240);
+		auto border = st::windowBgActive->c;
+		border.setAlpha((over || down) ? 140 : 60);
+		p.setPen(QPen(border, 1.2));
+		p.setBrush(bg);
+		p.drawEllipse(btnRect);
+	}
 	((over || down)
 		? _st.iconBelowOver
 		: _st.iconBelow).paint(p, _st.iconPosition, width());

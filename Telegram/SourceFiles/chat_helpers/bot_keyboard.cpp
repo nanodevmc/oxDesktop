@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/painter.h"
 #include "ui/round_rect.h"
 #include "ui/ui_utility.h"
+#include "extera/extera_config.h"
 #include "window/window_session_controller.h"
 #include "styles/style_chat.h"
 #include "styles/style_widgets.h"
@@ -135,18 +136,34 @@ void Style::paintButtonBg(
 		float64 howMuchOver) const {
 	using Color = HistoryMessageMarkupButton::Color;
 	using Corner = Ui::BubbleCornerRounding;
-	const auto bg = (color == Color::Normal)
+	auto bg = (color == Color::Normal)
 		? st::botKbBg->c
 		: (color == Color::Primary)
 		? st::botKbPrimaryBg->c
 		: (color == Color::Danger)
 		? st::botKbDangerBg->c
 		: st::botKbSuccessBg->c;
+	const auto md = Extera::Bool(u"material_design"_q);
+	if (md) {
+		const auto tint = (color == Color::Normal)
+			? st::windowBgActive->c
+			: QColor(255, 255, 255);
+		const auto alpha = int(base::SafeRound((0.08 + 0.16 * howMuchOver) * 255.));
+		auto overlay = tint;
+		overlay.setAlpha(std::clamp(alpha, 0, 255));
+		bg = anim::color(bg, overlay, overlay.alphaF());
+	}
 	auto hq = PainterHighQualityEnabler(p);
-	p.setPen(Qt::NoPen);
+	if (md) {
+		auto border = st::windowBgActive->c;
+		border.setAlpha(howMuchOver > 0. ? 80 : 35);
+		p.setPen(QPen(border, 1.0));
+	} else {
+		p.setPen(Qt::NoPen);
+	}
 	p.setBrush(bg);
-	const auto large = Ui::BubbleRadiusLarge();
-	const auto small = Ui::BubbleRadiusSmall();
+	const auto large = Ui::BubbleRadiusLarge() + (md ? 2 : 0);
+	const auto small = Ui::BubbleRadiusSmall() + (md ? 1 : 0);
 	const auto radius = [&](int index) {
 		return (rounding[index] == Corner::Large) ? large : small;
 	};

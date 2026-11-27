@@ -3767,10 +3767,10 @@ void OverlayWidget::openOcrBox() {
 	if (_dropdown && !_dropdown->isHidden()) {
 		_dropdown->hideAnimated(Ui::DropdownMenu::HideOption::IgnoreShow);
 	}
+	Extera::Ocr::ExtractAndShowBox(window, image);
 	if (!_windowed) {
 		close();
 	}
-	Extera::Ocr::ExtractAndShowBox(window, image);
 }
 
 void OverlayWidget::recognize() {
