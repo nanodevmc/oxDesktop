@@ -93,7 +93,7 @@ void Download(
 		}
 	}).fail([=] {
 		done(QByteArray());
-	}).toDC(MTP::downloadDcId(document->exdDcId(), 0)).send();
+	}).toDC(MTP::downloadDcId(document->oxdDcId(), 0)).send();
 }
 
 void CheckCandidate(

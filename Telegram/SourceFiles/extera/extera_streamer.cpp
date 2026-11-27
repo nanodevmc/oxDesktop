@@ -71,11 +71,11 @@ void ApplyCapture(QWidget *widget) {
 		return;
 	}
 	const auto mode = CaptureMode();
-	const auto applied = widget->property("exd_capture").toInt();
+	const auto applied = widget->property("oxd_capture").toInt();
 	if (mode == applied) {
 		return;
 	}
-	widget->setProperty("exd_capture", mode);
+	widget->setProperty("oxd_capture", mode);
 	const auto affinity = (mode == 1)
 		? DWORD(0x00000001)
 		: (mode == 2)

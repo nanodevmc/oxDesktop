@@ -85,7 +85,7 @@ State &Instance() {
 }
 
 [[maybe_unused]] [[nodiscard]] QString LegacyCachePath() {
-	return cWorkingDir() + u"tdata/exd_releases.json"_q;
+	return cWorkingDir() + u"tdata/oxd_releases.json"_q;
 }
 
 [[nodiscard]] int CurrentKey() {

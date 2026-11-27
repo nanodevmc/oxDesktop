@@ -459,8 +459,7 @@ jobs:
             -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
             -D CMAKE_POLICY_CMP0141=NEW
           cd /d "%GITHUB_WORKSPACE%\tdesktop\out"
-          cmake --build . --config Release --target Telegram --parallel
-          sccache --show-stats
+          cmake --build . --config Release --target Telegram --parallel || exit /b 1
 
       - name: Report sccache statistics and flush
         if: always() && steps.diff_check.outputs.skip_cpp_build != 'true' && steps.sccache.outcome == 'success'

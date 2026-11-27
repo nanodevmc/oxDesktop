@@ -48,7 +48,7 @@ private:
 
 };
 
-[[nodiscard]] bool Bool(const QString &key);
+[[nodiscard]] bool Bool(const QString &key, bool fallback = false);
 [[nodiscard]] bool IsBoolKey(const QString &key);
 [[nodiscard]] bool HasKey(const QString &key);
 void Set(const QString &key, QJsonValue value);

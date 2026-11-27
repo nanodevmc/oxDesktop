@@ -868,7 +868,11 @@ QString LookupCustom(const QString &twoLetterCode, std::string_view key) {
 		}
 	}
 	if (twoLetterCode.compare(QString::fromLatin1("ru"), Qt::CaseInsensitive) == 0) {
-		return LookupRussian(key);
+		for (const auto &entry : kRussianEntries) {
+			if (key == entry.key) {
+				return QString::fromUtf16(entry.value);
+			}
+		}
 	}
 	return QString();
 }

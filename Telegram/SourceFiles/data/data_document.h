@@ -294,8 +294,11 @@ public:
 	void collectLocalData(not_null<DocumentData*> local);
 
 	[[nodiscard]] QString filename() const;
-	[[nodiscard]] int32 exdDcId() const {
+	[[nodiscard]] int32 oxdDcId() const {
 		return _dc;
+	}
+	[[nodiscard]] int32 exdDcId() const {
+		return oxdDcId();
 	}
 	[[nodiscard]] Core::NameType nameType() const;
 	[[nodiscard]] QString mimeString() const;

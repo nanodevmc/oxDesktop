@@ -198,7 +198,7 @@ def _digest(path):
 
 def extract(path, plugin_id):
     root = plugin_root(plugin_id)
-    stamp = os.path.join(root, ".exd_stamp")
+    stamp = os.path.join(root, ".oxd_stamp")
     digest = _digest(path)
     try:
         with open(stamp, encoding="utf-8") as f:

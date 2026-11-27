@@ -69,6 +69,8 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"feed_in_menu"_q, true },
 		{ u"feed_wide_posts"_q, true },
 		{ u"wide_posts_group"_q, true },
+		{ u"ox_md3_chats"_q, true },
+		{ u"ox_md3_glow"_q, true },
 		{ u"feed_unread_counter"_q, true },
 		{ u"feed_include_archived"_q, true },
 		{ u"feed_hidden"_q, QString() },
@@ -392,7 +394,14 @@ void Set(const QString &key, QJsonValue value) {
 	Config::Instance().set(key, std::move(value));
 }
 
-bool Bool(const QString &key) {
+bool Bool(const QString &key, bool fallback) {
+	if (!Config::Instance().hasKey(key)) {
+		const auto &defaults = Defaults();
+		if (defaults.contains(key)) {
+			return defaults.value(key).toBool();
+		}
+		return fallback;
+	}
 	return Config::Instance().boolValue(key);
 }
 
