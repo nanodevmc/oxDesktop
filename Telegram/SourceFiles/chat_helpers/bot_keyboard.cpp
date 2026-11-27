@@ -21,6 +21,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "extera/extera_config.h"
 #include "window/window_session_controller.h"
+
+#include <algorithm>
 #include "styles/style_chat.h"
 #include "styles/style_widgets.h"
 
@@ -143,7 +145,7 @@ void Style::paintButtonBg(
 		: (color == Color::Danger)
 		? st::botKbDangerBg->c
 		: st::botKbSuccessBg->c;
-	const auto md = Extera::Bool(u"material_design"_q);
+	const auto md = Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true);
 	if (md) {
 		const auto tint = (color == Color::Normal)
 			? st::windowBgActive->c
@@ -152,16 +154,19 @@ void Style::paintButtonBg(
 		auto overlay = tint;
 		overlay.setAlpha(std::clamp(alpha, 0, 255));
 		bg = anim::color(bg, overlay, overlay.alphaF());
+		bg.setAlpha(std::clamp(int(bg.alpha() * (howMuchOver > 0. ? 0.92 : 0.82)), 0, 255));
 	}
 	auto hq = PainterHighQualityEnabler(p);
 	if (md) {
 		auto border = st::windowBgActive->c;
-		border.setAlpha(howMuchOver > 0. ? 80 : 35);
-		p.setPen(QPen(border, 1.0));
+		const auto glow = Extera::Bool(u"ox_md3_glow"_q, true);
+		border.setAlpha(howMuchOver > 0. ? (glow ? 130 : 80) : (glow ? 55 : 35));
+		p.setPen(QPen(border, glow && howMuchOver > 0. ? 1.4 : 1.0));
 	} else {
 		p.setPen(Qt::NoPen);
 	}
 	p.setBrush(bg);
+	const auto drawRect = md ? rect.adjusted(1, 1, -1, -1) : rect;
 	const auto large = Ui::BubbleRadiusLarge() + (md ? 2 : 0);
 	const auto small = Ui::BubbleRadiusSmall() + (md ? 1 : 0);
 	const auto radius = [&](int index) {
@@ -172,9 +177,9 @@ void Style::paintButtonBg(
 	const auto bl = radius(2);
 	const auto br = radius(3);
 	if ((tl == tr) && (tl == bl) && (tl == br)) {
-		p.drawRoundedRect(rect, tl, tl);
+		p.drawRoundedRect(drawRect, tl, tl);
 	} else {
-		p.drawPath(Ui::ComplexRoundedRectPath(rect, tl, tr, bl, br));
+		p.drawPath(Ui::ComplexRoundedRectPath(drawRect, tl, tr, bl, br));
 	}
 }
 

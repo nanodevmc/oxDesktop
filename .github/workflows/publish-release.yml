@@ -87,6 +87,7 @@ jobs:
           if [ -n "$LINUX_RUN" ]; then
             echo "Latest Linux run ID: $LINUX_RUN"
             gh run download "$LINUX_RUN" -n oxDesktop-linux-x64 --dir release_assets/linux || true
+            gh run download "$LINUX_RUN" -n oxDesktop-linux-portable --dir release_assets/linux || true
             gh run download "$LINUX_RUN" -n oxWsProxy-linux-x64 --dir release_assets/proxy || true
           else
             echo "Warning: No successful Linux run found."
@@ -107,7 +108,7 @@ jobs:
         id: notes
         run: |
           if [ -f "changelog.txt" ]; then
-            cat changelog.txt > release_notes.md
+            python3 .github/scripts/extract_release_notes.py changelog.txt release_notes.md
           else
             echo "oxDesktop ${{ steps.meta.outputs.TAG }}" > release_notes.md
           fi

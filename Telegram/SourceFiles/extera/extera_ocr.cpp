@@ -3,6 +3,7 @@
 #include "base/weak_ptr.h"
 #include "extera/extera_ai_chat.h"
 #include "extera/extera_config.h"
+#include "extera/extera_lang.h"
 #include "extera/extera_ws_proxy.h"
 #include "lang/lang_keys.h"
 #include "ui/layers/generic_box.h"
@@ -78,8 +79,6 @@ struct UiTexts {
 	QString title;
 	QString recognizingLocal;
 	QString recognizing;
-	QString modeCyrillic;
-	QString modeLatin;
 	QString readyLocal;
 	QString ready;
 	QString empty;
@@ -141,89 +140,42 @@ struct State {
 
 [[nodiscard]] UiTexts Strings() {
 	const auto lang = TargetLanguageCode();
-	if (lang == u"ru"_q || lang == u"uk"_q || lang == u"be"_q) {
-		return {
-			.title = u"Распознавание текста"_q,
-			.recognizingLocal = u"Распознавание..."_q,
-			.recognizing = u"Распознавание текста..."_q,
-			.modeCyrillic = u"Кириллица + EN"_q,
-			.modeLatin = u"Латиница (ES / DE / FR)"_q,
-			.readyLocal = u"Готово (оффлайн)"_q,
-			.ready = u"Готово"_q,
-			.empty = u"Текст на изображении не найден"_q,
-			.errorPrefix = u"Ошибка: "_q,
-			.noTextToTranslate = u"Нет текста для перевода"_q,
-			.noTextToCopy = u"Нет текста для копирования"_q,
-			.textCopied = u"Текст скопирован"_q,
-			.translationCopied = u"Перевод скопирован"_q,
-			.translate = u"Перевести"_q,
-			.copy = u"Копировать"_q,
-			.copyTranslation = u"Копировать перевод"_q,
-			.close = u"Закрыть"_q,
-			.translationHeader = u"Перевод"_q,
-			.translating = u"Выполняется перевод..."_q,
-			.translationError = u"Ошибка перевода"_q,
-			.placeholder = u"Распознанный текст..."_q,
-			.noImageError = u"Изображение отсутствует."_q,
-			.invalidImageError = u"Не удалось подготовить изображение."_q,
-			.badTranslatorReply = u"Некорректный ответ переводчика"_q,
-			.translateFailed = u"Не удалось перевести текст"_q,
-		};
-	} else if (lang == u"es"_q) {
-		return {
-			.title = u"Reconocimiento de texto"_q,
-			.recognizingLocal = u"Reconociendo..."_q,
-			.recognizing = u"Extrayendo texto..."_q,
-			.modeCyrillic = u"Cirílico + EN"_q,
-			.modeLatin = u"Latino (ES / DE / FR)"_q,
-			.readyLocal = u"Listo (local)"_q,
-			.ready = u"Listo"_q,
-			.empty = u"No se encontró texto en la imagen"_q,
-			.errorPrefix = u"Error: "_q,
-			.noTextToTranslate = u"No hay texto para traducir"_q,
-			.noTextToCopy = u"No hay texto para copiar"_q,
-			.textCopied = u"Texto copiado"_q,
-			.translationCopied = u"Traducción copiada"_q,
-			.translate = u"Traducir"_q,
-			.copy = u"Copiar"_q,
-			.copyTranslation = u"Copiar traducción"_q,
-			.close = u"Cerrar"_q,
-			.translationHeader = u"Traducción"_q,
-			.translating = u"Traduciendo..."_q,
-			.translationError = u"Error al traducir"_q,
-			.placeholder = u"Texto extraído..."_q,
-			.noImageError = u"La imagen no está disponible."_q,
-			.invalidImageError = u"No se pudo preparar la imagen."_q,
-			.badTranslatorReply = u"Respuesta no válida del traductor"_q,
-			.translateFailed = u"No se pudo traducir el texto"_q,
-		};
-	}
+	auto tr = [&](std::string_view key, const QString &fallback) -> QString {
+		const auto res = Extera::LookupCustom(lang, key);
+		if (!res.isEmpty()) {
+			return res;
+		}
+		const auto ru = Extera::LookupRussian(key);
+		if (!ru.isEmpty()) {
+			return ru;
+		}
+		return fallback;
+	};
+
 	return {
-		.title = u"Text Recognition"_q,
-		.recognizingLocal = u"Recognizing..."_q,
-		.recognizing = u"Extracting text..."_q,
-		.modeCyrillic = u"Cyrillic + EN"_q,
-		.modeLatin = u"Latin (ES / DE / FR)"_q,
-		.readyLocal = u"Done (offline)"_q,
-		.ready = u"Done"_q,
-		.empty = u"No text found in image"_q,
-		.errorPrefix = u"Error: "_q,
-		.noTextToTranslate = u"No text to translate"_q,
-		.noTextToCopy = u"No text to copy"_q,
-		.textCopied = u"Text copied"_q,
-		.translationCopied = u"Translation copied"_q,
-		.translate = u"Translate"_q,
-		.copy = u"Copy"_q,
-		.copyTranslation = u"Copy translation"_q,
-		.close = u"Close"_q,
-		.translationHeader = u"Translation"_q,
-		.translating = u"Translating..."_q,
-		.translationError = u"Translation error"_q,
-		.placeholder = u"Extracted text..."_q,
-		.noImageError = u"Image is missing."_q,
-		.invalidImageError = u"Failed to prepare image."_q,
-		.badTranslatorReply = u"Invalid translator response"_q,
-		.translateFailed = u"Failed to translate text"_q,
+		.title = tr("lng_oxd_ocr_title", u"Text Recognition"_q),
+		.recognizingLocal = tr("lng_oxd_ocr_recognizing_local", u"Recognizing..."_q),
+		.recognizing = tr("lng_oxd_ocr_recognizing", u"Extracting text..."_q),
+		.readyLocal = tr("lng_oxd_ocr_ready_local", u"Done (offline)"_q),
+		.ready = tr("lng_oxd_ocr_ready", u"Done"_q),
+		.empty = tr("lng_oxd_ocr_empty", u"No text found in image"_q),
+		.errorPrefix = tr("lng_oxd_ocr_error_prefix", u"Error: "_q),
+		.noTextToTranslate = tr("lng_oxd_ocr_no_text_translate", u"No text to translate"_q),
+		.noTextToCopy = tr("lng_oxd_ocr_no_text_copy", u"No text to copy"_q),
+		.textCopied = tr("lng_oxd_ocr_text_copied", u"Text copied"_q),
+		.translationCopied = tr("lng_oxd_ocr_translation_copied", u"Translation copied"_q),
+		.translate = tr("lng_oxd_ocr_translate", u"Translate"_q),
+		.copy = tr("lng_oxd_ocr_copy", u"Copy"_q),
+		.copyTranslation = tr("lng_oxd_ocr_copy_translation", u"Copy translation"_q),
+		.close = tr("lng_oxd_ocr_close", u"Close"_q),
+		.translationHeader = tr("lng_oxd_ocr_translation_header", u"Translation"_q),
+		.translating = tr("lng_oxd_ocr_translating", u"Translating..."_q),
+		.translationError = tr("lng_oxd_ocr_translation_error", u"Translation error"_q),
+		.placeholder = tr("lng_oxd_ocr_placeholder", u"Extracted text..."_q),
+		.noImageError = tr("lng_oxd_ocr_no_image_error", u"Image is missing."_q),
+		.invalidImageError = tr("lng_oxd_ocr_invalid_image_error", u"Failed to prepare image."_q),
+		.badTranslatorReply = tr("lng_oxd_ocr_bad_translator_reply", u"Invalid translator response"_q),
+		.translateFailed = tr("lng_oxd_ocr_translate_failed", u"Failed to translate text"_q),
 	};
 }
 
@@ -614,9 +566,7 @@ void ExtractWithTesseractOrCloud(
 	tempFile->flush();
 	tempFile->close();
 
-	const auto langs = (profile == OcrProfile::Latin)
-		? u"eng+spa+deu+fra"_q
-		: u"rus+eng+ukr+spa"_q;
+	const auto langs = u"rus+eng+ukr+bel+spa+deu+fra"_q;
 	RunProcessOcr(
 		tesseract,
 		QString(),
@@ -740,33 +690,6 @@ void PaintSurfaceCard(not_null<Ui::RpWidget*> widget, float64 radius = kCardRadi
 	}, widget->lifetime());
 }
 
-[[nodiscard]] not_null<Ui::AbstractButton*> CreateModeChip(
-		not_null<Ui::RpWidget*> parent,
-		const QString &label,
-		std::shared_ptr<OcrProfile> activeProfile,
-		OcrProfile chipProfile) {
-	const auto chip = Ui::CreateChild<Ui::AbstractButton>(parent.get());
-	const auto metrics = QFontMetrics(st::normalFont->f);
-	const auto textWidth = metrics.horizontalAdvance(label);
-	chip->resize(textWidth + 24, 30);
-	chip->show();
-	chip->paintRequest() | rpl::on_next([=] {
-		auto p = QPainter(chip);
-		auto hq = PainterHighQualityEnabler(p);
-		const auto active = (*activeProfile == chipProfile);
-		p.setPen(Qt::NoPen);
-		p.setBrush(active ? st::windowBgActive->c : st::windowBgOver->c);
-		const auto rect = QRectF(chip->rect());
-		const auto radius = rect.height() / 2.;
-		p.drawRoundedRect(rect, radius, radius);
-
-		p.setPen(active ? st::windowFgActive->c : st::windowSubTextFg->c);
-		p.setFont(active ? st::semiboldFont->f : st::normalFont->f);
-		p.drawText(rect, Qt::AlignCenter, label);
-	}, chip->lifetime());
-	return chip;
-}
-
 } // namespace
 
 void AttachNewBadge(not_null<Ui::Menu::Menu*> menu, QAction *action) {
@@ -872,22 +795,6 @@ void ExtractAndShowBox(
 		const auto activeProfile = std::make_shared<OcrProfile>(DefaultProfile());
 		const auto requestGen = std::make_shared<int>(0);
 
-		const auto modesRow = content->add(
-			object_ptr<Ui::FixedHeightWidget>(content, 30),
-			style::margins(16, 0, 16, 10));
-		const auto cyrChip = CreateModeChip(
-			modesRow,
-			strings.modeCyrillic,
-			activeProfile,
-			OcrProfile::Cyrillic);
-		const auto latChip = CreateModeChip(
-			modesRow,
-			strings.modeLatin,
-			activeProfile,
-			OcrProfile::Latin);
-		cyrChip->moveToLeft(0, 0);
-		latChip->moveToLeft(cyrChip->width() + 8, 0);
-
 		const auto statusState = std::make_shared<OcrStatus>(
 			OcrStatus::Recognizing);
 		const auto statusCard = content->add(
@@ -984,8 +891,6 @@ void ExtractAndShowBox(
 			statusLabel->setText(LocateRapidOcr(profile).has_value()
 				? strings.recognizingLocal
 				: strings.recognizing);
-			cyrChip->update();
-			latChip->update();
 			statusCard->update();
 
 			ExtractTextInternal(
@@ -1015,17 +920,6 @@ void ExtractAndShowBox(
 					field->setFocusFast();
 				});
 		};
-
-		cyrChip->setClickedCallback([=] {
-			if (*activeProfile != OcrProfile::Cyrillic) {
-				runOcr(OcrProfile::Cyrillic);
-			}
-		});
-		latChip->setClickedCallback([=] {
-			if (*activeProfile != OcrProfile::Latin) {
-				runOcr(OcrProfile::Latin);
-			}
-		});
 
 		box->setFocusCallback([=] { field->setFocusFast(); });
 

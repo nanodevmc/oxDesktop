@@ -1684,6 +1684,8 @@ void PartAppearance4(SectionBuilder &builder) {
 			{
 				{ u"md3_sliders"_q, &tr::lng_extera_md3_sliders },
 				{ u"md3_switches"_q, &tr::lng_extera_md3_switches },
+				{ u"ox_md3_chats"_q, &tr::lng_ox_md3_chats },
+				{ u"ox_md3_glow"_q, &tr::lng_ox_md3_glow },
 			});
 		AddToggle(
 			builder,

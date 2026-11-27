@@ -44,6 +44,11 @@ mod tests {
         let install_rect = Layout::install_rect(w, h);
         let hit_install = app.hit_test(install_rect.x + 5, install_rect.y + 5);
         assert_eq!(hit_install, Some(ButtonId::Install));
+
+        // Language button
+        let lang_rect = Layout::language_rect(w);
+        let hit_lang = app.hit_test(lang_rect.x + 5, lang_rect.y + 5);
+        assert_eq!(hit_lang, Some(ButtonId::Language));
     }
 
     #[test]

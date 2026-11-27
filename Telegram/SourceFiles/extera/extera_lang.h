@@ -8,5 +8,6 @@ namespace Extera {
 
 void ApplyRussian(Fn<void(const QByteArray&, const QByteArray&)> apply);
 [[nodiscard]] QString LookupRussian(std::string_view key);
+[[nodiscard]] QString LookupCustom(const QString &twoLetterCode, std::string_view key);
 
 } // namespace Extera

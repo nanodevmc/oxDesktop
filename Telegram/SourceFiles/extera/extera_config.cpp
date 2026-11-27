@@ -125,6 +125,8 @@ constexpr auto kSaveDelay = crl::time(1000);
 
 		{ u"md3_switches"_q, true },
 		{ u"md3_sliders"_q, true },
+		{ u"ox_md3_chats"_q, true },
+		{ u"ox_md3_glow"_q, true },
 		{ u"material_design"_q, true },
 		{ u"extera_5y_shown"_q, false },
 		{ u"custom_chat_themes"_q, true },

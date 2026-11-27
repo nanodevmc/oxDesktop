@@ -1,0 +1,22 @@
+{
+  "code": "uk",
+  "name": "Українська",
+  "tag": "UK",
+  "slogan": "Швидкий і безпечний клієнт Telegram із обходом блокувань",
+  "folder": "Папка:",
+  "browse": "Огляд...",
+  "current": "Поточна: ",
+  "new_version": "Нова версія: ",
+  "installed": "✓ Вже встановлено",
+  "downgrade": "! Бета / новіша",
+  "cancel": "Скасувати",
+  "install": "Встановити",
+  "title_installing": "Встановлення oxDesktop",
+  "unpacking": "Розпакування файлів клієнта...",
+  "title_finished": "oxDesktop встановлено",
+  "installed_sub": "Клієнт успішно встановлено в систему",
+  "launch_now": "Запустити oxDesktop зараз",
+  "finish": "Готово",
+  "downgrade_title": "Попередження про версію",
+  "downgrade_msg": "Виявлено новішу або попередню (бета/dev) версію oxDesktop.\n\nВи дійсно бажаєте встановити старішу версію?"
+}

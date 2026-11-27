@@ -63,9 +63,10 @@ pub fn to_wide_null(s: &str) -> Vec<u16> {
 
 #[link(name = "kernel32")]
 extern "system" {
-    fn GetUserDefaultUILanguage() -> u16;
+    pub fn GetUserDefaultUILanguage() -> u16;
 }
 
+#[allow(dead_code)]
 pub fn is_ru_locale() -> bool {
     if let Ok(lang) = std::env::var("LANG") {
         if lang.to_lowercase().contains("ru") {
@@ -97,6 +98,7 @@ pub enum ButtonId {
     CheckLaunch,
     LinkTelegram,
     LinkGitHub,
+    Language,
 }
 
 #[derive(Clone, Copy)]
@@ -286,6 +288,11 @@ impl Layout {
     pub fn finish_btn_rect(width: i32) -> Rect {
         Rect::new((width - FINISH_BTN_W) / 2, FINISH_BTN_Y, FINISH_BTN_W, FINISH_BTN_H)
     }
+
+    #[inline]
+    pub fn language_rect(width: i32) -> Rect {
+        Rect::new(width - 76, 12, 64, 24)
+    }
 }
 
 pub const INSTALLER_VERSION: &str = env!("OX_VERSION");
@@ -305,6 +312,7 @@ pub struct InstallerApp {
     pub fonts: AppFonts,
     pub hovered_btn: Option<ButtonId>,
     pub cancel_flag: Arc<AtomicBool>,
+    pub locale_idx: usize,
 }
 
 impl InstallerApp {
@@ -348,6 +356,23 @@ impl InstallerApp {
             fonts: AppFonts::new(),
             hovered_btn: None,
             cancel_flag: Arc::new(AtomicBool::new(false)),
+            locale_idx: crate::i18n::LocaleStrings::default_system(),
+        }
+    }
+
+    pub fn locale(&self) -> &'static crate::i18n::LocaleStrings {
+        if self.locale_idx < crate::i18n::AVAILABLE_LOCALES.len() {
+            &crate::i18n::AVAILABLE_LOCALES[self.locale_idx]
+        } else if !crate::i18n::AVAILABLE_LOCALES.is_empty() {
+            &crate::i18n::AVAILABLE_LOCALES[0]
+        } else {
+            &crate::i18n::FALLBACK_LOCALE
+        }
+    }
+
+    pub fn cycle_locale(&mut self) {
+        if !crate::i18n::AVAILABLE_LOCALES.is_empty() {
+            self.locale_idx = (self.locale_idx + 1) % crate::i18n::AVAILABLE_LOCALES.len();
         }
     }
 
@@ -383,6 +408,18 @@ impl InstallerApp {
         graphics.fill_rect(0, banner_dst_h - 8, width, 8, 0xCC0E1217);
         graphics.fill_rect(0, banner_dst_h, width, 6, COLOR_BG);
 
+        // --- 0.1 Языковая кнопка-переключатель в верхнем правом углу ---
+        let lang_tag = format!("[ {} ]", self.locale().tag);
+        self.draw_button_ex(
+            hdc,
+            graphics,
+            ButtonId::Language,
+            Layout::language_rect(width),
+            &lang_tag,
+            false,
+            true,
+        );
+
         // --- 1. Центр под баннером: чёткий заголовок oxDesktop и слоган ---
         unsafe {
             SelectObject(hdc, self.fonts.title);
@@ -394,7 +431,7 @@ impl InstallerApp {
             SelectObject(hdc, self.fonts.body);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_SECONDARY));
             let mut r_sub = Rect::new(0, 186, width, 20).to_win32_rect();
-            let sub_str = to_wide_null("Быстрый и безопасный клиент Telegram с обходом блокировок");
+            let sub_str = to_wide_null(self.locale().slogan);
             DrawTextW(hdc, sub_str.as_ptr(), -1, &mut r_sub, 0x00000001 | 0x00000020);
         }
 
@@ -411,7 +448,7 @@ impl InstallerApp {
             SelectObject(hdc, self.fonts.small);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_MUTED));
             let mut r_lbl = Rect::new(form_x + 14, path_y + 11, 48, 18).to_win32_rect();
-            let lbl = to_wide_null("Папка:");
+            let lbl = to_wide_null(self.locale().folder);
             DrawTextW(hdc, lbl.as_ptr(), -1, &mut r_lbl, 0x00000000 | 0x00000004 | 0x00000020);
 
             SelectObject(hdc, self.fonts.body);
@@ -433,7 +470,7 @@ impl InstallerApp {
             graphics,
             ButtonId::Browse,
             Layout::browse_rect(width),
-            "Обзор...",
+            self.locale().browse,
             false,
             true,
         );
@@ -451,22 +488,22 @@ impl InstallerApp {
 
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_MUTED));
             let mut r_cur = Rect::new(form_x + 4, ver_y, 140, 18).to_win32_rect();
-            let cur_w = to_wide_null(&format!("Текущая: {}", cur_val_str));
+            let cur_w = to_wide_null(&format!("{}{}", self.locale().current, cur_val_str));
             DrawTextW(hdc, cur_w.as_ptr(), -1, &mut r_cur, 0x00000000 | 0x00000004);
 
             let mut r_inst = Rect::new(form_x + 150, ver_y, 170, 18).to_win32_rect();
-            let inst_w = to_wide_null(&format!("Новая версия: {}", inst_val_str));
+            let inst_w = to_wide_null(&format!("{}{}", self.locale().new_version, inst_val_str));
             DrawTextW(hdc, inst_w.as_ptr(), -1, &mut r_inst, 0x00000000 | 0x00000004);
 
             if self.is_same_version {
                 SetTextColor(hdc, argb_to_colorref(COLOR_ACCENT));
                 let mut r_status = Rect::new(form_x + 330, ver_y, 190, 18).to_win32_rect();
-                let status_w = to_wide_null("✓ Уже установлено");
+                let status_w = to_wide_null(self.locale().installed);
                 DrawTextW(hdc, status_w.as_ptr(), -1, &mut r_status, 0x00000000 | 0x00000004);
             } else if self.is_downgrade {
                 SetTextColor(hdc, 0x002B90E0);
                 let mut r_status = Rect::new(form_x + 330, ver_y, 190, 18).to_win32_rect();
-                let status_w = to_wide_null("! Бета/более новая");
+                let status_w = to_wide_null(self.locale().downgrade);
                 DrawTextW(hdc, status_w.as_ptr(), -1, &mut r_status, 0x00000000 | 0x00000004);
             }
         }
@@ -525,7 +562,7 @@ impl InstallerApp {
             graphics,
             ButtonId::Cancel,
             Layout::cancel_rect(width, height),
-            "Отмена",
+            self.locale().cancel,
             false,
         );
 
@@ -534,7 +571,7 @@ impl InstallerApp {
             graphics,
             ButtonId::Install,
             Layout::install_rect(width, height),
-            "Установить",
+            self.locale().install,
             true,
         );
     }
@@ -552,12 +589,12 @@ impl InstallerApp {
             SelectObject(hdc, self.fonts.title);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_PRIMARY));
             let mut r_title = Rect::new(0, logo_y + logo_size + 18, width, 28).to_win32_rect();
-            let title_str = to_wide_null("Установка oxDesktop");
+            let title_str = to_wide_null(self.locale().title_installing);
             DrawTextW(hdc, title_str.as_ptr(), -1, &mut r_title, 0x00000001 | 0x00000020);
 
             SelectObject(hdc, self.fonts.body);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_SECONDARY));
-            let status_msg = format!("Распаковка файлов клиента... {}%", self.progress_percent);
+            let status_msg = format!("{} {}%", self.locale().unpacking, self.progress_percent);
             let mut r_sub = Rect::new(0, logo_y + logo_size + 50, width, 20).to_win32_rect();
             let sub_str = to_wide_null(&status_msg);
             DrawTextW(hdc, sub_str.as_ptr(), -1, &mut r_sub, 0x00000001 | 0x00000020);
@@ -597,13 +634,13 @@ impl InstallerApp {
             SelectObject(hdc, self.fonts.title);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_PRIMARY));
             let mut r_title = Rect::new(0, logo_y + logo_size + 14, width, 28).to_win32_rect();
-            let title_str = to_wide_null("oxDesktop установлен");
+            let title_str = to_wide_null(self.locale().title_finished);
             DrawTextW(hdc, title_str.as_ptr(), -1, &mut r_title, 0x00000001 | 0x00000020);
 
             SelectObject(hdc, self.fonts.body);
             SetTextColor(hdc, argb_to_colorref(COLOR_TEXT_SECONDARY));
             let mut r_sub = Rect::new(0, logo_y + logo_size + 44, width, 20).to_win32_rect();
-            let sub_str = to_wide_null("Клиент успешно установлен в систему");
+            let sub_str = to_wide_null(self.locale().installed_sub);
             DrawTextW(hdc, sub_str.as_ptr(), -1, &mut r_sub, 0x00000001 | 0x00000020);
         }
 
@@ -613,7 +650,7 @@ impl InstallerApp {
             graphics,
             ButtonId::CheckLaunch,
             Layout::finish_chk_rect(width),
-            "Запустить oxDesktop сейчас",
+            self.locale().launch_now,
             self.launch_after_install,
         );
 
@@ -623,7 +660,7 @@ impl InstallerApp {
             graphics,
             ButtonId::Finish,
             Layout::finish_btn_rect(width),
-            "Готово",
+            self.locale().finish,
             true,
         );
     }
@@ -740,17 +777,8 @@ impl InstallerApp {
             ButtonId::Install => {
                 if let Some(ref installed) = self.installed_version {
                     if crate::version::is_downgrade_or_prerelease(installed, INSTALLER_VERSION) {
-                        let is_ru = is_ru_locale();
-                        let title = if is_ru {
-                            "Предупреждение о версии"
-                        } else {
-                            "Version Warning"
-                        };
-                        let msg = if is_ru {
-                            "Обнаружена более новая или предварительная (бета/dev) версия oxDesktop.\n\nВы действительно хотите установить более раннюю версию?"
-                        } else {
-                            "A newer or pre-release (beta/dev) version of oxDesktop is already installed.\n\nDo you really want to install an older version?"
-                        };
+                        let title = self.locale().downgrade_title;
+                        let msg = self.locale().downgrade_msg;
 
                         let title_wide = to_wide_null(title);
                         let msg_wide = to_wide_null(msg);
@@ -850,6 +878,13 @@ impl InstallerApp {
                 }
                 false
             }
+            ButtonId::Language => {
+                self.cycle_locale();
+                unsafe {
+                    InvalidateRect(hwnd, std::ptr::null(), 0);
+                }
+                true
+            }
         }
     }
 
@@ -859,6 +894,10 @@ impl InstallerApp {
 
         match self.screen {
             Screen::Welcome => {
+                // Языковая кнопка в правом верхнем углу
+                if Layout::language_rect(w).contains(x, y) {
+                    return Some(ButtonId::Language);
+                }
                 // Ссылки в левом нижнем углу (друг под другом)
                 if Layout::link_telegram_rect().contains(x, y) {
                     return Some(ButtonId::LinkTelegram);

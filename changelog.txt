@@ -1,4 +1,4 @@
-7.4.6 (26.11.2026)
+7.4.6.1 pre-release (27.11.2026)
 
 Ru:
 - Встроенный деинсталлятор (`uninstall.exe`) прямо в папке программы с выбором очистки данных ([Удаление](https://github.com/nanodevmc/oxDesktop))
@@ -7,6 +7,9 @@ Ru:
 - Надежный параллельный обход MTProto TCP и WebSocket в oxWsProxy ([Прокси](tg://settings/proxy?highlight=ws_proxy))
 - Полная поддержка прямых ссылок tg://settings/chats и подсветка опций ([Чаты](tg://settings/chats))
 - Расширенный Material Design 3 для кнопок чатов и навигации с возможностью выключения ([Оформление](tg://settings/appearance?highlight=material_design))
+- Новые подпункты Material Design 3 в настройках («Чаты», «Свечение и полупрозрачность») ([Оформление](tg://settings/appearance?highlight=material_design))
+- Полупрозрачные поверхности и скругленные кнопки MD3 в интерфейсе чатов ([Чаты](tg://settings/chats))
+- Автовыбор и мгновенное переключение языка в правом верхнем углу инсталлятора ([Установка](https://github.com/nanodevmc/oxDesktop))
 - Восстановлены значки и профили ExteraGram API по прямым HTTPS-запросам ([Профиль](tg://settings/extera))
 - Исправлено наложение крестика закрытия на баннер 5-летия exteraGram ([Окно 5-летия](tg://settings/extera))
 - Волновой анимированный прогресс-бар в аудиоплеере ([Плеер](tg://settings/extera?highlight=wave_player))
@@ -16,7 +19,6 @@ Ru:
 - Звонки и мультимедиа через прокси без разрывов ([Звонки](tg://settings/calls))
 - Бэкапы и надёжное сохранение настроек ([Настройки oxDesktop](tg://settings/extera))
 - Режим стримера выключен по умолчанию ([Конфиденциальность](tg://settings/privacy?highlight=streamer_mode))
-- Испанский язык и автоопределение в инсталляторе ([Установка](https://github.com/nanodevmc/oxDesktop))
 
 En:
 - Standalone uninstaller (`uninstall.exe`) in app directory with optional user data cleanup ([Setup](https://github.com/nanodevmc/oxDesktop))
@@ -25,6 +27,9 @@ En:
 - Reliable MTProto TCP & WebSocket fallback engine in oxWsProxy ([Proxy](tg://settings/proxy?highlight=ws_proxy))
 - Direct support for tg://settings/chats deep links and parameter highlighting ([Chats](tg://settings/chats))
 - Expanded Material Design 3 surfaces for chat buttons with instant toggle ([Appearance](tg://settings/appearance?highlight=material_design))
+- New Material Design 3 sub-toggles ("Chats", "Glow and Translucency") in Appearance settings ([Appearance](tg://settings/appearance?highlight=material_design))
+- Translucent frosted surfaces and rounded MD3 buttons in chat interface ([Chats](tg://settings/chats))
+- Dynamic system language detection and instant switcher button in installer corner ([Setup](https://github.com/nanodevmc/oxDesktop))
 - Restored ExteraGram API badges and profiles via clean HTTPS ([Profile](tg://settings/extera))
 - Fixed close button overlap on exteraGram 5th anniversary banner ([5th Anniversary](tg://settings/extera))
 - Animated wavy seekbar in full audio player ([Player](tg://settings/extera?highlight=wave_player))
@@ -34,7 +39,6 @@ En:
 - Uninterrupted calls and media transfer through proxy ([Calls](tg://settings/calls))
 - Reliable settings storage and automated backups ([oxDesktop Settings](tg://settings/extera))
 - Streamer mode disabled by default ([Privacy](tg://settings/privacy?highlight=streamer_mode))
-- Spanish language support with auto-detection in installer ([Setup](https://github.com/nanodevmc/oxDesktop))
 
 7.4.4 (21.11.2026)
 

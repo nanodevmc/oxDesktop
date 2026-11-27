@@ -1,0 +1,22 @@
+{
+  "code": "es",
+  "name": "Español",
+  "tag": "ES",
+  "slogan": "Cliente de Telegram rápido y seguro con evasión de bloqueos",
+  "folder": "Carpeta:",
+  "browse": "Examinar...",
+  "current": "Actual: ",
+  "new_version": "Nueva versión: ",
+  "installed": "✓ Ya instalado",
+  "downgrade": "! Beta / versión más reciente",
+  "cancel": "Cancelar",
+  "install": "Instalar",
+  "title_installing": "Instalando oxDesktop",
+  "unpacking": "Desempaquetando archivos del cliente...",
+  "title_finished": "oxDesktop instalado",
+  "installed_sub": "El cliente se ha instalado correctamente en el sistema",
+  "launch_now": "Iniciar oxDesktop ahora",
+  "finish": "Listo",
+  "downgrade_title": "Aviso de versión anterior",
+  "downgrade_msg": "Se detectó una versión más reciente o beta de oxDesktop ya instalada.\n\n¿Realmente desea instalar una versión anterior?"
+}

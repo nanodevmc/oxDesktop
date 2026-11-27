@@ -547,8 +547,12 @@ jobs:
             New-Item -ItemType Directory -Path $targetPyRel -Force | Out-Null
             Copy-Item (Join-Path $pythonSrc '*') $targetPyRel -Recurse -Force
           }
-          Copy-Item (Join-Path $release 'python') $portable -Recurse -Force
-          Copy-Item (Join-Path $release 'modules') $portable -Recurse -Force
+          if (Test-Path (Join-Path $release 'python')) {
+            Copy-Item (Join-Path $release 'python') $portable -Recurse -Force
+          }
+          if (Test-Path (Join-Path $release 'modules')) {
+            Copy-Item (Join-Path $release 'modules') $portable -Recurse -Force
+          }
           $ocrSrc = Join-Path $env:GITHUB_WORKSPACE 'ocr_runtime'
           if (Test-Path $ocrSrc) {
             Copy-Item $ocrSrc (Join-Path $release 'ocr') -Recurse -Force

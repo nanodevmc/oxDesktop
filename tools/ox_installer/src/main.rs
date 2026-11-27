@@ -1,6 +1,7 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
 
 pub mod version;
+pub mod i18n;
 
 #[cfg(windows)]
 mod app;

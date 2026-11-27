@@ -1,0 +1,22 @@
+{
+  "code": "be",
+  "name": "Беларуская",
+  "tag": "BE",
+  "slogan": "Хуткі і бяспечны кліент Telegram з абыходам блакіровак",
+  "folder": "Папка:",
+  "browse": "Агляд...",
+  "current": "Бягучая: ",
+  "new_version": "Новая версія: ",
+  "installed": "✓ Ужо ўсталявана",
+  "downgrade": "! Бэта / навейшая",
+  "cancel": "Адмена",
+  "install": "Усталяваць",
+  "title_installing": "Усталяванне oxDesktop",
+  "unpacking": "Распакаванне файлаў кліента...",
+  "title_finished": "oxDesktop усталяваны",
+  "installed_sub": "Кліент паспяхова ўсталяваны ў сістэму",
+  "launch_now": "Запусціць oxDesktop зараз",
+  "finish": "Гатова",
+  "downgrade_title": "Папярэджанне пра версію",
+  "downgrade_msg": "Знойдзена навейшая або бэта-версія oxDesktop.\n\nЦі сапраўды вы хочаце ўсталяваць старэйшую версію?"
+}

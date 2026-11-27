@@ -1,0 +1,22 @@
+{
+  "code": "en",
+  "name": "English",
+  "tag": "EN",
+  "slogan": "Fast and secure Telegram desktop client with anti-censorship",
+  "folder": "Folder:",
+  "browse": "Browse...",
+  "current": "Current: ",
+  "new_version": "New version: ",
+  "installed": "✓ Already installed",
+  "downgrade": "! Beta / newer version",
+  "cancel": "Cancel",
+  "install": "Install",
+  "title_installing": "Installing oxDesktop",
+  "unpacking": "Extracting client files...",
+  "title_finished": "oxDesktop Installed",
+  "installed_sub": "The client has been successfully installed",
+  "launch_now": "Launch oxDesktop now",
+  "finish": "Finish",
+  "downgrade_title": "Downgrade Warning",
+  "downgrade_msg": "A newer or pre-release (beta/dev) version of oxDesktop is already installed.\n\nDo you really want to install an older version?"
+}

@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/effects/ripple_animation.h"
 #include "ui/unread_badge_paint.h"
+#include "ui/painter.h"
 #include "extera/extera_config.h"
 #include "styles/style_chat_helpers.h"
 
@@ -39,15 +40,20 @@ void JumpDownButton::paintEvent(QPaintEvent *e) {
 
 	const auto over = isOver();
 	const auto down = isDown();
-	const auto md = Extera::Bool(u"material_design"_q);
+	const auto md = Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true);
 	if (md) {
 		auto hq = PainterHighQualityEnabler(p);
-		const auto btnRect = QRectF(rect()).adjusted(3., 3., -3., -3.);
+		const auto btnRect = QRectF(rect()).adjusted(4., 4., -4., -4.);
 		auto bg = (over || down) ? st::windowBgOver->c : st::windowBg->c;
-		bg.setAlpha(240);
+		bg.setAlpha(over ? 210 : 170);
 		auto border = st::windowBgActive->c;
-		border.setAlpha((over || down) ? 140 : 60);
-		p.setPen(QPen(border, 1.2));
+		if (Extera::Bool(u"ox_md3_glow"_q, true)) {
+			border.setAlpha((over || down) ? 160 : 70);
+			p.setPen(QPen(border, 1.5));
+		} else {
+			border.setAlpha((over || down) ? 100 : 40);
+			p.setPen(QPen(border, 1.0));
+		}
 		p.setBrush(bg);
 		p.drawEllipse(btnRect);
 	}

@@ -226,12 +226,18 @@ void SendButton::paintEvent(QPaintEvent *e) {
 }
 
 void SendButton::paintRecord(QPainter &p, bool over) {
-	if (Extera::Bool(u"material_design"_q)) {
+	if (Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true)) {
 		auto hq = PainterHighQualityEnabler(p);
-		const auto btnRect = QRectF(rect()).adjusted(4., 4., -4., -4.);
+		const auto btnRect = QRectF(rect()).adjusted(5., 5., -5., -5.);
 		auto bg = st::windowBgOver->c;
-		bg.setAlpha(over ? 220 : 120);
-		p.setPen(Qt::NoPen);
+		bg.setAlpha(over ? 190 : 140);
+		if (Extera::Bool(u"ox_md3_glow"_q, true) && over) {
+			auto glow = st::windowBgActive->c;
+			glow.setAlpha(50);
+			p.setPen(QPen(glow, 1.5));
+		} else {
+			p.setPen(Qt::NoPen);
+		}
 		p.setBrush(bg);
 		p.drawEllipse(btnRect);
 	}
@@ -251,12 +257,18 @@ void SendButton::paintRecord(QPainter &p, bool over) {
 }
 
 void SendButton::paintRound(QPainter &p, bool over) {
-	if (Extera::Bool(u"material_design"_q)) {
+	if (Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true)) {
 		auto hq = PainterHighQualityEnabler(p);
-		const auto btnRect = QRectF(rect()).adjusted(4., 4., -4., -4.);
+		const auto btnRect = QRectF(rect()).adjusted(5., 5., -5., -5.);
 		auto bg = st::windowBgOver->c;
-		bg.setAlpha(over ? 220 : 120);
-		p.setPen(Qt::NoPen);
+		bg.setAlpha(over ? 190 : 140);
+		if (Extera::Bool(u"ox_md3_glow"_q, true) && over) {
+			auto glow = st::windowBgActive->c;
+			glow.setAlpha(50);
+			p.setPen(QPen(glow, 1.5));
+		} else {
+			p.setPen(Qt::NoPen);
+		}
 		p.setBrush(bg);
 		p.drawEllipse(btnRect);
 	}
@@ -336,14 +348,21 @@ void SendButton::paintSend(QPainter &p, bool over) {
 			paintRipple(p, ellipse.topLeft(), &color);
 		}
 	} else if (!isDisabled()) {
-		if (Extera::Bool(u"material_design"_q)) {
+		if (Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true)) {
 			auto hq = PainterHighQualityEnabler(p);
-			const auto btnRect = QRectF(rect()).adjusted(4., 4., -4., -4.);
+			const auto btnRect = QRectF(rect()).adjusted(5., 5., -5., -5.);
 			auto bg = st::windowBgActive->c;
 			if (over) {
-				bg = bg.lighter(110);
+				bg = bg.lighter(115);
 			}
-			p.setPen(Qt::NoPen);
+			if (Extera::Bool(u"ox_md3_glow"_q, true)) {
+				auto glow = bg;
+				glow.setAlpha(over ? 70 : 35);
+				p.setPen(QPen(glow, 1.8));
+			} else {
+				p.setPen(Qt::NoPen);
+			}
+			bg.setAlpha(over ? 230 : 180);
 			p.setBrush(bg);
 			p.drawEllipse(btnRect);
 		}
