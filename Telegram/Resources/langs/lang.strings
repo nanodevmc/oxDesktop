@@ -9887,6 +9887,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_extera_md3_containers" = "Settings Containers";
 "lng_extera_md3_switches" = "Switch Style";
 "lng_extera_md3_sliders" = "Slider Style";
+"lng_oxd_md3_chats" = "Chat Controls";
+"lng_oxd_md3_glow" = "Glow and Translucency";
+"lng_ox_md3_chats" = "Chat Controls";
+"lng_ox_md3_glow" = "Glow and Translucency";
 "lng_extera_custom_themes" = "Custom Themes in Chats";
 "lng_extera_custom_themes_about" = "Each chat will display the theme that was specifically chosen for it.";
 "lng_extera_sections" = "Sections";

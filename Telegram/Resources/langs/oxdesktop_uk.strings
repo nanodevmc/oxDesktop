@@ -647,6 +647,8 @@
 "lng_oxd_ai_test_error" = "API verification failed! Check your key, URL, and model.";
 "lng_oxd_ocr_extract" = "Розпізнати текст";
 
+"lng_oxd_md3_chats" = "Інтерфейс чатів";
+"lng_oxd_md3_glow" = "Світіння та напівпрозорість";
 "lng_ox_md3_chats" = "Інтерфейс чатів";
 "lng_ox_md3_glow" = "Світіння та напівпрозорість";
 "lng_oxd_ocr_title" = "Розпізнавання тексту";
