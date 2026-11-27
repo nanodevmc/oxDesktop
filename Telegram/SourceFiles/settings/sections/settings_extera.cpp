@@ -1,5 +1,6 @@
 #include "settings/sections/settings_extera.h"
 #include "ui/new_badges.h"
+#include "ui/painter.h"
 
 #include <QtCore/QPointer>
 #include <QtCore/QRegularExpression>
