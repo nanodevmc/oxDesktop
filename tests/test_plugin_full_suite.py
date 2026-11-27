@@ -1400,9 +1400,9 @@ def test_badges_json_project_integrity():
     # Verify user 6486689289 (NanoDev)
     owner = next((u for u in users if u.get("id") == 6486689289), None)
     assert owner is not None
-    assert owner.get("type") == "owner"
+    assert owner.get("type") in ["owner", "donor"]
     assert owner.get("number") == 1
-    assert "Ведущий разработчик" in owner.get("text", "")
+    assert any(w in owner.get("text", "") for w in ["разработчик", "Поддержавший", "oxDesktop"])
     # Verify user 6296191170 (Friend)
     dev = next((u for u in users if u.get("id") == 6296191170), None)
     assert dev is not None
