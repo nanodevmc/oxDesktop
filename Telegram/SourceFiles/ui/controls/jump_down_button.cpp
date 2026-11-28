@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/unread_badge_paint.h"
 #include "ui/painter.h"
 #include "extera/extera_config.h"
+#include "extera/extera_plugins.h"
 #include "styles/style_chat_helpers.h"
 
 namespace Ui {
@@ -40,24 +41,49 @@ void JumpDownButton::paintEvent(QPaintEvent *e) {
 
 	const auto over = isOver();
 	const auto down = isDown();
+	const auto uiOverride = Extera::Plugins::GetUiOverride(u"chat.jump_down"_q);
+	if (uiOverride && !uiOverride->visible) {
+		return;
+	}
 	const auto md = Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true);
-	if (md) {
+	if (md || uiOverride) {
 		auto hq = PainterHighQualityEnabler(p);
-		const auto btnRect = QRectF(
+		auto btnRect = QRectF(
 			QPointF(_st.rippleAreaPosition),
 			QSizeF(_st.rippleAreaSize, _st.rippleAreaSize));
-		auto bg = (over || down) ? st::windowBgOver->c : st::windowBg->c;
-		bg.setAlpha(over ? 210 : 170);
-		auto border = st::windowBgActive->c;
-		if (Extera::Bool(u"ox_md3_glow"_q, true)) {
-			border.setAlpha((over || down) ? 160 : 70);
-			p.setPen(QPen(border, 1.5));
-		} else {
-			border.setAlpha((over || down) ? 100 : 40);
-			p.setPen(QPen(border, 1.0));
+		if (uiOverride) {
+			const auto w = btnRect.width() * uiOverride->widthScale;
+			const auto h = btnRect.height() * uiOverride->heightScale;
+			btnRect = QRectF(
+				btnRect.center().x() - w / 2.,
+				btnRect.center().y() - h / 2.,
+				w,
+				h);
 		}
+		auto bg = (uiOverride && uiOverride->bgColor)
+			? *uiOverride->bgColor
+			: ((over || down) ? st::windowBgOver->c : st::windowBg->c);
+		bg.setAlpha((uiOverride && uiOverride->alpha >= 0)
+			? uiOverride->alpha
+			: (over ? 210 : 170));
+		auto border = (uiOverride && uiOverride->borderColor)
+			? *uiOverride->borderColor
+			: st::windowBgActive->c;
+		const auto glow = Extera::Bool(u"ox_md3_glow"_q, true);
+		const auto bw = (uiOverride && uiOverride->borderWidth >= 0.)
+			? uiOverride->borderWidth
+			: (glow ? 1.5 : 1.0);
+		border.setAlpha(glow ? ((over || down) ? 160 : 70) : ((over || down) ? 100 : 40));
+		p.setPen(QPen(border, bw));
 		p.setBrush(bg);
-		p.drawEllipse(btnRect);
+		if (uiOverride && (uiOverride->shape == u"oval"_q || uiOverride->shape == u"pill"_q || uiOverride->shape == u"rounded_rect"_q)) {
+			const auto r = (uiOverride->cornerRadius >= 0.)
+				? uiOverride->cornerRadius
+				: (std::min(btnRect.width(), btnRect.height()) / 2.);
+			p.drawRoundedRect(btnRect, r, r);
+		} else {
+			p.drawEllipse(btnRect);
+		}
 	}
 	((over || down)
 		? _st.iconBelowOver

@@ -83,6 +83,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/outline_segments.h"
 #include "ui/effects/round_checkbox.h"
 #include "ui/empty_userpic.h"
+#include "ui/basic_click_handlers.h"
 #include "ui/layers/generic_box.h"
 #include "ui/painter.h"
 #include "ui/peer/video_userpic_player.h"
@@ -576,10 +577,24 @@ TopBar::TopBar(
 				if (!controller) {
 					return;
 				}
-				controller->showToast({
-					.text = TextWithEntities{ text },
-					.duration = crl::time(4000),
-				});
+				controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+					box->setTitle(rpl::single(u"oxDesktop • Badge"_q));
+					box->addRow(object_ptr<Ui::FlatLabel>(
+						box,
+						rpl::single(text),
+						st::boxLabel));
+					box->addRow(object_ptr<Ui::FlatLabel>(
+						box,
+						rpl::single(u"\nЗначки подтверждают статус разработчика, мецената или участника сообщества exteraGram / oxDesktop."_q),
+						st::boxDividerLabel));
+					box->addLeftButton(rpl::single(u"Поддержать"_q), [=] {
+						box->closeBox();
+						UrlClickHandler::Open(u"tg://support"_q);
+					});
+					box->addButton(tr::lng_close(), [=] {
+						box->closeBox();
+					});
+				}));
 			};
 			if (Extera::PluginTrust::IsTrustedChannel(peer)) {
 				controller->showToast({

@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "extera/extera_config.h"
+#include "extera/extera_plugins.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_credits.h"
 #include "lang/lang_keys.h"
@@ -156,8 +157,37 @@ void SendButton::finishAnimating() {
 
 void SendButton::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
+	const auto uiOverride = Extera::Plugins::GetUiOverride(u"chat.send_button"_q);
+	if (uiOverride && !uiOverride->visible) {
+		return;
+	}
 
 	auto over = (isDown() || isOver());
+	if (uiOverride) {
+		auto hq = PainterHighQualityEnabler(p);
+		auto r = QRectF(rect()).adjusted(3., 3., -3., -3.);
+		if (uiOverride->widthScale != 1.0 || uiOverride->heightScale != 1.0) {
+			const auto w = r.width() * uiOverride->widthScale;
+			const auto h = r.height() * uiOverride->heightScale;
+			r = QRectF(r.center().x() - w / 2., r.center().y() - h / 2., w, h);
+		}
+		auto bg = uiOverride->bgColor.value_or(over ? st::windowBgOver->c : st::windowBg->c);
+		if (uiOverride->alpha >= 0) {
+			bg.setAlpha(uiOverride->alpha);
+		}
+		p.setBrush(bg);
+		if (uiOverride->borderColor) {
+			p.setPen(QPen(*uiOverride->borderColor, uiOverride->borderWidth >= 0. ? uiOverride->borderWidth : 1.0));
+		} else {
+			p.setPen(Qt::NoPen);
+		}
+		if (uiOverride->shape == u"oval"_q || uiOverride->shape == u"pill"_q || uiOverride->shape == u"rounded_rect"_q) {
+			const auto rad = uiOverride->cornerRadius >= 0. ? uiOverride->cornerRadius : (std::min(r.width(), r.height()) / 2.);
+			p.drawRoundedRect(r, rad, rad);
+		} else {
+			p.drawEllipse(r);
+		}
+	}
 
 	if (_voiceRoundAnimating) {
 		paintVoiceRoundIcon(p, over);

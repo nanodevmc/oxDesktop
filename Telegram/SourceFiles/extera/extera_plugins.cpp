@@ -935,6 +935,65 @@ PyObject *NativeAppVersionFull(PyObject *self, PyObject *args) {
 	return PyLong_FromLongLong(AppVersion);
 }
 
+QMutex gUiOverridesMutex;
+base::flat_map<QString, base::flat_map<QString, UiOverride>> gUiOverrides;
+
+[[nodiscard]] std::optional<QColor> ParseHexColor(const QString &hex) {
+	if (hex.isEmpty()) {
+		return std::nullopt;
+	}
+	const auto color = QColor(hex);
+	return color.isValid() ? std::make_optional(color) : std::nullopt;
+}
+
+PyObject *NativeSetUiOverride(PyObject *self, PyObject *args) {
+	const char *pluginId = nullptr;
+	const char *target = nullptr;
+	PyObject *dict = nullptr;
+	if (!PyArg_ParseTuple(args, "ssO", &pluginId, &target, &dict) || !PyDict_Check(dict)) {
+		PyErr_SetString(PyExc_TypeError, "Expected (str, str, dict)");
+		return nullptr;
+	}
+	UiOverride props;
+	auto getStr = [&](const char *k) -> QString {
+		if (const auto v = PyDict_GetItemString(dict, k); v && PyUnicode_Check(v)) {
+			return QString::fromUtf8(PyUnicode_AsUTF8(v));
+		}
+		return QString();
+	};
+	auto getFloat = [&](const char *k, float64 def) -> float64 {
+		if (const auto v = PyDict_GetItemString(dict, k); v && (PyFloat_Check(v) || PyLong_Check(v))) {
+			return PyFloat_AsDouble(v);
+		}
+		return def;
+	};
+	props.shape = getStr("shape");
+	props.widthScale = std::clamp(getFloat("width_scale", 1.0), 0.3, 3.0);
+	props.heightScale = std::clamp(getFloat("height_scale", 1.0), 0.3, 3.0);
+	props.cornerRadius = getFloat("corner_radius", -1.0);
+	props.borderWidth = getFloat("border_width", -1.0);
+	props.bgColor = ParseHexColor(getStr("bg_color"));
+	props.borderColor = ParseHexColor(getStr("border_color"));
+	if (const auto v = PyDict_GetItemString(dict, "alpha"); v && PyLong_Check(v)) {
+		props.alpha = std::clamp(int(PyLong_AsLong(v)), 0, 255);
+	}
+	if (const auto v = PyDict_GetItemString(dict, "visible"); v && PyBool_Check(v)) {
+		props.visible = (v == Py_True);
+	}
+	SetUiOverride(QString::fromUtf8(pluginId), QString::fromUtf8(target), props);
+	Py_RETURN_NONE;
+}
+
+PyObject *NativeClearUiOverride(PyObject *self, PyObject *args) {
+	const char *pluginId = nullptr;
+	const char *target = "";
+	if (!PyArg_ParseTuple(args, "s|s", &pluginId, &target)) {
+		return nullptr;
+	}
+	ClearUiOverrides(QString::fromUtf8(pluginId), QString::fromUtf8(target));
+	Py_RETURN_NONE;
+}
+
 PyMethodDef NativeMethods[] = {
 	{ "log", NativeLog, METH_VARARGS, nullptr },
 	{ "toast", NativeToast, METH_VARARGS, nullptr },
@@ -962,6 +1021,8 @@ PyMethodDef NativeMethods[] = {
 	{ "theme_color", NativeThemeColor, METH_VARARGS, nullptr },
 	{ "app_version", NativeAppVersion, METH_VARARGS, nullptr },
 	{ "app_version_full", NativeAppVersionFull, METH_VARARGS, nullptr },
+	{ "set_ui_override", NativeSetUiOverride, METH_VARARGS, nullptr },
+	{ "clear_ui_override", NativeClearUiOverride, METH_VARARGS, nullptr },
 	{ nullptr, nullptr, 0, nullptr },
 };
 
@@ -1443,6 +1504,41 @@ bool InterceptLocalUrl(const QString &url) {
 	}).toBool();
 	state.intentInFlight = false;
 	return blocked;
+}
+
+void SetUiOverride(
+		const QString &pluginId,
+		const QString &target,
+		const UiOverride &props) {
+	if (pluginId.isEmpty() || target.isEmpty()) {
+		return;
+	}
+	QMutexLocker lock(&gUiOverridesMutex);
+	gUiOverrides[pluginId][target] = props;
+}
+
+void ClearUiOverrides(const QString &pluginId, const QString &target) {
+	QMutexLocker lock(&gUiOverridesMutex);
+	if (target.isEmpty()) {
+		gUiOverrides.remove(pluginId);
+		return;
+	}
+	if (auto it = gUiOverrides.find(pluginId); it != end(gUiOverrides)) {
+		it->second.remove(target);
+		if (it->second.empty()) {
+			gUiOverrides.erase(it);
+		}
+	}
+}
+
+std::optional<UiOverride> GetUiOverride(const QString &target) {
+	QMutexLocker lock(&gUiOverridesMutex);
+	for (const auto &[pluginId, targets] : gUiOverrides) {
+		if (const auto it = targets.find(target); it != end(targets)) {
+			return it->second;
+		}
+	}
+	return std::nullopt;
 }
 
 } // namespace Extera::Plugins

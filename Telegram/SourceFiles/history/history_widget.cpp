@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extera/extera_shot.h"
 
 #include "extera/extera_config.h"
+#include "extera/extera_plugins.h"
 #include "core/version.h"
 #include <QtCore/QSysInfo>
 
@@ -11659,20 +11660,27 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	p.setInactive(
 		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
 	p.fillRect(myrtlrect(0, backy, width(), backh), st::historyReplyBg);
-	if (Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true)) {
+	const auto inputOverride = Extera::Plugins::GetUiOverride(u"chat.input_bar"_q);
+	if (inputOverride || (Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true))) {
 		auto hq = PainterHighQualityEnabler(p);
 		const auto pill = QRectF(
 			_field->x() - st::historySendPadding / 2.,
 			_field->y() - st::historySendPadding / 2.,
 			_field->width() + st::historySendPadding,
 			_field->height() + st::historySendPadding);
-		auto fill = st::windowBgOver->c;
-		fill.setAlpha(130);
-		auto border = st::windowBgActive->c;
+		auto fill = (inputOverride && inputOverride->bgColor)
+			? *inputOverride->bgColor
+			: st::windowBgOver->c;
+		fill.setAlpha((inputOverride && inputOverride->alpha >= 0) ? inputOverride->alpha : 130);
+		auto border = (inputOverride && inputOverride->borderColor)
+			? *inputOverride->borderColor
+			: st::windowBgActive->c;
 		border.setAlpha(Extera::Bool(u"ox_md3_glow"_q, true) ? 90 : 40);
-		p.setPen(QPen(border, 1.0));
+		const auto bw = (inputOverride && inputOverride->borderWidth >= 0.) ? inputOverride->borderWidth : 1.0;
+		const auto rad = (inputOverride && inputOverride->cornerRadius >= 0.) ? inputOverride->cornerRadius : 16.;
+		p.setPen(QPen(border, bw));
 		p.setBrush(fill);
-		p.drawRoundedRect(pill, 16., 16.);
+		p.drawRoundedRect(pill, rad, rad);
 	}
 
 	const auto media = (!_previewDrawPreview && drawMsgText)

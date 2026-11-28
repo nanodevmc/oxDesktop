@@ -116,6 +116,7 @@ enum class Button {
 	Repeat,
 	ShowMessage,
 	CopyLyrics,
+	Cover,
 };
 
 [[nodiscard]] std::vector<Line> ParseSynced(const QString &text) {
@@ -263,6 +264,7 @@ private:
 	float64 _scrollTo = 0.;
 	Ui::Animations::Simple _scrollAnimation;
 	base::Timer _waveTimer;
+	bool _showLyricsInCompact = false;
 
 };
 
@@ -688,6 +690,9 @@ QPoint View::buttonCenter(Button button) const {
 }
 
 QRect View::lyricsRect() const {
+	if (width() < S(520)) {
+		return coverRect();
+	}
 	const auto left = coverRect().right() + S(48);
 	return QRect(left, S(24), width() - left - S(32), _height - S(48));
 }
@@ -767,8 +772,12 @@ Button View::buttonAt(QPoint point, int *line) const {
 	if (sliderRect().marginsAdded({ S(6), S(12), S(6), S(12) }).contains(point)) {
 		return Button::Slider;
 	}
+	const auto compact = (width() < S(520));
+	if (compact && coverRect().contains(point)) {
+		return Button::Cover;
+	}
 	const auto rect = lyricsRect();
-	if (_lyrics == Lyrics::Synced && rect.contains(point)) {
+	if ((!compact || _showLyricsInCompact) && _lyrics == Lyrics::Synced && rect.contains(point)) {
 		const auto y = point.y() - rect.y() + int(_scroll);
 		for (auto i = 0; i != int(_lines.size()); ++i) {
 			const auto &entry = _lines[i];
@@ -877,6 +886,11 @@ void View::mouseReleaseEvent(QMouseEvent *e) {
 		}
 		break;
 	case Button::CopyLyrics:
+		if (width() < S(520)) {
+			_showLyricsInCompact = !_showLyricsInCompact;
+			update();
+			break;
+		}
 		if (!_lines.empty()) {
 			auto text = QStringList();
 			for (const auto &entry : _lines) {
@@ -885,6 +899,10 @@ void View::mouseReleaseEvent(QMouseEvent *e) {
 			QGuiApplication::clipboard()->setText(text.join('\n'));
 			_controller->showToast(tr::lng_oxd_player_lyrics_copied(tr::now));
 		}
+		break;
+	case Button::Cover:
+		_showLyricsInCompact = !_showLyricsInCompact;
+		update();
 		break;
 	case Button::Line:
 		if (line >= 0 && length() > 0) {
@@ -1019,32 +1037,37 @@ void View::paintEvent(QPaintEvent *e) {
 		p.fillRect(rect(), shade);
 	}
 
-	const auto cover = coverRect();
-	auto path = QPainterPath();
-	path.addRoundedRect(cover, S(16), S(16));
-	if (!_cover.isNull()) {
-		p.save();
-		p.setClipPath(path);
-		const auto scaled = _cover.size().scaled(
-			cover.size(),
-			Qt::KeepAspectRatioByExpanding);
-		p.drawImage(
-			QRect(
-				cover.x() - (scaled.width() - cover.width()) / 2,
-				cover.y() - (scaled.height() - cover.height()) / 2,
-				scaled.width(),
-				scaled.height()),
-			_cover);
-		p.restore();
-	} else {
-		p.fillPath(path, QColor(255, 255, 255, 28));
-		p.setPen(QColor(255, 255, 255, 150));
-		p.setFont(style::font(S(72), style::FontFlags(), 0)->f);
-		p.drawText(cover, Qt::AlignCenter, QString(QChar(0x266B)));
+	const auto compact = (width() < S(520));
+	if (!compact || !_showLyricsInCompact) {
+		const auto cover = coverRect();
+		auto path = QPainterPath();
+		path.addRoundedRect(cover, S(16), S(16));
+		if (!_cover.isNull()) {
+			p.save();
+			p.setClipPath(path);
+			const auto scaled = _cover.size().scaled(
+				cover.size(),
+				Qt::KeepAspectRatioByExpanding);
+			p.drawImage(
+				QRect(
+					cover.x() - (scaled.width() - cover.width()) / 2,
+					cover.y() - (scaled.height() - cover.height()) / 2,
+					scaled.width(),
+					scaled.height()),
+				_cover);
+			p.restore();
+		} else {
+			p.fillPath(path, QColor(255, 255, 255, 28));
+			p.setPen(QColor(255, 255, 255, 150));
+			p.setFont(style::font(S(72), style::FontFlags(), 0)->f);
+			p.drawText(cover, Qt::AlignCenter, QString(QChar(0x266B)));
+		}
 	}
 
 	paintControls(p);
-	paintLyrics(p);
+	if (!compact || _showLyricsInCompact) {
+		paintLyrics(p);
+	}
 }
 
 void View::paintControls(QPainter &p) {

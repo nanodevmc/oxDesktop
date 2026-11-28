@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "extera/extera_config.h"
 #include "extera/extera_menu.h"
+#include "extera/extera_ocr.h"
 #include "extera/extera_shot.h"
 
 #include "api/api_attached_stickers.h"
@@ -1959,6 +1960,19 @@ void FillContextMenuItems(
 							list->hasCopyRestriction(view->data())));
 					}
 				}, &st::menuIconTranslate);
+			}
+			if (const auto photo = itemMedia ? itemMedia->photo() : nullptr) {
+				const auto ocrAction = result->addAction(tr::lng_oxd_ocr_extract(tr::now), [=] {
+					if (const auto mv = photo->activeMediaView()) {
+						if (const auto img = mv->image(Data::PhotoSize::Large)) {
+							const auto raw = img->original();
+							if (!raw.isNull()) {
+								Extera::Ocr::ExtractAndShowBox(list->controller(), raw);
+							}
+						}
+					}
+				}, &st::menuIconTranslate);
+				Extera::Ocr::AttachNewBadge(result->menu(), ocrAction);
 			}
 		}
 	}

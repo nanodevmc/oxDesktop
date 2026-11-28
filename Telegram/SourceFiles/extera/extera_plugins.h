@@ -63,4 +63,25 @@ void NotifyAppEvent(const QString &name);
 [[nodiscard]] rpl::producer<QString> settingsChanges();
 void notifyListChanged();
 
+struct UiOverride {
+	QString shape;
+	float64 widthScale = 1.0;
+	float64 heightScale = 1.0;
+	float64 cornerRadius = -1.0;
+	std::optional<QColor> bgColor;
+	std::optional<QColor> borderColor;
+	float64 borderWidth = -1.0;
+	int alpha = -1;
+	bool visible = true;
+};
+
+void SetUiOverride(
+	const QString &pluginId,
+	const QString &target,
+	const UiOverride &props);
+void ClearUiOverrides(
+	const QString &pluginId,
+	const QString &target = QString());
+[[nodiscard]] std::optional<UiOverride> GetUiOverride(const QString &target);
+
 } // namespace Extera::Plugins

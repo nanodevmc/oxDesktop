@@ -7,6 +7,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_top_bar_widget.h"
 
+#include "extera/extera_config.h"
+#include "extera/extera_plugins.h"
+
 #include "history/history.h"
 #include "history/view/history_view_send_action.h"
 #include "boxes/add_contact_box.h"
@@ -540,11 +543,18 @@ void TopBarWidget::paintEvent(QPaintEvent *e) {
 	const auto slidingTop = std::max(selectedButtonsTop, searchFieldTop);
 
 	p.fillRect(QRect(0, 0, width(), st::topBarHeight), st::topBarBg);
-	if (Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true)) {
-		auto tint = st::windowBgActive->c;
-		tint.setAlpha(Extera::Bool(u"ox_md3_glow"_q, true) ? 16 : 8);
+	const auto topOverride = Extera::Plugins::GetUiOverride(u"chat.top_bar"_q);
+	if (topOverride || (Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true))) {
+		auto tint = (topOverride && topOverride->bgColor)
+			? *topOverride->bgColor
+			: st::windowBgActive->c;
+		tint.setAlpha((topOverride && topOverride->alpha >= 0)
+			? topOverride->alpha
+			: (Extera::Bool(u"ox_md3_glow"_q, true) ? 16 : 8));
 		p.fillRect(QRect(0, 0, width(), st::topBarHeight), tint);
-		auto line = st::windowBgActive->c;
+		auto line = (topOverride && topOverride->borderColor)
+			? *topOverride->borderColor
+			: st::windowBgActive->c;
 		line.setAlpha(Extera::Bool(u"ox_md3_glow"_q, true) ? 70 : 35);
 		p.fillRect(QRect(0, st::topBarHeight - 1, width(), 1), line);
 	}
