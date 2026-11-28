@@ -611,7 +611,7 @@ void ShowExtera5YearsBox(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setWidth(st::boxWidth + 24);
 		box->setNoContentMargin(true);
-		const auto weakBox = Ui::MakeWeak(box);
+		const auto weakBox = base::make_weak(box);
 		box->addTopButton(st::boxTitleClose, [=] {
 			if (const auto strong = weakBox.data()) {
 				strong->closeBox();
