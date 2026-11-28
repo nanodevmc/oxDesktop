@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 360
     env:
       SCCACHE_DIR: "${{ github.workspace }}\\.sccache"
-      SCCACHE_CACHE_SIZE: "10G"
+      SCCACHE_CACHE_SIZE: "5G"
       SCCACHE_DIRECT: "true"
       SCCACHE_IDLE_TIMEOUT: "0"
       CLEAR_QT_BUILD_TREE: "1"
@@ -442,22 +442,22 @@ jobs:
           API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
         run: |
           call "%VCVARS64%" -vcvars_ver=14.44
-          set "SCCACHE_CACHE_SIZE=10G"
+          set "SCCACHE_CACHE_SIZE=5G"
           sccache --start-server
           sccache --show-stats
-          set "CREDS=-D TDESKTOP_API_ID=%API_ID% -D TDESKTOP_API_HASH=%API_HASH%"
+          set "CREDS=-DTDESKTOP_API_ID=%API_ID% -DTDESKTOP_API_HASH=%API_HASH%"
           if "%API_ID%"=="" (
             echo No API secrets, using TEST ONLY credentials
-            set "CREDS=-D TDESKTOP_API_TEST=ON"
+            set "CREDS=-DTDESKTOP_API_TEST=ON"
           )
           cd tdesktop\Telegram
           call configure.bat %CREDS% ^
             -G "Ninja Multi-Config" ^
-            -D CMAKE_DISABLE_PRECOMPILED_HEADERS=ON ^
-            -D CMAKE_C_COMPILER_LAUNCHER=sccache ^
-            -D CMAKE_CXX_COMPILER_LAUNCHER=sccache ^
-            -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
-            -D CMAKE_POLICY_CMP0141=NEW
+            -DCMAKE_DISABLE_PRECOMPILED_HEADERS=ON ^
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache ^
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ^
+            -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
+            -DCMAKE_POLICY_CMP0141=NEW
           cd /d "%GITHUB_WORKSPACE%\tdesktop\out"
           cmake --build . --config Release --target Telegram --parallel || exit /b 1
 

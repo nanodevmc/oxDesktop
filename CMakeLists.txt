@@ -26,7 +26,7 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt")
         set(APP_VERSION_FULL "${_ver_full}")
         set(_ver_str_major "${_ver_major}.${_ver_minor}")
         set(_ver_str "${APP_VERSION}")
-        file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/Telegram/build/version"
+        set(_ver_content
 "AppVersion         ${_ver_full}
 AppVersionStrMajor ${_ver_str_major}
 AppVersionStrSmall ${_ver_str}
@@ -35,6 +35,14 @@ BetaChannel        0
 AlphaVersion       0
 AppVersionOriginal ${_ver_str}
 ")
+        set(_ver_file "${CMAKE_CURRENT_SOURCE_DIR}/Telegram/build/version")
+        set(_ver_existing "")
+        if (EXISTS "${_ver_file}")
+            file(READ "${_ver_file}" _ver_existing)
+        endif()
+        if (NOT "${_ver_existing}" STREQUAL "${_ver_content}")
+            file(WRITE "${_ver_file}" "${_ver_content}")
+        endif()
     endif()
 
     if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in")
@@ -96,6 +104,9 @@ if (DESKTOP_APP_USE_COMPILER_CACHE)
         else()
             message(STATUS "Compiler already wrapped by ccache in environment (CXX=$ENV{CXX})")
         endif()
+    endif()
+    if (MSVC)
+        set(CMAKE_DISABLE_PRECOMPILED_HEADERS ON CACHE BOOL "Disable PCH when compiler cache is enabled" FORCE)
     endif()
 endif()
 

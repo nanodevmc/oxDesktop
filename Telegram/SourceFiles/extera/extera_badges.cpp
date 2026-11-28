@@ -266,17 +266,17 @@ template <typename OnData>
 void FetchJsonWithEtag(
 		not_null<QNetworkAccessManager*> manager,
 		const QString &url,
-		QByteArray &etagStorage,
+		QByteArray *etagStorage,
 		OnData &&onData) {
 	auto request = QNetworkRequest(QUrl(url));
 	request.setRawHeader("User-Agent", "oxDesktop/" APP_VERSION);
 	request.setRawHeader("Accept", "application/json");
-	if (!etagStorage.isEmpty()) {
-		request.setRawHeader("If-None-Match", etagStorage);
+	if (etagStorage && !etagStorage->isEmpty()) {
+		request.setRawHeader("If-None-Match", *etagStorage);
 	}
 	request.setTransferTimeout(10000);
 	const auto reply = manager->get(request);
-	QObject::connect(reply, &QNetworkReply::finished, [=, &etagStorage, onData = std::forward<OnData>(onData)]() mutable {
+	QObject::connect(reply, &QNetworkReply::finished, [=, onData = std::forward<OnData>(onData)]() mutable {
 		reply->deleteLater();
 		const auto code = reply->attribute(
 			QNetworkRequest::HttpStatusCodeAttribute).toInt();
@@ -285,8 +285,8 @@ void FetchJsonWithEtag(
 		}
 		if (reply->error() == QNetworkReply::NoError) {
 			const auto etag = reply->rawHeader("ETag");
-			if (!etag.isEmpty()) {
-				etagStorage = etag;
+			if (etagStorage && !etag.isEmpty()) {
+				*etagStorage = etag;
 			}
 			onData(reply->readAll());
 		}
@@ -297,7 +297,7 @@ void RefreshProfiles(QNetworkAccessManager *manager) {
 	FetchJsonWithEtag(
 		manager,
 		u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/badges.json"_q,
-		State().badgesEtag,
+		&State().badgesEtag,
 		[](const QByteArray &bytes) {
 			if (ApplyProfiles(bytes, false)) {
 				SaveToCache();
@@ -306,14 +306,14 @@ void RefreshProfiles(QNetworkAccessManager *manager) {
 	FetchJsonWithEtag(
 		manager,
 		u"https://raw.githubusercontent.com/nanodevmc/oxDesktop/main/trusted_hashes.json"_q,
-		State().hashesEtag,
+		&State().hashesEtag,
 		[](const QByteArray &bytes) {
 			ApplyTrustedHashes(bytes);
 		});
 	FetchJsonWithEtag(
 		manager,
 		u"https://api.exteragram.app/api/v1/profiles"_q,
-		QString(),
+		nullptr,
 		[](const QByteArray &bytes) {
 			if (ApplyProfiles(bytes, true)) {
 				SaveToCache();
