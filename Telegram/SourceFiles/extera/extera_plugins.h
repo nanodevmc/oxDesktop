@@ -1,9 +1,13 @@
 #pragma once
 
+#include "data/data_msg_id.h"
 #include "ui/text/text_entity.h"
 
 #include <QtCore/QJsonValue>
 #include <QtCore/QJsonObject>
+#include <QtGui/QColor>
+#include <optional>
+#include <vector>
 
 class History;
 class HistoryItem;
