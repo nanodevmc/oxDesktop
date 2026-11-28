@@ -656,7 +656,7 @@
 "lng_oxd_ocr_recognizing" = "Extracting text...";
 "lng_oxd_ocr_mode_cyrillic" = "Cyrillic + EN";
 "lng_oxd_ocr_mode_latin" = "Latin (ES / DE / FR)";
-"lng_oxd_ocr_ready_local" = "Done (offline)";
+"lng_oxd_ocr_ready_local" = "Done";
 "lng_oxd_ocr_ready" = "Done";
 "lng_oxd_ocr_empty" = "No text found in image";
 "lng_oxd_ocr_error_prefix" = "Error: ";
