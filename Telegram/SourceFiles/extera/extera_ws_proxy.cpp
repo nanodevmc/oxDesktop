@@ -23,7 +23,7 @@ namespace {
 constexpr auto kDefaultPort = 1443;
 constexpr auto kPortAttempts = 20;
 constexpr auto kRestartDelay = crl::time(3000);
-constexpr auto kAutoEnableDelay = 10 * crl::time(1000);
+constexpr auto kAutoEnableDelay = crl::time(7500);
 constexpr auto kRestartCooldown = crl::time(2000);
 constexpr auto kMaxRestarts = 5;
 

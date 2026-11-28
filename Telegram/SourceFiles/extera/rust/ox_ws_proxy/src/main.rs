@@ -473,10 +473,12 @@ async fn race_backend_connection(
 ) -> Option<BackendConn> {
     let (tx, mut rx) = mpsc::channel::<BackendConn>(1);
     let mut guards = AbortOnDrop(Vec::new());
+    let last_err: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 
     // 1. Parallel Direct WS probes
     for host in candidate_hosts {
         let tx = tx.clone();
+        let last_err = last_err.clone();
         let direct_url = format!("wss://{}/apiws", host);
         let host_name = host.clone();
         guards.0.push(tokio::spawn(async move {
@@ -485,16 +487,22 @@ async fn race_backend_connection(
                     "Sec-WebSocket-Protocol",
                     HeaderValue::from_static("binary"),
                 );
-                if let Ok(Ok((ws, _))) = tokio::time::timeout(
-                    Duration::from_millis(3500),
+                match tokio::time::timeout(
+                    Duration::from_millis(5000),
                     tokio_tungstenite::connect_async(req),
                 )
                 .await
                 {
-                    let _ = tx.send(BackendConn {
-                        stream: BackendStream::Ws(ws),
-                        desc: format!("Direct WS ({})", host_name),
-                    }).await;
+                    Ok(Ok((ws, _))) => {
+                        let _ = tx.send(BackendConn {
+                            stream: BackendStream::Ws(ws),
+                            desc: format!("Direct WS ({})", host_name),
+                        }).await;
+                    }
+                    Ok(Err(e)) => {
+                        *last_err.lock().await = Some(format!("Direct WS ({}): {}", host_name, e));
+                    }
+                    Err(_) => {}
                 }
             }
         }));
@@ -583,14 +591,21 @@ async fn race_backend_connection(
 
     drop(tx);
 
-    match tokio::time::timeout(Duration::from_millis(10000), rx.recv()).await {
+    match tokio::time::timeout(Duration::from_millis(12000), rx.recv()).await {
         Ok(Some(backend)) => {
             logger
                 .log(&format!("[{}] Connected via {} to DC{}", peer, backend.desc, actual_dc))
                 .await;
             Some(backend)
         }
-        _ => None,
+        _ => {
+            if let Some(err) = last_err.lock().await.as_ref() {
+                logger
+                    .warn(&format!("[{}] Last backend error for DC{}: {}", peer, actual_dc, err))
+                    .await;
+            }
+            None
+        }
     }
 }
 
