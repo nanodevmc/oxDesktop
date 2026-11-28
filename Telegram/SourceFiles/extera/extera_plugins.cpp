@@ -1351,7 +1351,7 @@ bool IsTrustedSource(not_null<PeerData*> peer) {
 SendResult OnSendMessage(
 		not_null<History*> history,
 		const QString &text,
-		MsgId replyTo) {
+		int64 replyTo) {
 	if (!Instance().started || BypassFlag) {
 		return {};
 	}
@@ -1360,7 +1360,7 @@ SendResult OnSendMessage(
 	const auto result = Call(u"send_hook"_q, QJsonObject{
 		{ u"peer"_q, double(dialog) },
 		{ u"text"_q, text },
-		{ u"reply_to"_q, double(replyTo.bare) },
+		{ u"reply_to"_q, double(replyTo) },
 	}).toObject();
 	const auto strategy = result.value(u"strategy"_q).toString();
 	if (strategy == u"cancel"_q) {

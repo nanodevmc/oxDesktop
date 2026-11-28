@@ -1,6 +1,5 @@
 #pragma once
 
-#include "data/data_msg_id.h"
 #include "ui/text/text_entity.h"
 
 #include <QtCore/QJsonValue>
@@ -51,7 +50,7 @@ QJsonValue Call(
 [[nodiscard]] SendResult OnSendMessage(
 	not_null<History*> history,
 	const QString &text,
-	MsgId replyTo);
+	int64 replyTo);
 
 [[nodiscard]] std::vector<MenuItem> MenuItems(const QString &type);
 void ClickMenuItem(const QString &id, QJsonObject context);
