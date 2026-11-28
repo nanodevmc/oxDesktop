@@ -611,7 +611,7 @@ void ShowExtera5YearsBox(not_null<Window::SessionController*> controller) {
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setWidth(st::boxWidth + 24);
 		box->setNoContentMargin(true);
-		const auto weakBox = base::make_weak(box);
+		const auto weakBox = QPointer<Ui::GenericBox>(box.get());
 		box->addTopButton(st::boxTitleClose, [=] {
 			if (const auto strong = weakBox.data()) {
 				strong->closeBox();
@@ -696,7 +696,6 @@ void ShowExtera5YearsBox(not_null<Window::SessionController*> controller) {
 				st::exteraSubtitle),
 			style::margins(16, 0, 16, 14));
 
-		const auto weakBox = QPointer<Ui::GenericBox>(box.get());
 		box->addLeftButton(rpl::single(channelBtnText), [=] {
 			UrlClickHandler::Open(u"https://t.me/exteraGram"_q);
 			if (weakBox) {
