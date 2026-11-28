@@ -156,7 +156,7 @@ struct State {
 		.title = tr("lng_oxd_ocr_title", u"Text Recognition"_q),
 		.recognizingLocal = tr("lng_oxd_ocr_recognizing_local", u"Recognizing..."_q),
 		.recognizing = tr("lng_oxd_ocr_recognizing", u"Extracting text..."_q),
-		.readyLocal = tr("lng_oxd_ocr_ready_local", u"Done (offline)"_q),
+		.readyLocal = tr("lng_oxd_ocr_ready_local", u"Done"_q),
 		.ready = tr("lng_oxd_ocr_ready", u"Done"_q),
 		.empty = tr("lng_oxd_ocr_empty", u"No text found in image"_q),
 		.errorPrefix = tr("lng_oxd_ocr_error_prefix", u"Error: "_q),

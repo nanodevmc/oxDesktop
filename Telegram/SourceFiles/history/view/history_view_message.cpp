@@ -82,7 +82,7 @@ namespace {
 
 [[nodiscard]] QString ActiveDeletedMark(not_null<const HistoryItem*> item) {
 	const auto customMark = Extera::String(u"deleted_mark_text"_q);
-	const auto mark = customMark.isEmpty() ? u"[Удалено]"_q : customMark;
+	const auto mark = customMark.isEmpty() ? u"Удалено"_q : customMark;
 	return (item->isDeleted() || item->originalText().text.endsWith(mark))
 		? mark
 		: QString();

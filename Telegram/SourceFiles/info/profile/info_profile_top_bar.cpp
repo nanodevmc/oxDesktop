@@ -592,7 +592,11 @@ TopBar::TopBar(
 				return;
 			}
 			if (!custom.isEmpty()) {
-				exdToast(custom);
+				const auto num = Extera::BadgeNumber(peer);
+				const auto title = num > 0
+					? (name + u" • #"_q + QString::number(num))
+					: name;
+				controller->show(Ui::MakeInformBox(title + u"\n\n"_q + custom));
 				return;
 			}
 			switch (kind) {

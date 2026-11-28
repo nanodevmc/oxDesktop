@@ -450,6 +450,7 @@ jobs:
             echo No API secrets, using TEST ONLY credentials
             set "CREDS=-DTDESKTOP_API_TEST=ON"
           )
+          if exist "%GITHUB_WORKSPACE%\tdesktop\out\CMakeCache.txt" del /f /q "%GITHUB_WORKSPACE%\tdesktop\out\CMakeCache.txt"
           cd tdesktop\Telegram
           call configure.bat %CREDS% ^
             -G "Ninja Multi-Config" ^

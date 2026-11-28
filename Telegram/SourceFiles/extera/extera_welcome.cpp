@@ -100,7 +100,7 @@ void FillUnofficialInfo(not_null<Ui::VerticalLayout*> container) {
 		container,
 		tr::lng_extera_welcome_site(),
 		u"В разработке..."_q,
-		u"https://t.me/oxDesktop"_q,
+		u"https://nanodevmc.github.io/oxDesktop/"_q,
 		&st::exteraIconWebsite);
 	AddLinkButton(
 		container,
@@ -112,7 +112,7 @@ void FillUnofficialInfo(not_null<Ui::VerticalLayout*> container) {
 		container,
 		tr::lng_extera_welcome_channel(),
 		u"@oxDesktop"_q,
-		u"https://t.me/oxDesktop"_q,
+		u"https://nanodevmc.github.io/oxDesktop/"_q,
 		&st::exteraIconChannel);
 }
 
@@ -195,7 +195,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				content,
 				tr::lng_extera_channel(),
 				u"@oxDesktop"_q,
-				u"https://t.me/oxDesktop"_q,
+				u"https://nanodevmc.github.io/oxDesktop/"_q,
 				&st::exteraIconChannel);
 			AddLinkButton(
 				content,
@@ -207,7 +207,7 @@ void ShowWelcomeBox(not_null<Window::SessionController*> controller) {
 				content,
 				tr::lng_extera_website(),
 				u"В разработке..."_q,
-				u"https://t.me/oxDesktop"_q,
+				u"https://nanodevmc.github.io/oxDesktop/"_q,
 				&st::exteraIconWebsite);
 			box->addButton(tr::lng_oxd_wizard_setup(), [=] {
 				base::call_delayed(0, box, [=] {

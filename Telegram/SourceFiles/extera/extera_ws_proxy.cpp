@@ -10,6 +10,7 @@
 #include <atomic>
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
+#include <QtCore/QPointer>
 #include <QtCore/QProcess>
 #include <QtCore/QRandomGenerator>
 #include <QtNetwork/QNetworkAccessManager>
@@ -31,7 +32,7 @@ std::atomic<bool> gProxyActive{ false };
 std::atomic<int> gProxyPort{ kDefaultPort };
 
 struct State {
-	QProcess *process = nullptr;
+	QPointer<QProcess> process;
 	MTP::ProxyData proxy;
 	std::unique_ptr<base::Timer> restartTimer;
 	std::unique_ptr<base::Timer> autoTimer;
@@ -41,19 +42,28 @@ struct State {
 	bool isConnected = false;
 
 	~State() {
-		if (process) {
+		if (process && !QCoreApplication::closingDown()) {
 			if (process->state() != QProcess::NotRunning) {
 				process->kill();
 				process->waitForFinished(500);
 			}
-			delete process;
-			process = nullptr;
 		}
 	}
 };
 
 State &Instance() {
-	static auto result = State();
+	static auto result = [] {
+		auto s = State();
+		if (qApp) {
+			QObject::connect(qApp, &QCoreApplication::aboutToQuit, [] {
+				Stop();
+				auto &st = Instance();
+				st.restartTimer.reset();
+				st.autoTimer.reset();
+			});
+		}
+		return s;
+	}();
 	return result;
 }
 

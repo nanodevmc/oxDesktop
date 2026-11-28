@@ -425,6 +425,18 @@ void AddSwitchGroup(
 				view->checkedChanges(
 				) | rpl::on_next([=](bool checked) {
 					Config().setBool(key, checked);
+					if (id == u"material_design"_q) {
+						auto any = checked;
+						if (!any) {
+							for (const auto &e : entries) {
+								if (Extera::Bool(e.key)) {
+									any = true;
+									break;
+								}
+							}
+						}
+						Config().setBool(id, any);
+					}
 				}, checkbox->lifetime());
 				checks.push_back(view);
 			}
@@ -3510,7 +3522,7 @@ void PartSmartGhost(SectionBuilder &builder) {
 			.icon = { &st::menuIconEdit },
 			.label = Config().stringChanges(u"deleted_mark_text"_q)
 				| rpl::map([](const QString &t) {
-					return t.isEmpty() ? u"[Удалено]"_q : t;
+					return t.isEmpty() ? u"Удалено"_q : t;
 				}),
 			.onClick = [=] {
 				if (controller) {
@@ -3522,12 +3534,12 @@ void PartSmartGhost(SectionBuilder &builder) {
 							box,
 							st::defaultInputField,
 							rpl::single(u"Текст пометки"_q),
-							current.isEmpty() ? u"[Удалено]"_q : current));
+							current.isEmpty() ? u"Удалено"_q : current));
 						box->addButton(tr::lng_settings_save(), [=] {
 							const auto val = field->getLastText().trimmed();
 							Extera::Config::Instance().setString(
 								u"deleted_mark_text"_q,
-								val.isEmpty() ? u"[Удалено]"_q : val);
+								val.isEmpty() ? u"Удалено"_q : val);
 							box->closeBox();
 						});
 						box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });

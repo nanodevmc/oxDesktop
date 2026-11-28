@@ -540,6 +540,14 @@ void TopBarWidget::paintEvent(QPaintEvent *e) {
 	const auto slidingTop = std::max(selectedButtonsTop, searchFieldTop);
 
 	p.fillRect(QRect(0, 0, width(), st::topBarHeight), st::topBarBg);
+	if (Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true)) {
+		auto tint = st::windowBgActive->c;
+		tint.setAlpha(Extera::Bool(u"ox_md3_glow"_q, true) ? 16 : 8);
+		p.fillRect(QRect(0, 0, width(), st::topBarHeight), tint);
+		auto line = st::windowBgActive->c;
+		line.setAlpha(Extera::Bool(u"ox_md3_glow"_q, true) ? 70 : 35);
+		p.fillRect(QRect(0, st::topBarHeight - 1, width(), 1), line);
+	}
 	if (slidingTop < 0) {
 		p.translate(0, slidingTop + st::topBarHeight);
 		paintTopBar(p);

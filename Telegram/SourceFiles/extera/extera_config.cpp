@@ -186,7 +186,7 @@ constexpr auto kSaveDelay = crl::time(1000);
 		{ u"ghost_hide_read_pms"_q, true },
 		{ u"ghost_hide_typing"_q, true },
 		{ u"anti_delete"_q, true },
-		{ u"deleted_mark_text"_q, u"[Удалено]"_q },
+		{ u"deleted_mark_text"_q, u"Удалено"_q },
 		{ u"deleted_mark_color"_q, u"#e53935"_q },
 		{ u"local_audio_player"_q, true },
 		{ u"custom_font_enabled"_q, false },

@@ -43,7 +43,9 @@ void JumpDownButton::paintEvent(QPaintEvent *e) {
 	const auto md = Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true);
 	if (md) {
 		auto hq = PainterHighQualityEnabler(p);
-		const auto btnRect = QRectF(rect()).adjusted(4., 4., -4., -4.);
+		const auto btnRect = QRectF(
+			QPointF(_st.rippleAreaPosition),
+			QSizeF(_st.rippleAreaSize, _st.rippleAreaSize));
 		auto bg = (over || down) ? st::windowBgOver->c : st::windowBg->c;
 		bg.setAlpha(over ? 210 : 170);
 		auto border = st::windowBgActive->c;

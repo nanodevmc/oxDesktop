@@ -60,7 +60,17 @@ struct State {
 };
 
 State &Instance() {
-	static auto result = State();
+	static auto result = [] {
+		auto s = State();
+		if (qApp) {
+			QObject::connect(qApp, &QCoreApplication::aboutToQuit, [] {
+				auto &st = Instance();
+				st.timer.reset();
+				st.manager = nullptr;
+			});
+		}
+		return s;
+	}();
 	return result;
 }
 

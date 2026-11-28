@@ -158,6 +158,9 @@ void Badge::setContent(Content content) {
 					|| !_emojiStatusPanel->paintBadgeFrame(check)) {
 					Painter p(check);
 					_emojiStatus->paint(p, args);
+					if (!_emojiStatus->ready()) {
+						style.premium.paint(p, 0, 0, check->width());
+					}
 				}
 			}
 			if (icon) {

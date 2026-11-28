@@ -67,6 +67,10 @@ if (NOT DEFINED CMAKE_CONFIGURATION_TYPES)
     set(configuration_types_init 1)
 endif()
 
+if (MSVC)
+    set(CMAKE_DISABLE_PRECOMPILED_HEADERS ON CACHE BOOL "Disable PCH for sccache" FORCE)
+endif()
+
 project(Telegram
     LANGUAGES C CXX
     VERSION ${desktop_app_version_cmake}

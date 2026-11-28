@@ -2443,15 +2443,21 @@ void HistoryWidget::updateExdBugHelper() {
 	const auto inner = _exdBugHelperPill->entity();
 	const auto width = st::semiboldFont->width(u"\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0435\u0445. \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E"_q) + style::ConvertScale(24);
 	const auto height = style::ConvertScale(26);
-	inner->resize(width, height);
-	_exdBugHelperPill->resize(width, height);
+	if (inner->size() != QSize(width, height)) {
+		inner->resize(width, height);
+		_exdBugHelperPill->resize(width, height);
+	}
 
 	const auto fieldTopLeft = _field->mapTo(this, QPoint(0, 0));
 	const auto pillX = fieldTopLeft.x() + style::ConvertScale(8);
 	const auto pillY = fieldTopLeft.y() - height - style::ConvertScale(4);
-	_exdBugHelperPill->move(pillX, pillY);
-	_exdBugHelperPill->raise();
-	_exdBugHelperPill->show(anim::type::normal);
+	if (_exdBugHelperPill->pos() != QPoint(pillX, pillY)) {
+		_exdBugHelperPill->move(pillX, pillY);
+	}
+	if (!_exdBugHelperPill->toggled()) {
+		_exdBugHelperPill->raise();
+		_exdBugHelperPill->show(anim::type::normal);
+	}
 }
 
 void HistoryWidget::insertDiagnosticInfo() {
@@ -11653,6 +11659,21 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	p.setInactive(
 		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
 	p.fillRect(myrtlrect(0, backy, width(), backh), st::historyReplyBg);
+	if (Extera::Bool(u"material_design"_q) && Extera::Bool(u"ox_md3_chats"_q, true)) {
+		auto hq = PainterHighQualityEnabler(p);
+		const auto pill = QRectF(
+			_field->x() - st::historySendPadding / 2.,
+			_field->y() - st::historySendPadding / 2.,
+			_field->width() + st::historySendPadding,
+			_field->height() + st::historySendPadding);
+		auto fill = st::windowBgOver->c;
+		fill.setAlpha(130);
+		auto border = st::windowBgActive->c;
+		border.setAlpha(Extera::Bool(u"ox_md3_glow"_q, true) ? 90 : 40);
+		p.setPen(QPen(border, 1.0));
+		p.setBrush(fill);
+		p.drawRoundedRect(pill, 16., 16.);
+	}
 
 	const auto media = (!_previewDrawPreview && drawMsgText)
 		? drawMsgText->media()
